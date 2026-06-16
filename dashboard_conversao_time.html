@@ -192,9 +192,10 @@ td.num,th.num{text-align:right}
 <div class="q-grid" id="q-cards"></div>
 
 <!-- Gráficos -->
-<div class="charts" style="grid-template-columns:1fr 1fr">
+<div class="charts" style="grid-template-columns:1fr 1fr 1fr">
 <div class="card"><h3>Agentes por Quartil</h3><canvas id="ch_quartil"></canvas></div>
 <div class="card"><h3>Score Médio por Quartil <span style="color:var(--muted);font-weight:400;font-size:12px">· Volume + Conversão Geral + Conv. Origens</span></h3><canvas id="ch_quartil_conv"></canvas></div>
+<div class="card"><h3>Conv. Média por Origem-Chave <span style="color:var(--muted);font-weight:400;font-size:12px">· média de conversão por origem em cada quartil</span></h3><canvas id="ch_quartil_origens" style="max-height:280px"></canvas></div>
 </div>
 
 <!-- Tabela detalhada -->
@@ -623,12 +624,21 @@ function renderQuartil(d){
   const labels=['Q1','Q2','Q3','Q4'];
   const colors=['#16a34a','#0072ce','#d97706','#dc2626'];
   mk('ch_quartil',{type:'bar',data:{labels,datasets:[{label:'Agentes',data:labels.map(q=>groups[q].length),backgroundColor:colors}]},
-    options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:15},anchor:'center',align:'center'}},
+    options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:15},anchor:'center',align:'center',formatter:v=>v}},
     scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
   mk('ch_quartil_conv',{type:'bar',data:{labels,datasets:[
     {label:'Score médio (0-100)',data:labels.map(q=>{const it=groups[q];return it.length?+(it.reduce((s,x)=>s+x.score,0)/it.length*100).toFixed(1):0;}),backgroundColor:colors},
   ]},options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:13},anchor:'center',align:'center',formatter:v=>v.toFixed(0)}},
     scales:{y:{beginAtZero:true,max:100}}}});
+  const oColors=['#0072ce','#16a34a','#d97706','#7c3aed','#dc2626'];
+  mk('ch_quartil_origens',{type:'bar',data:{labels,datasets:KEY_ORIG.map((o,i)=>({
+    label:KEY_LBL[i],
+    data:labels.map(q=>{const its=groups[q];const v=its.filter(a=>a.orig&&a.orig[o]&&a.orig[o].lt>0);return v.length?+(v.reduce((s,a)=>s+a.orig[o].vd/a.orig[o].lt*100,0)/v.length).toFixed(1):0;}),
+    backgroundColor:oColors[i],
+  }))},options:{responsive:true,
+    plugins:{legend:{display:true,position:'top'},
+      datalabels:{color:'#fff',font:{weight:'600',size:9},anchor:'center',align:'center',formatter:v=>v>0?v.toFixed(1):''}},
+    scales:{y:{beginAtZero:true,title:{display:true,text:'Conversão %'}}}}});
 
   /* Tabela */
   const fq=document.getElementById('f_quartil').value;
