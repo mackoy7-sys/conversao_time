@@ -152,27 +152,67 @@ td.num,th.num{text-align:right}
 </div><!-- /tab-geral -->
 
 <div id="tab-quartil" class="tab-panel">
+
+<!-- Barra de controles do quartil -->
+<div class="filters" style="margin-bottom:var(--gap)">
+<div class="fg">
+  <label>Canal de Vendas</label>
+  <select id="f_canal_q" onchange="renderQuartil(filtered())">
+    <option value="">Todos os canais</option>
+    <option value="INSIDE SALES">Inside Sales</option>
+    <option value="NOVA SEG">Nova Seg</option>
+    <option value="CONECTA">Conecta</option>
+    <option value="BENVE">Benve</option>
+  </select>
+</div>
+<div class="fg">
+  <label>Filtrar Quartil</label>
+  <select id="f_quartil" onchange="renderQuartil(filtered())">
+    <option value="">Todos</option>
+    <option value="Q1">Q1 — Elite</option>
+    <option value="Q2">Q2 — Bom</option>
+    <option value="Q3">Q3 — Mediano</option>
+    <option value="Q4">Q4 — Baixo</option>
+  </select>
+</div>
+<div class="fg" style="justify-content:flex-end">
+  <label style="opacity:0">x</label>
+  <div style="background:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:11px;color:var(--muted);line-height:1.5">
+    <b>Score composto:</b> 40% Volume · 35% Conv. Geral · 25% Conv. Origens-Chave
+  </div>
+</div>
+</div>
+
+<!-- Cards Q1–Q4 -->
 <div class="q-grid" id="q-cards"></div>
+
+<!-- Gráficos -->
 <div class="charts" style="grid-template-columns:1fr 1fr">
 <div class="card"><h3>Agentes por Quartil</h3><canvas id="ch_quartil"></canvas></div>
-<div class="card"><h3>Conversão Média por Quartil</h3><canvas id="ch_quartil_conv"></canvas></div>
+<div class="card"><h3>Score Médio por Quartil <span style="color:var(--muted);font-weight:400;font-size:12px">· Volume + Conversão Geral + Conv. Origens</span></h3><canvas id="ch_quartil_conv"></canvas></div>
 </div>
+
+<!-- Tabela detalhada -->
 <div class="tablecard" style="margin-top:var(--gap)">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
 <h3 style="font-size:14px;font-weight:700">Ranking por Quartil <span id="q-rows" style="color:var(--muted);font-weight:400"></span></h3>
-<div style="display:flex;align-items:center;gap:6px">
-<label style="font-size:12px;font-weight:600;color:var(--muted)">Filtrar:</label>
-<select id="f_quartil" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#f8fafc" onchange="renderQuartil(byAgent(filtered()))">
-<option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option>
-</select>
-</div></div>
+<div style="font-size:11px;color:var(--muted)">Origens-chave: Espontâneo · Carrinho Abandonado · Carrinho Abandonado Conecta · EugenIA · Repique Comercial</div>
+</div>
+<div style="overflow-x:auto">
 <table id="tbl_quartil">
 <thead><tr>
-<th>Quartil</th><th>Nome</th><th>Área</th><th>Supervisor</th>
-<th class="num">Leads</th><th class="num">Vidas</th><th class="num">Conv.%</th>
+<th>Q</th><th>Nome</th><th>Área</th><th>Supervisor</th>
+<th class="num">Score</th><th class="num">Vidas</th><th class="num">Conv.Geral</th>
+<th class="num" title="Espontâneo">Espon.</th>
+<th class="num" title="Carrinho Abandonado">C.Abnd.</th>
+<th class="num" title="Carrinho Abandonado Conecta">C.Abnd.Con.</th>
+<th class="num" title="EugenIA">Eugen.</th>
+<th class="num" title="Repique Comercial">Repique</th>
 </tr></thead><tbody></tbody>
 </table>
 </div>
+</div>
+
 </div><!-- /tab-quartil -->
 
 <div class="foot">Gerado a partir de Base_GUP_Tratado_com_Origem_1206_1.xlsx — aba BASE</div>
@@ -227,7 +267,7 @@ function render(){
   renderCharts(d,ag);
   renderTable(ag);
   renderOrigem(d);
-  if(document.getElementById('tab-quartil').classList.contains('active'))renderQuartil(ag);
+  if(document.getElementById('tab-quartil').classList.contains('active'))renderQuartil(d);
 }
 
 function renderOrigem(d){
@@ -311,66 +351,132 @@ document.getElementById('f_ordem').onchange=()=>renderTable(byAgent(filtered()))
 fillSelects();render();
 </script>
 <script>
+/* ========== TABS ========== */
 function switchTab(name,btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if(name==='quartil')renderQuartil(byAgent(filtered()));
+  if(name==='quartil')renderQuartil(filtered());
 }
-function calcQuartil(ag){
-  const sorted=[...ag].sort((a,b)=>conv(b[9],b[6])-conv(a[9],a[6]));
-  const n=sorted.length;
-  return sorted.map((r,i)=>{
-    let q;
-    if(i<n*.25)q='Q1';
-    else if(i<n*.5)q='Q2';
-    else if(i<n*.75)q='Q3';
-    else q='Q4';
-    return{r,q,cv:conv(r[9],r[6])};
+
+/* ========== QUARTIL — score composto ========== */
+const KEY_ORIG=['ESPONTÂNEO','CARRINHO ABANDONADO','CARRINHO ABANDONADO CONECTA','EUGENIA','REPIQUE COMERCIAL'];
+const KEY_LBL=['Espon.','C.Abnd.','C.Abnd.Con.','Eugen.','Repique'];
+
+function buildAgentStats(d,canal){
+  const data=canal?d.filter(r=>r[1]===canal):d;
+  const map={};
+  data.forEach(r=>{
+    if(!map[r[0]])map[r[0]]={nome:r[0],area:r[1],unidade:r[2],sup:r[3],lt:0,lp:0,ct:0,vd:0,orig:{}};
+    const a=map[r[0]];
+    a.lt+=r[6];a.lp+=r[7];a.ct+=r[8];a.vd+=r[9];
+    if(!a.orig[r[12]])a.orig[r[12]]={lt:0,vd:0};
+    a.orig[r[12]].lt+=r[6];a.orig[r[12]].vd+=r[9];
   });
+  const ags=Object.values(map);
+  if(!ags.length)return[];
+
+  /* métricas derivadas */
+  ags.forEach(ag=>{
+    ag.convGlobal=ag.lt?ag.vd/ag.lt*100:0;
+    let sc=0,cnt=0;
+    KEY_ORIG.forEach(o=>{
+      const os=ag.orig[o];
+      if(os&&os.lt>0){sc+=os.vd/os.lt*100;cnt++;}
+    });
+    ag.convKey=cnt?sc/cnt:ag.convGlobal;
+  });
+
+  /* percentil rank (0-1) para cada dimensão */
+  function pRank(arr,fn){
+    const s=[...arr].sort((a,b)=>fn(a)-fn(b));
+    const n=s.length;
+    s.forEach((x,i)=>x['_r'+fn.toString().slice(-2)]=n>1?i/(n-1):1);
+  }
+  /* volume */
+  const sv=[...ags].sort((a,b)=>a.vd-b.vd);
+  const nv=sv.length;sv.forEach((a,i)=>a.rv=nv>1?i/(nv-1):1);
+  /* conv global */
+  const sc=[...ags].sort((a,b)=>a.convGlobal-b.convGlobal);
+  const nc=sc.length;sc.forEach((a,i)=>a.rc=nc>1?i/(nc-1):1);
+  /* conv origens-chave */
+  const sk=[...ags].sort((a,b)=>a.convKey-b.convKey);
+  const nk=sk.length;sk.forEach((a,i)=>a.rk=nk>1?i/(nk-1):1);
+
+  /* score composto e quartil */
+  ags.forEach(ag=>ag.score=+(0.40*ag.rv+0.35*ag.rc+0.25*ag.rk).toFixed(4));
+  ags.sort((a,b)=>b.score-a.score);
+  const n=ags.length;
+  ags.forEach((ag,i)=>{
+    if(i<n*.25)ag.q='Q1';
+    else if(i<n*.5)ag.q='Q2';
+    else if(i<n*.75)ag.q='Q3';
+    else ag.q='Q4';
+  });
+  return ags;
 }
-function renderQuartil(ag){
-  const all=calcQuartil(ag);
+
+function renderQuartil(d){
+  const canal=document.getElementById('f_canal_q').value;
+  const ags=buildAgentStats(d,canal);
   const QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   const QN={Q1:'Top 25% · Elite',Q2:'50–75% · Bom',Q3:'25–50% · Mediano',Q4:'Bottom 25% · Baixo'};
   const groups={Q1:[],Q2:[],Q3:[],Q4:[]};
-  all.forEach(({r,q,cv})=>groups[q].push({r,cv}));
+  ags.forEach(ag=>groups[ag.q].push(ag));
+
+  /* Cards */
   document.getElementById('q-cards').innerHTML=['Q1','Q2','Q3','Q4'].map(q=>{
     const items=groups[q];
-    const avgCv=items.length?(items.reduce((s,x)=>s+x.cv,0)/items.length):0;
-    const totVidas=items.reduce((s,x)=>s+x.r[9],0);
-    const minCv=items.length?Math.min(...items.map(x=>x.cv)):0;
-    const maxCv=items.length?Math.max(...items.map(x=>x.cv)):0;
+    const avgScore=items.length?(items.reduce((s,x)=>s+x.score,0)/items.length*100):0;
+    const avgCvG=items.length?(items.reduce((s,x)=>s+x.convGlobal,0)/items.length):0;
+    const avgCvK=items.length?(items.reduce((s,x)=>s+x.convKey,0)/items.length):0;
+    const totVidas=items.reduce((s,x)=>s+x.vd,0);
     return '<div class="q-card '+q.toLowerCase()+'c">'+
       '<div class="q-badge '+q.toLowerCase()+'b">'+q+'</div>'+
       '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">'+QN[q]+'</div>'+
       '<div style="font-size:26px;font-weight:800;color:'+QC[q]+'">'+items.length+'<span style="font-size:13px;font-weight:600;color:var(--muted);margin-left:4px">agentes</span></div>'+
-      '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Conv. média</div>'+
-      '<div style="font-size:22px;font-weight:700;color:'+QC[q]+'">'+avgCv.toFixed(1)+'%</div>'+
-      '<div style="font-size:12px;color:var(--muted);margin-top:4px">Faixa: '+minCv.toFixed(1)+'% – '+maxCv.toFixed(1)+'%</div>'+
-      '<div style="font-size:12px;color:var(--muted)">Total vidas: <b>'+fmt(totVidas)+'</b></div>'+
+      '<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+        '<div><div style="font-size:11px;color:var(--muted)">Score médio</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+avgScore.toFixed(0)+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted)">Conv. geral</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+avgCvG.toFixed(1)+'%</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted)">Conv. origens</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+avgCvK.toFixed(1)+'%</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted)">Total vidas</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+fmt(totVidas)+'</div></div>'+
+      '</div>'+
       '</div>';
   }).join('');
+
+  /* Gráficos */
   const labels=['Q1','Q2','Q3','Q4'];
   const colors=['#16a34a','#0072ce','#d97706','#dc2626'];
   mk('ch_quartil',{type:'bar',data:{labels,datasets:[{label:'Agentes',data:labels.map(q=>groups[q].length),backgroundColor:colors}]},
     options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:15},anchor:'center',align:'center'}},
     scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-  mk('ch_quartil_conv',{type:'bar',data:{labels,datasets:[{label:'Conv. Média %',data:labels.map(q=>{
-    const items=groups[q];return items.length?+(items.reduce((s,x)=>s+x.cv,0)/items.length).toFixed(2):0;
-  }),backgroundColor:colors}]},
-    options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:13},anchor:'center',align:'center',formatter:v=>v.toFixed(1)+'%'}},
-    scales:{y:{beginAtZero:true}}}});
+  mk('ch_quartil_conv',{type:'bar',data:{labels,datasets:[
+    {label:'Score médio (0-100)',data:labels.map(q=>{const it=groups[q];return it.length?+(it.reduce((s,x)=>s+x.score,0)/it.length*100).toFixed(1):0;}),backgroundColor:colors},
+  ]},options:{responsive:true,plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'700',size:13},anchor:'center',align:'center',formatter:v=>v.toFixed(0)}},
+    scales:{y:{beginAtZero:true,max:100}}}});
+
+  /* Tabela */
   const fq=document.getElementById('f_quartil').value;
-  const rows=all.filter(x=>!fq||x.q===fq);
+  const rows=ags.filter(x=>!fq||x.q===fq);
   document.getElementById('q-rows').textContent='('+rows.length+' agentes)';
-  document.querySelector('#tbl_quartil tbody').innerHTML=rows.map(({r,q,cv})=>
-    '<tr><td><span class="q-badge '+q.toLowerCase()+'b" style="width:38px;height:22px;border-radius:6px;font-size:12px">'+q+'</span></td>'+
-    '<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[3]+'</td>'+
-    '<td class=num>'+fmt(r[6])+'</td><td class=num>'+fmt(r[9])+'</td>'+
-    '<td class=num><b style="color:'+QC[q]+'">'+cv.toFixed(1)+'%</b></td></tr>'
-  ).join('');
+  function cvCell(os){
+    if(!os||!os.lt)return'<td class=num style="color:#cbd5e1">—</td>';
+    const pct=(os.vd/os.lt*100);
+    const cor=pct>=10?'#16a34a':pct>=5?'#d97706':'#dc2626';
+    return'<td class=num><span style="color:'+cor+'">'+pct.toFixed(1)+'%</span></td>';
+  }
+  document.querySelector('#tbl_quartil tbody').innerHTML=rows.map(ag=>{
+    const cor=QC[ag.q];
+    return'<tr>'+
+      '<td><span class="q-badge '+ag.q.toLowerCase()+'b" style="width:36px;height:22px;border-radius:6px;font-size:12px">'+ag.q+'</span></td>'+
+      '<td>'+ag.nome+'</td><td>'+ag.area+'</td><td>'+ag.sup+'</td>'+
+      '<td class=num><b style="color:'+cor+'">'+(ag.score*100).toFixed(0)+'</b></td>'+
+      '<td class=num>'+fmt(ag.vd)+'</td>'+
+      '<td class=num><b style="color:'+cor+'">'+ag.convGlobal.toFixed(1)+'%</b></td>'+
+      KEY_ORIG.map(o=>cvCell(ag.orig[o])).join('')+
+    '</tr>';
+  }).join('');
 }
 </script>
 </body>
