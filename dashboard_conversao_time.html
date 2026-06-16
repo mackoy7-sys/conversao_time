@@ -350,6 +350,12 @@ td.num,th.num{text-align:right}
     <canvas id="ch_evol_line" style="max-height:340px"></canvas>
   </div>
 
+  <!-- gráfico 3: médias origens-chave -->
+  <div id="evol-origens-card" class="card" style="margin-bottom:var(--gap);display:none">
+    <h3>Conversão por Origem-Chave <span style="color:var(--muted);font-weight:400;font-size:12px">· total de vidas ÷ leads por origem ao longo do tempo</span></h3>
+    <canvas id="ch_evol_origens" style="max-height:300px"></canvas>
+  </div>
+
   <!-- tabela de evolução -->
   <div class="tablecard">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
@@ -662,8 +668,13 @@ function saveSnapshot(manual){
   const ags=buildAgentStats(RAW,'');
   const ag={};
   ags.forEach(a=>{ag[a.nome]={lt:a.lt,vd:a.vd,ct:a.ct,cg:+a.convGlobal.toFixed(2),ck:+a.convKey.toFixed(2),sc:+(a.score*100).toFixed(1),q:a.q};});
+  /* totais por origem-chave */
+  const origMap={};
+  RAW.forEach(r=>{const o=r[12];if(!origMap[o])origMap[o]={lt:0,vd:0};origMap[o].lt+=r[6];origMap[o].vd+=r[9];});
+  const orig={};
+  KEY_ORIG.forEach(o=>{if(origMap[o])orig[o]={lt:origMap[o].lt,vd:origMap[o].vd,cg:origMap[o].lt?+(origMap[o].vd/origMap[o].lt*100).toFixed(2):0};});
   const d=today.split('-');
-  snaps.push({ts:today,lbl:d[2]+'/'+d[1]+'/'+d[0],n:ags.length,ag});
+  snaps.push({ts:today,lbl:d[2]+'/'+d[1]+'/'+d[0],n:ags.length,ag,orig});
   if(snaps.length>MAX_SNAPS)snaps=snaps.slice(-MAX_SNAPS);
   try{
     localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));
@@ -720,6 +731,7 @@ function renderEvolucao(){
     [...sel.options].forEach(o=>{if(top5.includes(o.value))o.selected=true;});
   }
   renderEvolCharts(snaps);
+  renderEvolOrigensChart(snaps);
   renderEvolTable(snaps,'delta');
 }
 
@@ -759,6 +771,25 @@ function renderEvolCharts(snaps){
     interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},
     scales:{y:{title:{display:true,text:mLbl[metric]},beginAtZero:metric==='sc'||metric==='cg'||metric==='ck'}}}});
+}
+
+function renderEvolOrigensChart(snaps){
+  const withOrig=snaps.filter(s=>s.orig);
+  const card=document.getElementById('evol-origens-card');
+  if(withOrig.length<1){card.style.display='none';return;}
+  card.style.display='block';
+  const labels=withOrig.map(s=>s.lbl);
+  const colors=['#0072ce','#16a34a','#d97706','#7c3aed','#dc2626'];
+  const datasets=KEY_ORIG.map((o,i)=>({
+    label:KEY_LBL[i],
+    data:withOrig.map(s=>s.orig[o]?.cg??null),
+    borderColor:colors[i],backgroundColor:colors[i]+'33',
+    tension:.35,pointRadius:5,pointHoverRadius:7,spanGaps:false,
+  }));
+  mk('ch_evol_origens',{type:'line',data:{labels,datasets},options:{responsive:true,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},
+    scales:{y:{beginAtZero:true,title:{display:true,text:'Conversão % (vidas ÷ leads da origem)'}}}}});
 }
 
 let _evolSort='delta';
