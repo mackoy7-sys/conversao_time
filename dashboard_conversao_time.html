@@ -200,7 +200,7 @@ td.num,th.num{text-align:right}
 <div class="tablecard" style="margin-top:var(--gap)">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
 <h3 style="font-size:14px;font-weight:700">Ranking por Quartil <span id="q-rows" style="color:var(--muted);font-weight:400"></span></h3>
-<div style="font-size:11px;color:var(--muted)">Origens-chave: Espontâneo · Carrinho Abandonado · Carrinho Abandonado Conecta · EugenIA · Repique Comercial</div>
+<div style="font-size:11px;color:var(--muted)">Origens-chave: Espontâneo · Carrinho Abandonado · Carrinho Abandonado Conecta · EugenIA · Conecta</div>
 </div>
 <div style="overflow-x:auto">
 <table id="tbl_quartil">
@@ -211,7 +211,7 @@ td.num,th.num{text-align:right}
 <th class="num" title="Carrinho Abandonado">C.Abnd.</th>
 <th class="num" title="Carrinho Abandonado Conecta">C.Abnd.Con.</th>
 <th class="num" title="EugenIA">Eugen.</th>
-<th class="num" title="Repique Comercial">Repique</th>
+<th class="num" title="Conecta">Conecta</th>
 </tr></thead><tbody></tbody>
 </table>
 </div>
@@ -424,8 +424,8 @@ function switchTab(name,btn){
 }
 
 /* ========== QUARTIL — score composto ========== */
-const KEY_ORIG=['ESPONTÂNEO','CARRINHO ABANDONADO','CARRINHO ABANDONADO CONECTA','EUGENIA','REPIQUE COMERCIAL'];
-const KEY_LBL=['Espon.','C.Abnd.','C.Abnd.Con.','Eugen.','Repique'];
+const KEY_ORIG=['ESPONTÂNEO','CARRINHO ABANDONADO','CARRINHO ABANDONADO CONECTA','EUGENIA','CONECTA'];
+const KEY_LBL=['Espon.','C.Abnd.','C.Abnd.Con.','Eugen.','Conecta'];
 
 function buildAgentStats(d,canal){
   const data=canal?d.filter(r=>r[1]===canal):d;
