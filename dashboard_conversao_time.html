@@ -208,7 +208,7 @@ td.num,th.num{text-align:right}
 <table id="tbl_quartil">
 <thead><tr>
 <th>Q</th><th>Nome</th><th>Área</th><th>Supervisor</th>
-<th class="num">Score</th><th class="num">Vidas</th><th class="num">Conv.Geral</th>
+<th class="num">Score</th><th class="num">Leads</th><th class="num">Vidas</th><th class="num">Conv.Geral</th>
 <th class="num" title="Espontâneo">Espon.</th>
 <th class="num" title="Carrinho Abandonado">C.Abnd.</th>
 <th class="num" title="Carrinho Abandonado Conecta">C.Abnd.Con.</th>
@@ -654,6 +654,7 @@ function renderQuartil(d){
       '<td><span class="q-badge '+ag.q.toLowerCase()+'b" style="width:36px;height:22px;border-radius:6px;font-size:12px">'+ag.q+'</span></td>'+
       '<td>'+ag.nome+'</td><td>'+ag.area+'</td><td>'+ag.sup+'</td>'+
       '<td class=num><b style="color:'+cor+'">'+(ag.score*100).toFixed(0)+'</b></td>'+
+      '<td class=num>'+fmt(ag.lt)+'</td>'+
       '<td class=num>'+fmt(ag.vd)+'</td>'+
       '<td class=num><b style="color:'+cor+'">'+ag.convGlobal.toFixed(1)+'%</b></td>'+
       KEY_ORIG.map(o=>cvCell(ag.orig[o])).join('')+
