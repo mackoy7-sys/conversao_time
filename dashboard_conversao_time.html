@@ -663,8 +663,8 @@ function getSnaps(){return JSON.parse(localStorage.getItem(SNAP_KEY)||'[]');}
 function saveSnapshot(manual){
   const today=new Date().toISOString().slice(0,10);
   let snaps=getSnaps();
-  if(!manual&&snaps.some(s=>s.ts===today))return;
-  if(manual)snaps=snaps.filter(s=>s.ts!==today);
+  if(!manual&&snaps.some(s=>s.ts===today&&s.orig))return;
+  snaps=snaps.filter(s=>s.ts!==today);
   const ags=buildAgentStats(RAW,'');
   const ag={};
   ags.forEach(a=>{ag[a.nome]={lt:a.lt,vd:a.vd,ct:a.ct,cg:+a.convGlobal.toFixed(2),ck:+a.convKey.toFixed(2),sc:+(a.score*100).toFixed(1),q:a.q};});
