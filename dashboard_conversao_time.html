@@ -87,6 +87,7 @@ td.num,th.num{text-align:right}
 <button class="tab-btn active" onclick="switchTab('geral',this)">Visão Geral</button>
 <button class="tab-btn" onclick="switchTab('quartil',this)">Análise de Quartil</button>
 <button class="tab-btn" onclick="switchTab('extrato',this)">Extrato do Agente</button>
+<button class="tab-btn" onclick="switchTab('evolucao',this)">Evolução Temporal</button>
 </div>
 
 <div class="filters">
@@ -276,6 +277,109 @@ td.num,th.num{text-align:right}
 
 </div><!-- /tab-extrato -->
 
+<div id="tab-evolucao" class="tab-panel">
+
+<!-- barra de ações -->
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;background:var(--card);padding:14px 18px;border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:var(--gap)">
+  <div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Histórico de Snapshots</div>
+    <div id="evol-info" style="font-size:12px;color:var(--muted)">Nenhum snapshot registrado ainda</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button onclick="saveSnapshot(true)" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">📸 Registrar Snapshot Agora</button>
+    <button onclick="clearSnapshots()" style="padding:8px 16px;background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">🗑 Limpar Histórico</button>
+  </div>
+</div>
+
+<!-- estado: sem snapshots -->
+<div id="evol-empty" style="text-align:center;padding:60px 20px;background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.08)">
+  <div style="font-size:48px;margin-bottom:16px">📅</div>
+  <div style="font-size:16px;font-weight:700">Nenhum histórico registrado</div>
+  <div style="font-size:13px;color:var(--muted);margin-top:8px;max-width:440px;margin-left:auto;margin-right:auto">
+    Clique em <b>Registrar Snapshot Agora</b> para salvar o estado atual.<br>
+    A cada nova versão do dashboard, o snapshot é registrado automaticamente — a evolução aparece a partir do segundo ponto.
+  </div>
+</div>
+
+<!-- estado: apenas 1 snapshot -->
+<div id="evol-single" style="display:none">
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:14px 18px;margin-bottom:var(--gap);font-size:13px;color:#1d4ed8">
+    <b>Primeiro snapshot registrado.</b> <span id="evol-single-msg"></span>
+    Atualize o dashboard e registre um novo snapshot para ver a evolução.
+  </div>
+  <div class="tablecard">
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:14px">Ranking Atual do Snapshot</h3>
+    <table id="tbl_evol_single">
+      <thead><tr><th>#</th><th>Nome</th><th>Quartil</th><th class="num">Score</th><th class="num">Vidas</th><th class="num">Conv.%</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- estado: 2+ snapshots — visão completa -->
+<div id="evol-content" style="display:none">
+
+  <!-- controles do gráfico -->
+  <div class="filters" style="margin-bottom:var(--gap)">
+    <div class="fg">
+      <label>Agentes (Ctrl+clique = múltiplos, máx. 8)</label>
+      <select id="f_evol_agents" multiple size="5" style="border:1px solid #cbd5e1;border-radius:8px;font-size:12px;padding:4px;background:#f8fafc;min-width:220px" onchange="renderEvolCharts(getSnaps())"></select>
+    </div>
+    <div class="fg">
+      <label>Seleção rápida</label>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:2px">
+        <button onclick="quickSelect('top')" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer;text-align:left">▲ Top 5 Maior Evolução</button>
+        <button onclick="quickSelect('bot')" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer;text-align:left">▼ Top 5 Maior Queda</button>
+        <button onclick="quickSelect('cur')" style="padding:6px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer;text-align:left">⭐ Top 5 Score Atual</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Métrica</label>
+      <select id="f_evol_metric" onchange="renderEvolCharts(getSnaps())" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#f8fafc">
+        <option value="sc">Score Composto (0–100)</option>
+        <option value="cg">Conversão Geral %</option>
+        <option value="vd">Vidas Vendidas</option>
+        <option value="ck">Conv. Origens-Chave %</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- gráfico linha -->
+  <div class="card" style="margin-bottom:var(--gap)">
+    <h3 id="evol-chart-title">Evolução dos Agentes</h3>
+    <canvas id="ch_evol_line" style="max-height:340px"></canvas>
+  </div>
+
+  <!-- tabela de evolução -->
+  <div class="tablecard">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <h3 style="font-size:14px;font-weight:700">Evolução por Agente <span id="evol-table-header" style="color:var(--muted);font-weight:400;font-size:12px"></span></h3>
+      <div style="display:flex;gap:8px">
+        <button onclick="sortEvolTable('delta')" id="sort_delta" style="padding:5px 12px;border:1px solid #0072ce;border-radius:6px;font-size:12px;background:#0072ce;color:#fff;cursor:pointer">Maior evolução</button>
+        <button onclick="sortEvolTable('queda')" id="sort_queda" style="padding:5px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer">Maior queda</button>
+        <button onclick="sortEvolTable('alfa')" id="sort_alfa" style="padding:5px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#f8fafc;cursor:pointer">Alfabético</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table id="tbl_evolucao">
+      <thead><tr>
+        <th>Nome</th>
+        <th>Quartil Atual</th>
+        <th>Quartil Anterior</th>
+        <th class="num">Δ Score</th>
+        <th class="num">Score Atual</th>
+        <th class="num">Δ Conv.%</th>
+        <th class="num">Δ Vidas</th>
+        <th>Tendência</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </div>
+
+</div><!-- /evol-content -->
+</div><!-- /tab-evolucao -->
+
 <div class="foot">Gerado a partir de Base_GUP_Tratado_com_Origem_1206_1.xlsx — aba BASE</div>
 </div>
 
@@ -421,6 +525,7 @@ function switchTab(name,btn){
   btn.classList.add('active');
   if(name==='quartil')renderQuartil(filtered());
   if(name==='extrato'){updateExtratoSelector();renderExtrato();}
+  if(name==='evolucao')renderEvolucao();
 }
 
 /* ========== QUARTIL — score composto ========== */
@@ -538,6 +643,173 @@ function renderQuartil(d){
       '<td class=num>'+fmt(ag.vd)+'</td>'+
       '<td class=num><b style="color:'+cor+'">'+ag.convGlobal.toFixed(1)+'%</b></td>'+
       KEY_ORIG.map(o=>cvCell(ag.orig[o])).join('')+
+    '</tr>';
+  }).join('');
+}
+
+/* ========== EVOLUÇÃO TEMPORAL ========== */
+const SNAP_KEY='hap_conv_snaps_v1';
+const MAX_SNAPS=52;
+let _evolRows=[];
+
+function getSnaps(){return JSON.parse(localStorage.getItem(SNAP_KEY)||'[]');}
+
+function saveSnapshot(manual){
+  const today=new Date().toISOString().slice(0,10);
+  let snaps=getSnaps();
+  if(!manual&&snaps.some(s=>s.ts===today))return;
+  if(manual)snaps=snaps.filter(s=>s.ts!==today);
+  const ags=buildAgentStats(RAW,'');
+  const ag={};
+  ags.forEach(a=>{ag[a.nome]={lt:a.lt,vd:a.vd,ct:a.ct,cg:+a.convGlobal.toFixed(2),ck:+a.convKey.toFixed(2),sc:+(a.score*100).toFixed(1),q:a.q};});
+  const d=today.split('-');
+  snaps.push({ts:today,lbl:d[2]+'/'+d[1]+'/'+d[0],n:ags.length,ag});
+  if(snaps.length>MAX_SNAPS)snaps=snaps.slice(-MAX_SNAPS);
+  try{
+    localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));
+    if(manual){renderEvolucao();alert('Snapshot registrado: '+d[2]+'/'+d[1]+'/'+d[0]);}
+  }catch(e){if(manual)alert('Erro ao salvar snapshot (localStorage cheio).');}
+}
+
+function clearSnapshots(){
+  if(!confirm('Limpar todo o histórico de snapshots? Esta ação não pode ser desfeita.'))return;
+  localStorage.removeItem(SNAP_KEY);
+  renderEvolucao();
+}
+
+function renderEvolucao(){
+  const snaps=getSnaps();
+  const empty=document.getElementById('evol-empty');
+  const single=document.getElementById('evol-single');
+  const content=document.getElementById('evol-content');
+  /* info bar */
+  if(snaps.length){
+    const f=snaps[0],l=snaps[snaps.length-1];
+    document.getElementById('evol-info').innerHTML=
+      '<b>'+snaps.length+'</b> snapshot'+(snaps.length>1?'s':'')+' registrado'+(snaps.length>1?'s':'')+
+      ' · Primeiro: <b>'+f.lbl+'</b> · Último: <b>'+l.lbl+'</b>';
+  } else {
+    document.getElementById('evol-info').textContent='Nenhum snapshot registrado ainda';
+  }
+  if(!snaps.length){empty.style.display='block';single.style.display='none';content.style.display='none';return;}
+  if(snaps.length===1){
+    empty.style.display='none';single.style.display='block';content.style.display='none';
+    document.getElementById('evol-single-msg').textContent=snaps[0].lbl+' · '+snaps[0].n+' agentes · ';
+    const ags=Object.entries(snaps[0].ag).map(([nome,d])=>({nome,...d})).sort((a,b)=>b.sc-a.sc);
+    const QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
+    document.querySelector('#tbl_evol_single tbody').innerHTML=ags.map((a,i)=>
+      '<tr><td style="color:var(--muted)">'+(i+1)+'</td>'+
+      '<td><b>'+a.nome+'</b></td>'+
+      '<td><span class="q-badge '+a.q.toLowerCase()+'b" style="width:32px;height:20px;border-radius:5px;font-size:11px">'+a.q+'</span></td>'+
+      '<td class=num><b style="color:'+QC[a.q]+'">'+a.sc+'</b></td>'+
+      '<td class=num>'+fmt(a.vd)+'</td>'+
+      '<td class=num>'+a.cg+'%</td></tr>'
+    ).join('');
+    return;
+  }
+  empty.style.display='none';single.style.display='none';content.style.display='block';
+  /* popular select de agentes */
+  const allNames=[...new Set(snaps.flatMap(s=>Object.keys(s.ag)))].sort();
+  const sel=document.getElementById('f_evol_agents');
+  const prev=new Set([...sel.selectedOptions].map(o=>o.value));
+  sel.innerHTML=allNames.map(n=>'<option value="'+n+'"'+(prev.has(n)?' selected':'')+'>'+n+'</option>').join('');
+  /* se nenhum selecionado, preselecionar top 5 por score atual */
+  if(![...sel.options].some(o=>o.selected)){
+    const last=snaps[snaps.length-1];
+    const top5=Object.entries(last.ag).sort((a,b)=>b[1].sc-a[1].sc).slice(0,5).map(e=>e[0]);
+    [...sel.options].forEach(o=>{if(top5.includes(o.value))o.selected=true;});
+  }
+  renderEvolCharts(snaps);
+  renderEvolTable(snaps,'delta');
+}
+
+function quickSelect(mode){
+  const snaps=getSnaps();if(!snaps.length)return;
+  const first=snaps[0],last=snaps[snaps.length-1];
+  const all=[...new Set(snaps.flatMap(s=>Object.keys(s.ag)))];
+  let chosen;
+  if(mode==='top'){
+    chosen=all.map(n=>({n,d:(last.ag[n]?.sc||0)-(first.ag[n]?.sc||0)})).sort((a,b)=>b.d-a.d).slice(0,5).map(x=>x.n);
+  } else if(mode==='bot'){
+    chosen=all.map(n=>({n,d:(last.ag[n]?.sc||0)-(first.ag[n]?.sc||0)})).sort((a,b)=>a.d-b.d).slice(0,5).map(x=>x.n);
+  } else {
+    chosen=Object.entries(last.ag).sort((a,b)=>b[1].sc-a[1].sc).slice(0,5).map(e=>e[0]);
+  }
+  const sel=document.getElementById('f_evol_agents');
+  [...sel.options].forEach(o=>{o.selected=chosen.includes(o.value);});
+  renderEvolCharts(snaps);
+}
+
+function renderEvolCharts(snaps){
+  const metric=document.getElementById('f_evol_metric').value||'sc';
+  const mLbl={sc:'Score Composto (0–100)',cg:'Conversão Geral %',vd:'Vidas Vendidas',ck:'Conv. Origens-Chave %'};
+  const sel=document.getElementById('f_evol_agents');
+  const chosen=[...sel.selectedOptions].map(o=>o.value).slice(0,8);
+  if(!chosen.length)return;
+  const labels=snaps.map(s=>s.lbl);
+  const PAL2=['#0072ce','#16a34a','#d97706','#7c3aed','#db2777','#00a3a1','#dc2626','#f97316'];
+  const datasets=chosen.map((nome,i)=>({
+    label:nome.length>20?nome.split(' ').slice(0,2).join(' '):nome,
+    data:snaps.map(s=>s.ag[nome]?.[metric]??null),
+    borderColor:PAL2[i],backgroundColor:PAL2[i]+'33',
+    tension:.35,pointRadius:5,pointHoverRadius:7,spanGaps:false,
+  }));
+  document.getElementById('evol-chart-title').textContent='Evolução — '+mLbl[metric];
+  mk('ch_evol_line',{type:'line',data:{labels,datasets},options:{responsive:true,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top'},datalabels:{display:false}},
+    scales:{y:{title:{display:true,text:mLbl[metric]},beginAtZero:metric==='sc'||metric==='cg'||metric==='ck'}}}});
+}
+
+let _evolSort='delta';
+function sortEvolTable(mode){
+  _evolSort=mode;
+  ['delta','queda','alfa'].forEach(m=>{
+    const btn=document.getElementById('sort_'+m);
+    btn.style.background=m===mode?'#0072ce':'#f8fafc';
+    btn.style.color=m===mode?'#fff':'inherit';
+    btn.style.borderColor=m===mode?'#0072ce':'#cbd5e1';
+  });
+  const snaps=getSnaps();if(snaps.length<2)return;
+  renderEvolTable(snaps,mode);
+}
+
+function renderEvolTable(snaps,sortMode){
+  const first=snaps[0],last=snaps[snaps.length-1];
+  const QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
+  const allNames=[...new Set([...Object.keys(first.ag),...Object.keys(last.ag)])];
+  _evolRows=allNames.map(nome=>{
+    const f=first.ag[nome],l=last.ag[nome];
+    const ds=f&&l?+(l.sc-f.sc).toFixed(1):null;
+    const dc=f&&l?+(l.cg-f.cg).toFixed(2):null;
+    const dv=f&&l?l.vd-f.vd:null;
+    const status=!f?'new':!l?'left':ds>2?'up':ds<-2?'down':'stable';
+    return{nome,f,l,ds,dc,dv,status};
+  });
+  const sm=sortMode||_evolSort||'delta';
+  if(sm==='delta')_evolRows.sort((a,b)=>{
+    if(a.status==='new'&&b.status!=='new')return-1;if(b.status==='new'&&a.status!=='new')return 1;
+    if(a.status==='left'&&b.status!=='left')return 1;if(b.status==='left'&&a.status!=='left')return-1;
+    return(b.ds||0)-(a.ds||0);
+  });
+  else if(sm==='queda')_evolRows.sort((a,b)=>(a.ds||0)-(b.ds||0));
+  else _evolRows.sort((a,b)=>a.nome.localeCompare(b.nome));
+  document.getElementById('evol-table-header').textContent='('+first.lbl+' → '+last.lbl+' · '+_evolRows.filter(r=>r.status==='up').length+' subiram · '+_evolRows.filter(r=>r.status==='down').length+' caíram)';
+  const trend={up:'▲',down:'▼',stable:'—',new:'★ novo',left:'✕ saiu'};
+  const trendC={up:'#16a34a',down:'#dc2626',stable:'#94a3b8',new:'#7c3aed',left:'#94a3b8'};
+  document.querySelector('#tbl_evolucao tbody').innerHTML=_evolRows.map(r=>{
+    const qa=r.l?.q||r.f?.q,qp=r.f?.q;
+    const cor=QC[qa]||'#94a3b8';
+    const qChanged=r.f&&r.l&&r.f.q!==r.l.q;
+    return'<tr style="'+(r.status==='left'?'opacity:.45':'')+'">'+
+      '<td><b>'+r.nome+'</b></td>'+
+      '<td><span class="q-badge '+(qa||'').toLowerCase()+'b" style="width:32px;height:20px;border-radius:5px;font-size:11px">'+(qa||'—')+'</span>'+(qChanged?'<span style="font-size:11px;color:var(--muted);margin-left:5px">era '+qp+'</span>':'')+'</td>'+
+      '<td><span style="font-size:11px;color:var(--muted)">'+(r.f?('<span class="q-badge '+qp.toLowerCase()+'b" style="width:28px;height:18px;border-radius:4px;font-size:10px">'+qp+'</span>'):'—')+'</span></td>'+
+      '<td class=num><b style="color:'+(r.ds===null?'#94a3b8':r.ds>0?'#16a34a':r.ds<0?'#dc2626':'#94a3b8')+';font-size:15px">'+(r.ds===null?'—':(r.ds>0?'+':'')+r.ds)+'</b></td>'+
+      '<td class=num><span style="color:var(--muted)">'+(r.f?.sc??'—')+' → </span><b style="color:'+cor+'">'+(r.l?.sc??'—')+'</b></td>'+
+      '<td class=num><span style="color:'+(r.dc===null?'#94a3b8':r.dc>0?'#16a34a':r.dc<0?'#dc2626':'#94a3b8')+'">'+(r.dc===null?'—':(r.dc>0?'+':'')+r.dc+'%')+'</span></td>'+
+      '<td class=num><span style="color:'+(r.dv===null?'#94a3b8':r.dv>0?'#16a34a':r.dv<0?'#dc2626':'#94a3b8')+'">'+(r.dv===null?'—':(r.dv>0?'+':'')+fmt(r.dv))+'</span></td>'+
+      '<td><span style="font-size:13px;font-weight:700;color:'+trendC[r.status]+'">'+trend[r.status]+'</span></td>'+
     '</tr>';
   }).join('');
 }
@@ -690,6 +962,9 @@ function renderExtrato(){
     '</tr>';
   }).join('');
 }
+
+/* auto-save snapshot ao abrir o dashboard (1× por dia) */
+saveSnapshot(false);
 </script>
 </body>
 </html>
