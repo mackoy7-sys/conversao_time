@@ -408,7 +408,7 @@ function fillSelects(){
     s.onchange=render;
   }
 }
-function resetF(){for(const f of F)document.getElementById(SEL[f]).value='';render();}
+function resetF(){for(const f of F)document.getElementById(SEL[f]).value='';document.getElementById('f_extrato_agente').value='';document.getElementById('f_extrato_canal').value='';render();}
 function filtered(){
   return RAW.filter(r=>F.every(f=>{const v=document.getElementById(SEL[f]).value;return !v||r[COL[f]]===v;}));
 }
