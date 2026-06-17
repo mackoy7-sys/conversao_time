@@ -157,6 +157,16 @@ td.num,th.num{text-align:right}
 </table>
 </div>
 
+<div class="tablecard" style="margin-top:var(--gap)">
+<h3 style="font-size:14px;font-weight:700;margin-bottom:14px">Conversão por Tempo de Casa <span style="color:var(--muted);font-weight:400">· conversão = vidas ÷ leads</span></h3>
+<table id="tbl_tempo">
+<thead><tr>
+<th>Tempo de Casa</th><th class="num">Leads</th><th class="num">Contratos</th>
+<th class="num">Vidas</th><th class="num">Conv. Contratos</th><th class="num">Conv. (Vidas/Leads)</th>
+</tr></thead><tbody></tbody>
+</table>
+</div>
+
 </div><!-- /tab-geral -->
 
 <div id="tab-quartil" class="tab-panel">
@@ -442,6 +452,7 @@ function render(){
   renderCharts(d,ag);
   renderTable(ag);
   renderOrigem(d);
+  renderTempo(d);
   if(document.getElementById('tab-quartil').classList.contains('active'))renderQuartil(d);
   if(document.getElementById('tab-extrato').classList.contains('active'))updateExtratoSelector();
 }
@@ -462,6 +473,26 @@ function renderOrigem(d){
   }).join('');
 }
 
+const ORD_TEMPO=['00 a 03 M','04 a 06 M','07 a 09 M','10 A 12 M','> 12M','N/D'];
+function renderTempo(d){
+  const o=agg(d,13);
+  const keys=Object.keys(o).sort((x,y)=>{const ix=ORD_TEMPO.indexOf(x),iy=ORD_TEMPO.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy);});
+  const tl=sum(d,6),tc=sum(d,8),tv=sum(d,9);
+  let body=keys.map(k=>{
+    const cv=conv(o[k].vd,o[k].lt), cg=conv(o[k].ct,o[k].lt);
+    const cor=cv>=10?'#16a34a':cv>=5?'#d97706':'#dc2626';
+    return '<tr><td>'+k+'</td>'+
+      '<td class=num>'+fmt(o[k].lt)+'</td>'+
+      '<td class=num>'+fmt(o[k].ct)+'</td>'+
+      '<td class=num><b>'+fmt(o[k].vd)+'</b></td>'+
+      '<td class=num>'+cg.toFixed(2)+'%</td>'+
+      '<td class=num><span class=pill style="background:'+cor+'22;color:'+cor+'">'+cv.toFixed(2)+'%</span></td></tr>';
+  }).join('');
+  body+='<tr style="font-weight:700;border-top:2px solid #cbd5e1"><td>Total Geral</td>'+
+    '<td class=num>'+fmt(tl)+'</td><td class=num>'+fmt(tc)+'</td><td class=num>'+fmt(tv)+'</td>'+
+    '<td class=num>'+conv(tc,tl).toFixed(2)+'%</td><td class=num>'+conv(tv,tl).toFixed(2)+'%</td></tr>';
+  document.querySelector('#tbl_tempo tbody').innerHTML=body;
+}
 function agg(d,col){const m={};d.forEach(r=>{const k=r[col];if(!m[k])m[k]={lt:0,lp:0,ct:0,vd:0};m[k].lt+=r[6];m[k].lp+=r[7];m[k].ct+=r[8];m[k].vd+=r[9];});return m;}
 function conv(vd,lt){return lt?(vd/lt*100):0}
 
