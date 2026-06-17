@@ -647,7 +647,7 @@ function renderTempoCasa(d){
   let body=rows.map(r=>{
     const cor=r.convV>=10?'#16a34a':r.convV>=5?'#d97706':'#dc2626';
     const g=gid(r.k);
-    let h='<tr style="cursor:pointer;background:#eef2f7;font-weight:700" onclick="tcToggle('+JSON.stringify(g)+')">'
+    let h='<tr data-g="'+g+'" style="cursor:pointer;background:#eef2f7;font-weight:700" onclick="tcToggle(this.dataset.g)">'
       +'<td><span id="tci_'+g+'" style="display:inline-block;width:16px;font-size:11px;color:#0072ce">&#9654;</span> <b>'+r.k+'</b></td>'
       +'<td class=num>'+r.ag+'</td><td class=num>'+fmt(r.lt)+'</td><td class=num>'+fmt(r.lp)+'</td>'
       +'<td class=num>'+fmt(r.ct)+'</td><td class=num><b>'+fmt(r.vd)+'</b></td>'
