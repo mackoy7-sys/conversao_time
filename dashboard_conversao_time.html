@@ -414,7 +414,7 @@ td.num,th.num{text-align:right}
 <!-- Charts linha 1: Conversão + Vidas -->
 <div class="charts" style="margin-bottom:var(--gap)">
   <div class="card"><h3>Taxa de Conversão (%) por Tempo de Casa <span style="color:var(--muted);font-weight:400;font-size:12px">· vidas ÷ leads totais</span></h3><canvas id="ch_tc_conv" style="max-height:280px"></canvas></div>
-  <div class="card"><h3>Total de Vidas Vendidas por Tempo de Casa</h3><canvas id="ch_tc_vidas" style="max-height:280px"></canvas></div>
+  <div class="card"><h3>Volume de Agentes por Tempo de Casa</h3><canvas id="ch_tc_vidas" style="max-height:280px"></canvas></div>
 </div>
 
 <!-- Charts linha 2: Média/agente + Evolução combo -->
@@ -640,7 +640,7 @@ function renderTempoCasa(d){
   const cc=rows.map((_,i)=>pal[i%pal.length]);
   const DLbar={color:'#1e293b',anchor:'end',align:'top',font:{weight:'700',size:11},clamp:true};
   mk('ch_tc_conv',{type:'bar',data:{labels,datasets:[{label:'Conv%',data:rows.map(r=>+r.convV.toFixed(2)),backgroundColor:cc,borderRadius:6}]},options:{plugins:{legend:{display:false},datalabels:{...DLbar,formatter:v=>v.toFixed(1)+'%'}},scales:{y:{ticks:{callback:v=>v+'%'},beginAtZero:true,grid:{color:'#f1f5f9'}}}}});
-  mk('ch_tc_vidas',{type:'bar',data:{labels,datasets:[{label:'Vidas',data:rows.map(r=>r.vd),backgroundColor:cc,borderRadius:6}]},options:{plugins:{legend:{display:false},datalabels:{...DLbar,formatter:v=>fmt(v)}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}}}}});
+  mk('ch_tc_vidas',{type:'bar',data:{labels,datasets:[{label:'Agentes',data:rows.map(r=>r.ag),backgroundColor:cc,borderRadius:6}]},options:{plugins:{legend:{display:false},datalabels:{...DLbar,formatter:v=>v}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{stepSize:1}}}}});
   mk('ch_tc_media',{type:'bar',data:{labels,datasets:[{label:'Vidas/Agente',data:rows.map(r=>+r.vdAg.toFixed(1)),backgroundColor:cc,borderRadius:6}]},options:{plugins:{legend:{display:false},datalabels:{...DLbar,formatter:v=>v.toFixed(1)}},scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'}}}}});
   mk('ch_tc_evolucao',{type:'bar',data:{labels,datasets:[{type:'bar',label:'Vidas',data:rows.map(r=>r.vd),backgroundColor:cc.map(c=>c+'99'),borderRadius:6,yAxisID:'y',order:2},{type:'line',label:'Conv%',data:rows.map(r=>+r.convV.toFixed(2)),borderColor:'#dc2626',backgroundColor:'transparent',pointBackgroundColor:'#dc2626',borderWidth:2.5,pointRadius:5,pointHoverRadius:7,yAxisID:'y2',tension:0.3,order:1}]},options:{plugins:{legend:{position:'top'},datalabels:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'Vidas',color:'#64748b'},grid:{color:'#f1f5f9'}},y2:{beginAtZero:true,position:'right',title:{display:true,text:'Conv%',color:'#dc2626'},ticks:{callback:v=>v.toFixed(1)+'%',color:'#dc2626'},grid:{drawOnChartArea:false}}}}});
   const gid=k=>'tcg'+k.replace(/[^a-zA-Z0-9]/g,'_');
