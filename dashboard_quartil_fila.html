@@ -168,7 +168,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <div id="gestao_chips" class="chips"></div>
 <div id="tbl_quartil_nota" class="note" style="display:none"><b>Como funciona o Score / Quartil.</b> O <b>Score</b> (0–100) combina 3 critérios em percentil dentro do grupo: <b>VENDA 50% + PRINCIPAL 30% + DEMAIS FILA 20%</b>.<br>
 • <b>VENDA (50%) — atingimento de volume:</b> vidas do período ÷ <b>meta de 60 vidas/mês</b> (a meta escala pelo nº de meses selecionados — ex.: 6 meses = 360; 1 mês = 60). É o balizador de volume e segue o filtro de <b>Mês</b>, então o quartil <b>reordena conforme o mês</b>.<br>
-• <b>PRINCIPAL (30%) e DEMAIS FILA (20%) — atingimento de meta de conversão por origem:</b> vidas ÷ vidas esperadas, onde esperadas = Σ(leads da origem × meta). Metas: PRINCIPAL — C.Abnd.Con. 8%, Conecta 8%, C.Abnd. 8%, Eugenia 14%; DEMAIS FILA — Espontâneo 5%. Base de origens é "Ano Todo" (não há origem por mês), por isso esses 2 critérios não variam com o filtro de Mês.<br>
+• <b>PRINCIPAL (30%) e DEMAIS FILA (20%) — atingimento de meta de conversão por origem:</b> vidas ÷ vidas esperadas, onde esperadas = Σ(leads da origem × meta). Metas: PRINCIPAL — C.Abnd.Con. 8%, Conecta 8%, C.Abnd. 8%, Eugenia 10%; DEMAIS FILA — Espontâneo 5%. Base de origens é "Ano Todo" (não há origem por mês), por isso esses 2 critérios não variam com o filtro de Mês.<br>
 Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>Q3 — Mediano</b>, <b>Q4 — Baixo</b> (25% piores). <b style="color:#16a34a">Porta do Q1 (dupla, obrigatória):</b> só é elegível ao Q1 quem <b>atingir a meta de volume</b> (60 vidas/mês × nº de meses = Ating. volume ≥ 100%) <b>E</b> alcançar <b>≥ 95% da meta de conversão</b> (atingimento de conversão das origens-chave ≥ 95%, base anual). Quem falha em qualquer uma fica no máximo no Q2, mesmo com score alto. O Q1 é preenchido pelos de maior score que passam nas duas portas (pode ficar com menos de 25% — ou vazio — se não houver elegíveis). <b>Obs.:</b> a base por vendedor só contém 5 origens — as demais filas do plano de metas (Mídia, Televendas, Leads Frios, VPC, Campanhas, Repique, Outros, Flamengo) não estão disponíveis por vendedor, então DEMAIS FILA reflete apenas Espontâneo. Recalculado conforme o <b>"Ver por"</b> (Promotor / Supervisor / Gestor) e respeita os filtros do topo.</div>
 <table id="tbl"><thead><tr>
 <th class="num">#</th>
@@ -440,7 +440,7 @@ function groupBy(rows,col,ord){
 }
 // ===== Métrica de quartil por FILA (meta de conversão por origem) =====
 // Classificação de cada origem-chave + meta de conversão (%). g: 'P'=PRINCIPAL, 'D'=DEMAIS FILA.
-var ORIG_META={"C.Abnd.Con.":{g:'P',meta:8},"Conecta":{g:'P',meta:8},"C.Abnd.":{g:'P',meta:8},"Eugen.":{g:'P',meta:14},"Espon.":{g:'D',meta:5}};
+var ORIG_META={"C.Abnd.Con.":{g:'P',meta:8},"Conecta":{g:'P',meta:8},"C.Abnd.":{g:'P',meta:8},"Eugen.":{g:'P',meta:10},"Espon.":{g:'D',meta:5}};
 // Agrega leads/vidas por origem-chave para um grupo (soma os vendedores que o compõem, via ORIG_BY_NOME "Ano Todo")
 function origAccOf(g){
   var acc={};KEY_ORIG_LBL.forEach(function(l){acc[l]={lt:0,vd:0};});
@@ -457,6 +457,9 @@ function totalMonths(){if(_ALLMONTHS==null){try{var s=new Set();RAW.forEach(func
 function periodMonths(){var sel=null;try{FILTERS.forEach(function(x){if(x.col===C.MES)sel=x.sel;});}catch(e){}return (sel&&sel.size>0)?sel.size:totalMonths();}
 function volTarget(){return VOL_TARGET_MES*periodMonths();}
 var _curVolTgt=VOL_TARGET_MES;
+// Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
+function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
+function effVd(g){return (vincVV()?(g.vv||0):(g.vd||0));}
 // quartil: VENDA 50% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 20% (conversão vs meta por origem, base anual)
 function assignQuartis(a){
   var n=a.length;if(!n)return;
@@ -464,7 +467,7 @@ function assignQuartis(a){
   function rankBy(key,rk){var v=a.filter(function(g){return g[key]!=null;});var m=v.length;a.forEach(function(g){g[rk]=null;});v.slice().sort(function(x,y){return x[key]-y[key];}).forEach(function(x,i){x[rk]=m>1?i/(m-1):1;});}
   a.forEach(function(g){
     var acc=origAccOf(g);g._accFila=acc;
-    var V=(g._effVd!=null?g._effVd:g.vd)||0;
+    var V=g._effVd=effVd(g);               // vidas efetivas conforme filtro VIDAS (Total/Vinculado)
     g._attVol=tgt>0?V/tgt:null;            // VENDA: atingimento de volume (vidas do período ÷ 60×meses)
     g._attConv=attainOf(acc,null);         // atingimento de conversão GERAL das origens-chave vs meta (anual)
     g._attP=attainOf(acc,'P');             // PRINCIPAL: conversão vs meta (anual)
@@ -870,6 +873,39 @@ function renderTempo(rows){
     {type:'line',label:'Conversão %',data:a.map(function(g){var c=convVal(g.vd,g.lt);return c===null?null:+c.toFixed(1);}),borderColor:AMB,backgroundColor:AMB,yAxisID:'y1',tension:.3}
   ]},options:{layout:{padding:{top:22}},plugins:{legend:{position:'bottom'}},scales:{y:{position:'left'},y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}}},plugins:[barLabels]});
 }
+// Exporta os dados que compõem o resultado do vendedor selecionado (detalhe por mês sob filtros + origens-chave)
+function downloadExtratoCSV(){
+  var nome=document.getElementById('ext_in').value.trim();
+  if(!nome){return;}
+  var rows=filtered().filter(function(r){return r[C.NOME]===nome;});
+  var sep=';';
+  function esc(v){v=(v==null?'':''+v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  function pct(vd,lt){return lt>0?(vd/lt*100).toFixed(1).replace('.',',')+'%':'';}
+  var L=[];
+  L.push(esc('Extrato do Vendedor')+sep+esc(nome));
+  var mSel=null;try{FILTERS.forEach(function(f){if(f.col===C.MES)mSel=f.sel;});}catch(e){}
+  var mesLbl=(mSel&&mSel.size)?Array.from(mSel).sort().map(function(m){return MESNOME[m]||m;}).join(', '):'Todos';
+  var sSel=null;try{FILTERS.forEach(function(f){if(f.col===C.STATUS)sSel=f.sel;});}catch(e){}
+  var stLbl=(sSel&&sSel.size)?Array.from(sSel).join(', '):'Todos';
+  L.push(esc('Filtros: Mês='+mesLbl+' | Status='+stLbl));
+  L.push('');
+  L.push('DETALHE (conforme filtros aplicados)');
+  L.push(['Mes','Area','Unidade','Supervisor','Gestao','Origem CT','Status','Tempo de Casa','Leads','Leads Produtivos','Vidas','Vidas Vinculadas','Conversao'].map(esc).join(sep));
+  var tl=0,tp=0,tv=0,tvv=0;
+  rows.sort(function(a,b){return (a[C.MES]||0)-(b[C.MES]||0);}).forEach(function(r){
+    tl+=r[C.LT];tp+=r[C.LP];tv+=r[C.VD];tvv+=r[C.VV];
+    L.push([MESNOME[r[C.MES]]||r[C.MES],r[C.AREA],r[C.UNIDADE],r[C.SUP],r[C.GESTAO],r[C.ORG],r[C.STATUS],r[C.TEMPO],r[C.LT],r[C.LP],r[C.VD],r[C.VV],pct(r[C.VD],r[C.LT])].map(esc).join(sep));
+  });
+  L.push(['TOTAL','','','','','','','',tl,tp,tv,tvv,pct(tv,tl)].map(esc).join(sep));
+  L.push('');
+  L.push(['ORIGENS-CHAVE (Ano Todo)','Leads','Vidas','Conversao','Meta','Atingimento'].map(esc).join(sep));
+  var ob=ORIG_BY_NOME[nome]||{};
+  KEY_ORIG_LBL.forEach(function(l){var o=ob[l];var meta=(ORIG_META[l]||{}).meta;if(o){var at=meta?( o.vd/(o.lt*meta/100)*100).toFixed(0)+'%':'';L.push([l,o.lt,o.vd,pct(o.vd,o.lt),(meta!=null?meta+'%':''),at].map(esc).join(sep));}});
+  var blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='extrato_'+nome.replace(/[^a-z0-9]+/gi,'_')+'_'+mesLbl.replace(/[^a-z0-9]+/gi,'')+'.csv';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+}
 function renderExtrato(){
   var nome=document.getElementById('ext_in').value.trim();
   var empty=document.getElementById('extrato-empty');
@@ -899,7 +935,8 @@ function renderExtrato(){
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var QN={Q1:'Elite · Top 25%',Q2:'Bom · 50–75%',Q3:'Mediano · 25–50%',Q4:'Baixo · Bottom 25%'};
   var cor=QC[ag.q];
-  var convGlobal=ag.lt>0?ag.vd/ag.lt*100:0;
+  var effV=(ag._effVd!=null?ag._effVd:ag.vd);
+  var convGlobal=ag.lt>0?effV/ag.lt*100:0;   // Conv. geral respeita o filtro VIDAS (Total/Vinculado)
   var convVV=ag.lt>0?ag.vv/ag.lt*100:0;
   // conv. origens-chave: média das origens-chave com leads (Ano Todo)
   var ob=ORIG_BY_NOME[nome]||{};
@@ -927,13 +964,47 @@ function renderExtrato(){
   var pctR=function(r){return r==null?'—':(r*100).toFixed(0);};
   var attV=function(a){return a==null?'sem leads':(a*100).toFixed(0)+'% da meta';};
   var _pm=periodMonths();
-  var volTxt=(ag._attVol==null?'—':(_pm>1?(nf(Math.round(ag.vd/_pm))+' vidas/mês'):(nf(ag.vd)+' vidas no mês'))+' / 60 ('+(ag._attVol*100).toFixed(0)+'%)');
+  var volTxt=(ag._attVol==null?'—':(_pm>1?(nf(Math.round(effV/_pm))+' vidas/mês'):(nf(effV)+' vidas no mês'))+' / 60 ('+(ag._attVol*100).toFixed(0)+'%)');
   var dims=[
     ['VENDA — volume (meta 60 vidas/mês)','peso 50%','#0072ce',pctR(ag._rv),volTxt],
     ['PRINCIPAL (C.Abnd., C.Abnd.Con., Conecta, Eugenia)','peso 30%','#7c3aed',pctR(ag._rk),attV(ag._attP)],
     ['DEMAIS FILA (Espontâneo)','peso 20%','#00a3a1',pctR(ag._rc),attV(ag._attD)],
   ];
+  // ---- Painel: Qualificação do Quartil (portas + veredito) ----
+  var volPct=ag._attVol==null?null:Math.round(ag._attVol*100);
+  var volOK=ag._attVol!=null&&ag._attVol>=1;
+  var convPctv=ag._attConv==null?null:Math.round(ag._attConv*100);
+  var convOK=ag._attConv!=null&&ag._attConv>=0.95;
+  var chL2=0,chV2=0;KEY_ORIG_LBL.forEach(function(l){var o=ob[l];if(o){chL2+=o.lt;chV2+=o.vd;}});
+  var convChv=chL2?(chV2/chL2*100):null;
+  var inQ1=ag.q==='Q1', elig=ag._q1elig;
+  var verdict, vCor;
+  if(inQ1){verdict='✓ <b>Está no Q1 (Elite)</b> — passou nas duas portas e ficou entre os de maior score do grupo.';vCor='#16a34a';}
+  else if(elig){verdict='◐ <b>Elegível ao Q1</b> (passou nas duas portas), mas ficou fora por <b>score</b> — há mais elegíveis que vagas no Q1. Classificado em <b>'+ag.q+'</b>.';vCor='#d97706';}
+  else{var rs=[];if(!volOK)rs.push('volume abaixo da meta ('+(volPct==null?'—':volPct+'%')+' &lt; 100%)');if(!convOK)rs.push('conversão abaixo de 95% da meta ('+(convPctv==null?'sem dados':convPctv+'%')+')');verdict='✗ <b>Fora do Q1</b> — '+rs.join(' e ')+'. Classificado em <b>'+ag.q+'</b>.';vCor='#dc2626';}
+  function gateBox(titulo,sub,ok,valor,req){var c=ok?'#16a34a':'#dc2626';var ic=ok?'✓':'✗';
+    return '<div style="flex:1;min-width:230px;border:2px solid '+c+'33;background:'+c+'0d;border-radius:10px;padding:12px 14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:#334155">'+titulo+'</span><span style="font-size:18px;font-weight:800;color:'+c+'">'+ic+'</span></div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:6px">'+sub+'</div>'+
+      '<div style="font-size:22px;font-weight:800;color:'+c+'">'+valor+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:2px">'+req+'</div></div>';}
+  var qualHTML='<div class="card" style="margin-bottom:var(--gap)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'+
+      '<h3 style="margin:0">Qualificação do Quartil</h3>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+        '<button onclick="downloadExtratoCSV()" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Baixar leads (CSV)</button>'+
+        '<div class="q-badge '+ag.q.toLowerCase()+'b" style="width:auto;padding:5px 14px;height:auto;border-radius:8px;font-size:14px">'+ag.q+' — '+QN[ag.q]+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:'+vCor+'12;border-left:4px solid '+vCor+';padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px">'+verdict+'</div>'+
+    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Portas do Q1 (ambas obrigatórias)</div>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap">'+
+      gateBox('Porta 1 · Volume','Vidas do período ÷ meta '+nf(_curVolTgt)+' (60/mês × '+_pm+')',volOK,(volPct==null?'—':volPct+'%'),nf(effV)+' vidas · exige ≥ 100%')+
+      gateBox('Porta 2 · Conversão','Atingimento da meta de conversão (origens-chave · anual)',convOK,(convPctv==null?'—':convPctv+'%'),(convChv==null?'sem dados de origem':'conv. chave '+convChv.toFixed(1)+'%')+' · exige ≥ 95%')+
+    '</div>'+
+  '</div>';
   document.getElementById('extrato-score').innerHTML=
+    qualHTML+
     '<div class="card">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">'+
       '<h3 style="margin:0">Decomposição do Score</h3>'+
@@ -1059,10 +1130,7 @@ function renderQuartilV(){
     ags.forEach(function(ag){var g=gmap[ag.k]||{lt:0,vd:0};ag.lt=g.lt;ag.vd=g.vd;ag.vv=g.vd;});
   }
   var vincSel=(document.getElementById('f_vinc')||{value:'vd'}).value;
-  ags.forEach(function(ag){ag._effVd=vincSel==='vv'?ag.vv:ag.vd;});
-  ags.forEach(function(ag){ag._origVd=ag.vd;ag.vd=ag._effVd;});
-  assignQuartis(ags);
-  ags.forEach(function(ag){ag.vd=ag._origVd;});
+  assignQuartis(ags);   // assignQuartis já define ag._effVd conforme o filtro VIDAS (vd/vv)
   // Leads/Vidas/Conv exibidos seguem os filtros do topo (inclusive Mês), base mesmo-mês.
   // O Score/Atingimento usa a base de origens "Ano Todo" (única com quebra por origem) — por isso não varia com o Mês.
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
