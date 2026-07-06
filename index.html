@@ -380,7 +380,7 @@ var TXTKEYS={k:1,g:1,a:1,u:1,s:1,o:1};
 function colsFor(v){return v==='sup'?COLS_SUP:v==='gestao'?COLS_GESTAO:v==='area'?COLS_AREA:v==='unid'?COLS_UNID:v==='org'?COLS_ORG:COLS_NOME;}
 function setViewBy(){VIEWBY=document.getElementById('tbl_viewby').value;if(!colsFor(VIEWBY).some(function(c){return c.k===SORT.key;}))SORT={key:'vd',dir:'desc'};render();}
 function sortBy(key){if(SORT.key===key)SORT.dir=SORT.dir==='asc'?'desc':'asc';else{SORT.key=key;SORT.dir=TXTKEYS[key]?'asc':'desc';}render();}
-function sortVal(g,meta,key){if(key==='k')return g.k;if(key==='lt')return g.lt;if(key==='vd')return g.vd;if(key==='cv'){var c=convVal(g.vd,g.lt);return c===null?-1:c;}if(key==='sc')return g._score==null?-1:g._score;var mt=meta[g.k]||{};if(key==='vdpp')return mt.np?g.vd/mt.np:0;if(key==='np')return mt.np||0;if(key==='ns')return mt.ns||0;if(key==='na')return mt.na||0;if(key==='f')return tempoCasaOrd(mt.t);return mt[key]||'';}
+function sortVal(g,meta,key){if(key==='k')return g.k;if(key==='lt')return g.lt;if(key==='vd')return effVd(g);if(key==='cv'){var c=convVal(effVd(g),g.lt);return c===null?-1:c;}if(key==='sc')return g._score==null?-1:g._score;var mt=meta[g.k]||{};if(key==='vdpp')return mt.np?effVd(g)/mt.np:0;if(key==='np')return mt.np||0;if(key==='ns')return mt.ns||0;if(key==='na')return mt.na||0;if(key==='f')return tempoCasaOrd(mt.t);return mt[key]||'';}
 // rotulos de dados em cima das barras (leads/vendas) - plugin inline, sem CDN extra
 const barLabels={
   id:'barLabels',
@@ -516,7 +516,8 @@ function rowCrossVal(r){
   if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];return t?{lt:t.lt,vd:t.vd}:{lt:0,vd:0};}
   var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
   if(origSel){var oLbl=KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(origSel)];var o=((ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[oLbl];return o?{lt:o.lt,vd:o.vd}:{lt:0,vd:0};}
-  return {lt:r[C.LT],vd:r[C.VD]};
+  // sem cross-filtro: vd respeita o filtro VIDAS (Total/Vinculado mesmo mes)
+  return {lt:r[C.LT],vd:(vincVV()?(r[C.VV]||0):r[C.VD])};
 }
 function crossScope(arr,rowsOf){
   var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
@@ -608,9 +609,9 @@ function render(){
   // KPIs (reescopados por Tipo CT/Origem via crossScope, linha a linha — respeita Mes tambem)
   var proms=new Set();rows.forEach(function(r){proms.add(r[C.NOME]);});
   var kpiAgg=[{lt:0,vd:0,vv:0,_rows:rows}];
-  rows.forEach(function(r){kpiAgg[0].lt+=r[C.LT];kpiAgg[0].vd+=r[C.VD];});
+  rows.forEach(function(r){kpiAgg[0].lt+=r[C.LT];kpiAgg[0].vd+=r[C.VD];kpiAgg[0].vv+=r[C.VV];});
   crossScope(kpiAgg);
-  var lt=kpiAgg[0].lt,vd=kpiAgg[0].vd;
+  var lt=kpiAgg[0].lt,vd=effVd(kpiAgg[0]);   // filtro VIDAS (Total/Vinculado) reflete no KPI Vidas + Conversão
   document.getElementById('k_lt').textContent=nf(lt);
   document.getElementById('k_vd').textContent=nf(vd);
   document.getElementById('k_cv').textContent=convTxt(vd,lt);
@@ -794,11 +795,11 @@ function cellFor(g,mt,k,rc,pos){
   if(k==='k')return '<td><span class="exp">▸</span>'+g.k+'</td>';
   if(k==='lt')return '<td class="num">'+nf(g.lt)+'</td>';
   if(k==='sla')return '<td class="num">'+slaPctHTML(g)+'</td>';
-  if(k==='vd')return '<td class="num">'+nf(g.vd)+'</td>';
-  if(k==='cv')return '<td class="num">'+convPill(g.vd,g.lt)+'</td>';
+  if(k==='vd')return '<td class="num">'+nf(effVd(g))+'</td>';
+  if(k==='cv')return '<td class="num">'+convPill(effVd(g),g.lt)+'</td>';
   if(k==='sc')return '<td class="num">'+scoreHTML(g)+'</td>';
   if(k==='np'||k==='ns'||k==='na')return '<td class="num">'+nf(mt[k]||0)+'</td>';
-  if(k==='vdpp')return '<td class="num">'+(mt.np?(g.vd/mt.np).toFixed(1).replace('.',','):'—')+'</td>';
+  if(k==='vdpp')return '<td class="num">'+(mt.np?(effVd(g)/mt.np).toFixed(1).replace('.',','):'—')+'</td>';
   if(k==='f')return '<td>'+tempoCasaExato(mt.t)+'</td>';   // tempo de casa = tempo EXATO (so nesta tabela)
   return '<td>'+(mt[k]||'')+'</td>';
 }
@@ -903,22 +904,22 @@ function renderOrg(rows){
   var m={};
   rows.forEach(function(r){
     var k=r[C.ORG];
-    if(!m[k])m[k]={k:k,lt:0,lp:0,vd:0,ag:new Set(),_rows:[]};
-    m[k].lt+=r[C.LT];m[k].lp+=r[C.LP];m[k].vd+=r[C.VD];m[k].ag.add(r[C.NOME]);m[k]._rows.push(r);
+    if(!m[k])m[k]={k:k,lt:0,lp:0,vd:0,vv:0,ag:new Set(),_rows:[]};
+    m[k].lt+=r[C.LT];m[k].lp+=r[C.LP];m[k].vd+=r[C.VD];m[k].vv+=r[C.VV];m[k].ag.add(r[C.NOME]);m[k]._rows.push(r);
   });
-  var a=Object.values(m).sort(function(x,y){return y.vd-x.vd;});
+  var a=Object.values(m).sort(function(x,y){return effVd(y)-effVd(x);});
   crossScope(a);   // tabela reescopada por Tipo CT/Origem (respeita Mes tambem)
   var crossOn=crossFilterActive();
   var tb=document.querySelector('#tbl_org tbody');
   tb.innerHTML=a.map(function(g){
-    var ag=g.ag.size, vpa=ag>0?g.vd/ag:null;
+    var ev=effVd(g), ag=g.ag.size, vpa=ag>0?ev/ag:null;   // vd exibida respeita o filtro VIDAS
     return '<tr><td>'+g.k+'</td>'+
       '<td class="num">'+nf(ag)+'</td>'+
       '<td class="num">'+nf(g.lt)+'</td>'+
       '<td class="num">'+(crossOn?'—':nf(g.lp))+'</td>'+
-      '<td class="num">'+nf(g.vd)+'</td>'+
+      '<td class="num">'+nf(ev)+'</td>'+
       '<td class="num">'+(vpa===null?'—':vpa.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}))+'</td>'+
-      '<td class="num">'+convPill(g.vd,g.lt)+'</td></tr>';
+      '<td class="num">'+convPill(ev,g.lt)+'</td></tr>';
   }).join('');
   // grafico: vidas (vendas) por mes, proprio x terceiros (sem N/D) — reescopado linha a linha via rowCrossVal
   var orgs=a.map(function(g){return g.k;}).filter(function(o){return o&&o!=='N/D';});
@@ -946,19 +947,19 @@ function renderOrgTempo(rows){
   var TEAMS=['TIME PRÓPRIO','TIME TERCEIROS'];
   var FX=ORD_FAIXA.filter(function(f){return f!=='N/D';});
   var D={};
-  FX.forEach(function(fx){D[fx]={};TEAMS.forEach(function(t){D[fx][t]={lt:0,vd:0,ag:new Set(),_rows:[]};});});
+  FX.forEach(function(fx){D[fx]={};TEAMS.forEach(function(t){D[fx][t]={lt:0,vd:0,vv:0,ag:new Set(),_rows:[]};});});
   rows.forEach(function(r){
     var fx=r[C.FAIXA],t=r[C.ORG];
     if(!D[fx]||TEAMS.indexOf(t)<0)return;
-    var c=D[fx][t];c.lt+=r[C.LT];c.vd+=r[C.VD];c.ag.add(r[C.NOME]);c._rows.push(r);
+    var c=D[fx][t];c.lt+=r[C.LT];c.vd+=r[C.VD];c.vv+=r[C.VV];c.ag.add(r[C.NOME]);c._rows.push(r);
   });
   var _flat=[];FX.forEach(function(fx){TEAMS.forEach(function(t){_flat.push(D[fx][t]);});});
   crossScope(_flat);   // reescopa por Tipo CT/Origem (respeita Mes tambem)
   var html='';
   FX.forEach(function(fx){
     var row=D[fx];
-    if(!TEAMS.some(function(t){return row[t].vd>0||row[t].lt>0;}))return;
-    var cv={};TEAMS.forEach(function(t){cv[t]=convVal(row[t].vd,row[t].lt);});
+    if(!TEAMS.some(function(t){return effVd(row[t])>0||row[t].lt>0;}))return;
+    var cv={};TEAMS.forEach(function(t){cv[t]=convVal(effVd(row[t]),row[t].lt);});   // conv respeita filtro VIDAS
     var a=cv[TEAMS[0]],b=cv[TEAMS[1]],win=null;
     if(a!==null&&(b===null||a>b))win=TEAMS[0];
     else if(b!==null&&(a===null||b>a))win=TEAMS[1];
@@ -967,7 +968,7 @@ function renderOrgTempo(rows){
       var c=row[t],v=cv[t],txt=v===null?'—':v.toFixed(1)+'%';
       var wcls=win===t?' style="background:#dcfce7;color:#15803d;font-weight:700;border-radius:6px"':'';
       var lb=' style="border-left:1px solid #e2e8f0"';   // separa cada grupo de time
-      html+='<td class="num"'+lb+'>'+nf(c.ag.size)+'</td><td class="num">'+nf(c.vd)+'</td><td class="num"'+wcls+'>'+(win===t?'★ ':'')+txt+'</td>';
+      html+='<td class="num"'+lb+'>'+nf(c.ag.size)+'</td><td class="num">'+nf(effVd(c))+'</td><td class="num"'+wcls+'>'+(win===t?'★ ':'')+txt+'</td>';
     });
     html+='</tr>';
   });
@@ -983,8 +984,9 @@ function renderEquipes(rows){
     var t=r[C.ORG];if(TEAMS.indexOf(t)<0)return;
     var fx=r[C.FAIXA];if(!D[fx])return;
     var nm=r[C.NOME],c=D[fx][t];
-    c.lt+=r[C.LT];c.vd+=r[C.VD];c.ag.add(nm);
-    agVidas[nm]=(agVidas[nm]||0)+r[C.VD];agTeam[nm]=t;agFx[nm]=fx;
+    var cvr=rowCrossVal(r);   // respeita filtro VIDAS (Total/Vinculado) e cross Tipo CT/Origem
+    c.lt+=cvr.lt;c.vd+=cvr.vd;c.ag.add(nm);
+    agVidas[nm]=(agVidas[nm]||0)+cvr.vd;agTeam[nm]=t;agFx[nm]=fx;
     var tf=r[C.TTFS];if(tf!==''&&tf!=null&&!isNaN(+tf))agTTFS[nm]=+tf;
   });
   var FXd=FX.filter(function(fx){return TEAMS.some(function(t){return D[fx][t].lt>0||D[fx][t].vd>0;});});
@@ -1046,26 +1048,26 @@ function renderTempo(rows){
   var m={};
   rows.forEach(function(r){
     var k=r[C.FAIXA];
-    if(!m[k])m[k]={k:k,lt:0,lp:0,vd:0,ag:new Set(),_rows:[]};
-    m[k].lt+=r[C.LT];m[k].lp+=r[C.LP];m[k].vd+=r[C.VD];m[k].ag.add(r[C.NOME]);m[k]._rows.push(r);
+    if(!m[k])m[k]={k:k,lt:0,lp:0,vd:0,vv:0,ag:new Set(),_rows:[]};
+    m[k].lt+=r[C.LT];m[k].lp+=r[C.LP];m[k].vd+=r[C.VD];m[k].vv+=r[C.VV];m[k].ag.add(r[C.NOME]);m[k]._rows.push(r);
   });
   var a=Object.values(m).sort(function(x,y){return ORD_FAIXA.indexOf(x.k)-ORD_FAIXA.indexOf(y.k);});
   crossScope(a);   // reescopa por Tipo CT/Origem (tabela + grafico abaixo; respeita Mes tambem)
   var crossOnT=crossFilterActive();
   var tb=document.querySelector('#tbl_tempo tbody');
   tb.innerHTML=a.map(function(g){
-    var ag=g.ag.size, vpa=ag>0?g.vd/ag:null;
+    var ev=effVd(g), ag=g.ag.size, vpa=ag>0?ev/ag:null;   // vd exibida respeita o filtro VIDAS
     return '<tr><td>'+g.k+'</td>'+
       '<td class="num">'+nf(ag)+'</td>'+
       '<td class="num">'+nf(g.lt)+'</td>'+
       '<td class="num">'+(crossOnT?'—':nf(g.lp))+'</td>'+
-      '<td class="num">'+nf(g.vd)+'</td>'+
+      '<td class="num">'+nf(ev)+'</td>'+
       '<td class="num">'+(vpa===null?'—':vpa.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}))+'</td>'+
-      '<td class="num">'+convPill(g.vd,g.lt)+'</td></tr>';
+      '<td class="num">'+convPill(ev,g.lt)+'</td></tr>';
   }).join('');
   mkChart('ch_tempo',{type:'bar',data:{labels:a.map(function(g){return g.k;}),datasets:[
-    {type:'bar',label:'Vidas',data:a.map(function(g){return g.vd;}),backgroundColor:ACC,yAxisID:'y'},
-    {type:'line',label:'Conversão %',data:a.map(function(g){var c=convVal(g.vd,g.lt);return c===null?null:+c.toFixed(1);}),borderColor:AMB,backgroundColor:AMB,yAxisID:'y1',tension:.3}
+    {type:'bar',label:'Vidas',data:a.map(function(g){return effVd(g);}),backgroundColor:ACC,yAxisID:'y'},
+    {type:'line',label:'Conversão %',data:a.map(function(g){var c=convVal(effVd(g),g.lt);return c===null?null:+c.toFixed(1);}),borderColor:AMB,backgroundColor:AMB,yAxisID:'y1',tension:.3}
   ]},options:{layout:{padding:{top:22}},plugins:{legend:{position:'bottom'}},scales:{y:{position:'left'},y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}}},plugins:[barLabels]});
 }
 // Conversão por Tempo de Atendimento (<=2min / +2min) — métrica fixa, nao depende de `rows`/filtros
