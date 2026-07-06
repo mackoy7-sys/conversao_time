@@ -38,6 +38,16 @@ th{text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;font-size:1
 td{padding:9px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap}
 tr:hover td{background:#f8fafc}
 td.num,th.num{text-align:right}
+.vrow .exp{display:inline-block;width:14px;color:var(--muted);font-size:10px;transition:transform .12s}
+.vrow.open .exp{transform:rotate(90deg)}
+.vrow.open>td{background:#eff6ff}
+.vdet:hover td{background:inherit}
+.vdet>td{padding:0 12px 14px;background:#f8fafc}
+.origem-det-h{font-weight:700;font-size:12px;color:var(--muted);padding:10px 0 6px}
+.origem-mini{font-size:12px}
+.origem-mini th{border-bottom:1px solid #e2e8f0;padding:6px 10px}
+.origem-mini td{border-bottom:1px solid #eef2f7;padding:6px 10px;white-space:nowrap}
+.origem-mini tr:hover td{background:#f1f5f9}
 th.sortable{cursor:pointer}
 th.sortable:hover{color:var(--accent)}
 th.sorted{color:var(--accent)}
@@ -122,6 +132,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <button class="tab-btn" onclick="switchTab('comp',this)">Vinculado × Total</button>
 <button class="tab-btn" onclick="switchTab('extrato',this)">Extrato do Vendedor</button>
 <button class="tab-btn" onclick="switchTab('quartil',this);renderQuartilV();">Análise de Quartil</button>
+<button class="tab-btn" onclick="switchTab('origem',this);renderOrigemTab();">Leads por Origem</button>
 </div>
 
 <div class="filters">
@@ -180,6 +191,23 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <th class="num">Lead total</th><th class="num">Vidas</th><th class="num">Conversão</th>
 </tr></thead><tbody></tbody></table>
 <div id="tbl_pager" class="pager"></div>
+<div class="note" style="margin-top:10px">💡 Clique numa linha para abrir o <b>funil de Leads por Origem</b> daquele vendedor (segue o "Ver por" e o filtro de Mês).</div>
+</div>
+</div>
+
+<div id="tab-origem" class="tab-panel">
+<div class="tablecard">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+<h3 style="font-size:14px;font-weight:700">Leads por Origem por mês <span style="color:var(--muted);font-weight:400">· respeita os filtros de Gestão / Supervisor / Vendedor do topo</span></h3>
+<div style="display:flex;align-items:center;gap:6px">
+<label style="font-size:12px;font-weight:600;color:var(--muted)">Mês:</label>
+<select id="orig_mes" class="sel" onchange="renderOrigemTab()"></select>
+</div>
+</div>
+<table id="tbl_origem_tab"><thead><tr>
+<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+</tr></thead><tbody></tbody></table>
+<div class="note" style="margin-top:8px">Leads e Produtivos são exatos. <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP.</div>
 </div>
 </div>
 
@@ -644,6 +672,65 @@ function render(){
   renderOrg(rows);renderOrgTempo(rows);renderTempo(rows);renderTATConv();renderVendSLA();renderComp(rows);renderExtrato();renderQuartilV();
 }
 
+// ========== Leads por Origem (colapsavel na aba Geral + aba propria) ==========
+// Reusa o cubo ORIGEM_STATS[nome][mes][ORIGEM]={t,p,c,v}. Cada linha do RAW e' (nome x mes),
+// entao somar ORIGEM_STATS[nome][mes] sobre as linhas ja respeita QUALQUER filtro (incl. Mes).
+function origemAgg(rows){
+  var acc={};
+  rows.forEach(function(r){
+    var by=ORIGEM_STATS[r[C.NOME]]; if(!by)return;
+    var d=by[r[C.MES]]; if(!d)return;
+    for(var og in d){
+      if(!acc[og])acc[og]={og:og,t:0,p:0,c:0,v:0};
+      var s=d[og];acc[og].t+=s.t;acc[og].p+=s.p;acc[og].c+=s.c;acc[og].v+=s.v;
+    }
+  });
+  return Object.values(acc).sort(function(x,y){return y.t-x.t;});
+}
+function _opct(n,d){return d>0?(n/d*100).toFixed(1).replace('.',',')+'%':'—';}
+function origemTableBody(rows){
+  var a=origemAgg(rows);
+  if(!a.length)return '<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  var tot={t:0,p:0,c:0,v:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;});
+  function tr(og,x,extra){return '<tr'+(extra||'')+'><td>'+og+'</td><td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td></tr>';}
+  var body=a.map(function(x){return tr(x.og,x,'');}).join('');
+  body+=tr('TOTAL GERAL',tot,' style="font-weight:700;border-top:2px solid var(--border)"');
+  return '<tbody>'+body+'</tbody>';
+}
+function _origemFill(tableId,rows){
+  var t=document.getElementById(tableId);if(!t)return;
+  var head=t.querySelector('thead').outerHTML;
+  t.innerHTML=head+origemTableBody(rows);
+}
+// Funil por LINHA (Detalhe por Vendedor): monta o funil de origem do recorte g._rows (as linhas
+// RAW ja' filtradas daquele vendedor/grupo). Segue o "Ver por" e o filtro de Mes automaticamente.
+function origemDetailHTML(g){
+  return '<div class="origem-det"><div class="origem-det-h">Leads por Origem · '+g.k+'</div>'
+    +'<table class="origem-mini"><thead><tr>'
+    +'<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th>'
+    +'<th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>'
+    +'</tr></thead>'+origemTableBody(g._rows||[])+'</table>'
+    +'<div class="note" style="margin:8px 0 0">Leads e Produtivos exatos. Contratos (≈ telefones distintos casados) e Vidas são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO.</div></div>';
+}
+function toggleOrigemRow(rid,tr){
+  var d=document.getElementById(rid);if(!d)return;
+  var show=d.style.display==='none';
+  d.style.display=show?'':'none';
+  tr.classList.toggle('open',show);
+}
+// Aba propria: mes vem do seletor local; respeita os filtros de QUEM (todos menos o de Mes).
+function passesWho(r){return FILTERS.every(function(f){return f.isMes||f.sel.size===0||f.sel.has(r[f.col]);});}
+function renderOrigemTab(){
+  var sel=document.getElementById('orig_mes');if(!sel)return;
+  if(!sel.options.length){
+    var opts='';for(var mm=1;mm<=MES_FIM;mm++)opts+='<option value="'+mm+'">'+(MESNOME[mm]||mm)+'</option>';
+    sel.innerHTML=opts;sel.value=MES_FIM;
+  }
+  var m=parseInt(sel.value,10);
+  var rows=RAW.filter(function(r){return passesWho(r)&&r[C.MES]===m;});
+  _origemFill('tbl_origem_tab',rows);
+}
+
 // ---------- aba Vinculado x Total ----------
 var COMP_VIEWBY='nome';
 function setCompView(){COMP_VIEWBY=document.getElementById('comp_viewby').value;renderComp(filtered());}
@@ -687,12 +774,12 @@ function renderComp(rows){
 // ---------- detalhe por vendedor: paginacao + ranking ----------
 var SLA_COL={t:'SLA ≤2min',k:'sla',n:1,ti:'% de atendimentos respondidos em ≤2min (denominador: leads DENTRO do horário). Fotografia do período do build de SLA — não varia com o filtro de Mês.'};
 var LT_COL={t:'Lead total',k:'lt',n:1,ti:'Sob o filtro Tipo CT: continua sendo o total geral (lead não tem CANAL/Tipo CT) — só Vidas fica restrita ao tipo selecionado. Conversão vira vidas-do-tipo ÷ leads totais.'};
-var COLS_NOME=[{t:'#',n:1},{t:'Nome abreviado',k:'k'},{t:'Gestor',k:'g'},{t:'Área',k:'a'},{t:'Unidade',k:'u'},{t:'Supervisor',k:'s'},{t:'Times',k:'o'},{t:'Tempo de casa',k:'f'},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Conversão',k:'cv',n:1}];
-var COLS_SUP=[{t:'#',n:1},{t:'Supervisor',k:'k'},{t:'Gestão',k:'g'},{t:'Área',k:'a'},{t:'Unidade',k:'u'},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
-var COLS_GESTAO=[{t:'#',n:1},{t:'Gestor',k:'k'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
-var COLS_AREA=[{t:'#',n:1},{t:'Área',k:'k'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
-var COLS_ORG=[{t:'#',n:1},{t:'Organização',k:'k'},{t:'Áreas',k:'na',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
-var COLS_UNID=[{t:'#',n:1},{t:'Unidade',k:'k'},{t:'Área',k:'a'},{t:'Gestão',k:'g'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_NOME=[{t:'Nome abreviado',k:'k'},{t:'Gestor',k:'g'},{t:'Área',k:'a'},{t:'Unidade',k:'u'},{t:'Supervisor',k:'s'},{t:'Times',k:'o'},{t:'Tempo de casa',k:'f'},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_SUP=[{t:'Supervisor',k:'k'},{t:'Gestão',k:'g'},{t:'Área',k:'a'},{t:'Unidade',k:'u'},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_GESTAO=[{t:'Gestor',k:'k'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_AREA=[{t:'Área',k:'k'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_ORG=[{t:'Organização',k:'k'},{t:'Áreas',k:'na',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
+var COLS_UNID=[{t:'Unidade',k:'k'},{t:'Área',k:'a'},{t:'Gestão',k:'g'},{t:'Supervisores',k:'ns',n:1},{t:'Promotores',k:'np',n:1},LT_COL,SLA_COL,{t:'Vidas',k:'vd',n:1},{t:'Vidas/Promotor',k:'vdpp',n:1},{t:'Conversão',k:'cv',n:1}];
 var NOUN={nome:'vendedores',sup:'supervisores',gestao:'gestores',area:'áreas',unid:'unidades',org:'times'};
 function buildHead(cols){
   return cols.map(function(c){
@@ -704,7 +791,7 @@ function buildHead(cols){
 }
 function cellFor(g,mt,k,rc,pos){
   if(!k)return '<td class="'+rc+'">'+pos+'.</td>';
-  if(k==='k')return '<td>'+g.k+'</td>';
+  if(k==='k')return '<td><span class="exp">▸</span>'+g.k+'</td>';
   if(k==='lt')return '<td class="num">'+nf(g.lt)+'</td>';
   if(k==='sla')return '<td class="num">'+slaPctHTML(g)+'</td>';
   if(k==='vd')return '<td class="num">'+nf(g.vd)+'</td>';
@@ -727,9 +814,11 @@ function renderTablePage(){
   for(var i=start;i<end;i++){
     var g=arr[i],mt=meta[g.k]||{},pos=g.rank;
     var rc='rank'+(pos===1?' top1':pos===2?' top2':pos===3?' top3':'');
-    html+='<tr>';
+    var rid='vdet'+i;
+    html+='<tr class="vrow" style="cursor:pointer" onclick="toggleOrigemRow(\''+rid+'\',this)">';
     for(var ci=0;ci<cols.length;ci++)html+=cellFor(g,mt,cols[ci].k,rc,pos);
     html+='</tr>';
+    html+='<tr id="'+rid+'" class="vdet" style="display:none"><td colspan="'+cols.length+'">'+origemDetailHTML(g)+'</td></tr>';
   }
   if(!arr.length)html='<tr><td colspan="'+cols.length+'" style="color:var(--muted)">Sem '+noun+' para o filtro atual.</td></tr>';
   document.querySelector('#tbl tbody').innerHTML=html;
@@ -1458,6 +1547,7 @@ function renderQuartilV(){
 
 const ORIG_BY_NOME={};
 const ORIG_BY_NOME_MES={};
+const ORIGEM_STATS={};
 const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
@@ -1500,6 +1590,7 @@ function _initUI(){
     if(M.ORIG_BY_NOME)Object.assign(ORIG_BY_NOME,M.ORIG_BY_NOME);
     if(M.ORIG_BY_NOME_MES)Object.assign(ORIG_BY_NOME_MES,M.ORIG_BY_NOME_MES);
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
+    if(M.ORIGEM_STATS)Object.assign(ORIGEM_STATS,M.ORIGEM_STATS);
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
     _initUI();
