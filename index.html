@@ -208,9 +208,9 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <h3 style="font-size:14px;font-weight:700">Leads por Tipo <span style="color:var(--muted);font-weight:400">· agregado por TIPO → clique para expandir as filas (Session Team) → clique numa fila para ver os vendedores. Respeita Gestão / Supervisor / Vendedor / Mês do topo</span></h3>
 </div>
 <table id="tbl_tipo_tab"><thead><tr>
-<th>Tipo / Fila</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+<th>Tipo / Fila / Vendedor</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas PME</th><th class="num">Vidas PF</th><th class="num">Vidas TOTAL</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Mesmas métricas do "Leads por Origem". <b>Tipo</b> = classificação do lead pela fila (Session Team), igual ao bloco LEADS | TIPO do GUP; expanda para ver as filas dentro de cada tipo. <b>Contratos</b> e <b>Vidas</b> são vidas vinculadas (casadas por telefone ao lead daquele tipo/fila) — cobertura parcial em PME/ADESÃO.</div>
+<div class="note" style="margin-top:8px"><b>Tipo</b> = classificação do lead pela fila (Session Team), igual ao bloco LEADS | TIPO do GUP; expanda TIPO → fila → vendedor. As colunas <b>Vidas ADESÃO/PME/PF</b> separam as vidas ligadas por <b>produto da venda</b> (CANAL); <b>Vidas TOTAL</b> é a soma. <b>Contratos</b> e <b>Vidas</b> são vidas vinculadas (casadas por telefone ao lead daquele tipo/fila) — cobertura parcial em PME/ADESÃO, então uma linha de lead PME pode ter mais vidas em PF do que em PME (o cliente virou plano individual).</div>
 </div>
 </div>
 </div>
@@ -480,9 +480,11 @@ function crossFilterActive(){return !!(document.getElementById('f_tipo_cross').v
 function rowCrossVal(r){
   // Cross-filtros (precedencia por lado):
   //   LEADS: Tipo(lead) -> Origem -> total.
-  //   VIDAS: Tipo(lead) (vidas VINCULADAS ligadas ao lead do tipo) -> Produto(venda)/CANAL -> Origem -> total.
-  // Tipo(lead) governa AS DUAS pontas (leads do tipo + vidas ligadas), entao quando ativo prevalece
-  // sobre Produto nas vidas (nao existe base cruzada tipo-lead x produto). LEADTIPO/TIPO = {lt,vd}.
+  //   VIDAS: (Tipo lead + Produto juntos) INTERSECCAO lead-tipo x produto (LEADTIPO_PROD, so' vinculadas)
+  //          -> so' Tipo(lead) = vidas vinculadas ligadas ao lead do tipo (qualquer produto)
+  //          -> so' Produto = vidas por CANAL (cobertura ~99,9%) -> Origem -> total.
+  // Ligar os DOIS (ex.: lead PME + produto PME) le a conversao "lead do tipo X que virou venda do
+  // produto Y" -- so' nas vidas VINCULADAS (piso; PME/ADESAO casam pouco telefone->lead). LEADTIPO/TIPO={lt,vd}.
   var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;
   var tipoSel=(document.getElementById('f_tipo_cross')||{value:''}).value;
   var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
@@ -491,8 +493,11 @@ function rowCrossVal(r){
   var lRow=leadSel?(((LEADTIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel]):null;
   var lt = leadSel?(lRow?lRow.lt:0) : origSel?(oRow?oRow.lt:0) : r[C.LT];
   var vd;
-  if(leadSel){vd=lRow?lRow.vd:0;}
-  else if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];vd=t?t.vd:0;}
+  if(leadSel&&tipoSel){   // OS DOIS ligados: interseccao TIPO do lead x PRODUTO da venda (so' vinculadas)
+    var lp=((LEADTIPO_PROD[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel]; vd=lp?(lp[tipoSel]||0):0;
+  }
+  else if(leadSel){vd=lRow?lRow.vd:0;}   // so' Tipo(lead): vidas vinculadas ligadas ao lead do tipo
+  else if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];vd=t?t.vd:0;}   // so' Produto: vidas por CANAL
   else if(origSel){vd=oRow?oRow.vd:0;}
   else{vd=(vincVV()?(r[C.VV]||0):r[C.VD]);}
   return {lt:lt,vd:vd};
@@ -704,12 +709,13 @@ function toggleOrigemRow(rid,tr){
   d.style.display=show?'':'none';
   tr.classList.toggle('open',show);
 }
-// ===== Tabela "Leads por Tipo" (agregado por TIPO -> expansivel por FILA/Session Team) =====
-// Mesmas 8 metricas do "Leads por Origem". Usa o cubo TIPOFILA_STATS[nome][mes][tipo][fila]={t,p,v,c}.
-// Alimentada por filteredWho() (WHO + Mes; NAO reage aos cross-filtros Tipo(lead)/Produto/Origem,
-// que sao eixos proprios) — por isso a tabela e' uma quebra "limpa" por tipo/fila do recorte de topo.
+// ===== Tabela "Leads por Tipo" (agregado por TIPO -> expansivel por FILA/Session Team -> Vendedor) =====
+// Usa o cubo TIPOFILA_STATS[nome][mes][tipo][fila]={t,p,v,c,vp:{PF,PME,ADESAO}}. A coluna Vidas e'
+// separada por PRODUTO da venda: VIDAS ADESAO/PME/PF/TOTAL (interseccao tipo-do-lead x produto, so' vinc).
+// Alimentada por filteredWho() (WHO + Mes; NAO reage aos cross-filtros Tipo(lead)/Produto/Origem).
 function filteredWho(){return RAW.filter(function(r){return FILTERS.every(function(f){return f.sel.size===0||f.sel.has(r[f.col]);});});}
-function _omCells(x){return '<td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td>';}
+function _addVp(o,vp){if(!vp)return;if(!o.vp)o.vp={};for(var k in vp)o.vp[k]=(o.vp[k]||0)+vp[k];}
+function _omCells(x){var vp=x.vp||{};return '<td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(vp.ADESAO||0)+'</td><td class="num">'+nf(vp.PME||0)+'</td><td class="num">'+nf(vp.PF||0)+'</td><td class="num" style="font-weight:600">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td>';}
 var TIPO_ORD_TAB=['PF','PME','ADESAO','PPO','OUTROS'];
 // Agrega em 3 niveis: TIPO -> FILA (Session Team) -> VENDEDOR (NOME). O vendedor ja' e' a chave de topo
 // do cubo TIPOFILA_STATS[nome][mes][tipo][fila], entao basta acumular por r[C.NOME].
@@ -724,11 +730,11 @@ function tipoFilaAgg(rows){
       var byf=d[tp];
       for(var fl in byf){
         var s=byf[fl];
-        T.t+=s.t;T.p+=s.p;T.c+=s.c;T.v+=s.v;
+        T.t+=s.t;T.p+=s.p;T.c+=s.c;T.v+=s.v;_addVp(T,s.vp);
         var F=T.filas[fl]; if(!F)F=T.filas[fl]={fila:fl,t:0,p:0,c:0,v:0,vend:{}};
-        F.t+=s.t;F.p+=s.p;F.c+=s.c;F.v+=s.v;
+        F.t+=s.t;F.p+=s.p;F.c+=s.c;F.v+=s.v;_addVp(F,s.vp);
         var V=F.vend[nome]; if(!V)V=F.vend[nome]={nome:nome,t:0,p:0,c:0,v:0};
-        V.t+=s.t;V.p+=s.p;V.c+=s.c;V.v+=s.v;
+        V.t+=s.t;V.p+=s.p;V.c+=s.c;V.v+=s.v;_addVp(V,s.vp);
       }
     }
   });
@@ -742,8 +748,8 @@ function tipoFilaAgg(rows){
 function _esc(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function tipoTableBody(rows){
   var a=tipoFilaAgg(rows);
-  if(!a.length)return '<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
-  var tot={t:0,p:0,c:0,v:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;});
+  if(!a.length)return '<tbody><tr><td colspan="11" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  var tot={t:0,p:0,c:0,v:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;_addVp(tot,x.vp);});
   function crt(has){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?'▶':'')+'</span>';}
   var body='';
   a.forEach(function(x,i){
@@ -1606,6 +1612,7 @@ function renderQuartilV(){
 const ORIG_BY_NOME={};
 const ORIG_BY_NOME_MES={};
 const LEADTIPO_BY_NOME_MES={};
+const LEADTIPO_PROD={};
 const TIPOFILA_STATS={};
 const ORIGEM_STATS={};
 const TIPO_BY_NOME_MES={};
@@ -1651,6 +1658,7 @@ function _initUI(){
     if(M.ORIG_BY_NOME_MES)Object.assign(ORIG_BY_NOME_MES,M.ORIG_BY_NOME_MES);
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
+    if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
     if(M.ORIGEM_STATS)Object.assign(ORIGEM_STATS,M.ORIGEM_STATS);
     if(M.TIPOFILA_STATS)Object.assign(TIPOFILA_STATS,M.TIPOFILA_STATS);
     var hc=document.getElementById('hcount');
