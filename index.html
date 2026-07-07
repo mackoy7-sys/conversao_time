@@ -126,17 +126,15 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 
 <div class="tab-nav">
 <button class="tab-btn active" onclick="switchTab('geral',this)">Visão Geral</button>
+<button class="tab-btn" onclick="switchTab('origem',this);renderOrigemTab();">Leads por Origem</button>
 <button class="tab-btn" onclick="switchTab('org',this)">Próprio × Terceiros</button>
 <button class="tab-btn" onclick="switchTab('tempo',this)">Tempo de Casa</button>
-<button class="tab-btn" onclick="switchTab('tempoatend',this)">Tempo de Atendimento</button>
-<button class="tab-btn" onclick="switchTab('comp',this)">Vinculado × Total</button>
 <button class="tab-btn" onclick="switchTab('extrato',this)">Extrato do Vendedor</button>
 <button class="tab-btn" onclick="switchTab('quartil',this);renderQuartilV();">Análise de Quartil</button>
-<button class="tab-btn" onclick="switchTab('origem',this);renderOrigemTab();">Leads por Origem</button>
 </div>
 
 <div class="filters">
-<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="Classificado pelo CANAL real da venda (mesma regra do relatório diário) — não pela origem/fila do lead. Leads Totais continua sendo o total geral do vendedor (lead não tem CANAL); só Vidas fica restrita ao tipo selecionado.">Tipo CT (Ano Todo)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label>Vidas</label><select id="f_vinc" class="sel" onchange="render()"><option value="vd">Total</option><option value="vv">Vinculado (mesmo mês)</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
+<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="PRODUTO da venda — classificado pelo CANAL real (mesma regra do relatório diário): PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA. Recorta só as VIDAS pelo produto vendido; os Leads não mudam. Independente do filtro Tipo (lead).">Produto (venda)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label title="TIPO do LEAD — fila do lead (Session Team), MESMA classificação do bloco LEADS | TIPO do relatório de leads por dia (GUP): PF/PME/ADESÃO/PPO/OUTROS. Mostra os LEADS daquele tipo, as VIDAS LIGADAS a esses leads (vinculadas por telefone) e a conversão (vidas ligadas ÷ leads), por vendedor. Cobertura das vidas é parcial (só vinculadas; PME/ADESÃO casam pouco telefone→lead) — é um piso, menor que o Produto (venda) que usa CANAL. Se marcar junto com Produto, o Tipo (lead) prevalece nas vidas.">Tipo (lead)</label><select id="f_tipolead_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option><option>PPO</option><option>OUTROS</option></select></div><div class="fg"><label>Vidas</label><select id="f_vinc" class="sel" onchange="render()"><option value="vd">Total</option><option value="vv">Vinculado (mesmo mês)</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
 <div class="fg"><label>Supervisor</label><div class="ms" id="f_sup"></div></div>
 <div class="fg"><label>Unidade</label><div class="ms" id="f_unidade"></div></div>
 <div class="fg"><label>Gestão</label><div class="ms" id="f_gestao"></div></div>
@@ -191,23 +189,29 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <th class="num">Lead total</th><th class="num">Vidas</th><th class="num">Conversão</th>
 </tr></thead><tbody></tbody></table>
 <div id="tbl_pager" class="pager"></div>
-<div class="note" style="margin-top:10px">💡 Clique numa linha para abrir o <b>funil de Leads por Origem</b> daquele vendedor (segue o "Ver por" e o filtro de Mês).</div>
+<div class="note" style="margin-top:10px">💡 Clique numa linha para abrir o <b>funil de Leads por Origem</b> daquele vendedor (segue o "Ver por", o filtro de Mês e os filtros Tipo (lead) / Produto (venda) / Origem).</div>
 </div>
 </div>
 
 <div id="tab-origem" class="tab-panel">
 <div class="tablecard">
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Origem por mês <span style="color:var(--muted);font-weight:400">· respeita os filtros de Gestão / Supervisor / Vendedor do topo</span></h3>
-<div style="display:flex;align-items:center;gap:6px">
-<label style="font-size:12px;font-weight:600;color:var(--muted)">Mês:</label>
-<select id="orig_mes" class="sel" onchange="renderOrigemTab()"></select>
-</div>
+<div style="margin-bottom:14px">
+<h3 style="font-size:14px;font-weight:700">Leads por Origem <span style="color:var(--muted);font-weight:400">· respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
 </div>
 <table id="tbl_origem_tab"><thead><tr>
 <th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
 <div class="note" style="margin-top:8px">Leads e Produtivos são exatos. <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP.</div>
+</div>
+<div class="tablecard" style="margin-top:16px">
+<div style="margin-bottom:14px">
+<h3 style="font-size:14px;font-weight:700">Leads por Tipo <span style="color:var(--muted);font-weight:400">· agregado por TIPO → clique para expandir as filas (Session Team) → clique numa fila para ver os vendedores. Respeita Gestão / Supervisor / Vendedor / Mês do topo</span></h3>
+</div>
+<table id="tbl_tipo_tab"><thead><tr>
+<th>Tipo / Fila</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+</tr></thead><tbody></tbody></table>
+<div class="note" style="margin-top:8px">Mesmas métricas do "Leads por Origem". <b>Tipo</b> = classificação do lead pela fila (Session Team), igual ao bloco LEADS | TIPO do GUP; expanda para ver as filas dentro de cada tipo. <b>Contratos</b> e <b>Vidas</b> são vidas vinculadas (casadas por telefone ao lead daquele tipo/fila) — cobertura parcial em PME/ADESÃO.</div>
+</div>
 </div>
 </div>
 
@@ -229,45 +233,6 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div class="card"><h3>Conversão por Tempo de Casa</h3><canvas id="ch_tempo"></canvas></div>
 <div class="tablecard"><table id="tbl_tempo"><thead><tr>
 <th>Faixa</th><th class="num">Agentes</th><th class="num">Leads</th><th class="num">Leads produtivos</th><th class="num">Vidas</th><th class="num">Vidas/agente</th><th class="num">Conv. vidas</th>
-</tr></thead><tbody></tbody></table></div>
-</div>
-
-<div id="tab-tempoatend" class="tab-panel">
-<div class="note"><b>Conversão por Tempo de Atendimento.</b> Classifica cada lead pelo tempo de resposta do agente (regra oficial HAPON V006 do dashboard SLA/Atendimento — exclui BOT e fora do horário do agente) e mostra a conversão em venda (vínculo por telefone + data, mesma metodologia da aba "Vinculado × Total"). <b>Métrica fixa</b> — é uma fotografia do período do build de SLA, não acompanha os filtros do topo (Vendedor/Gestão/Mês/etc.).</div>
-<div class="card"><h3>Conversão por Tempo de Atendimento</h3><canvas id="ch_tempoatend"></canvas></div>
-<div class="tablecard"><table id="tbl_tempoatend"><thead><tr>
-<th>Tempo de resposta</th><th class="num">Leads</th><th class="num">Vidas vinculadas</th><th class="num">Conversão</th>
-</tr></thead><tbody></tbody></table></div>
-
-<div class="note" style="margin-top:20px"><b>Vendedor × SLA (≤2min).</b> Visão complementar à de cima: ali o bucket é do <b>lead</b> (o mesmo vendedor cai em vários buckets ao mesmo tempo, um por cliente atendido); aqui cada ponto do gráfico é <b>um vendedor</b> — eixo X é o % dos leads dele respondidos em até 2 min (SLA), eixo Y é a Conversão dele (geral: vidas totais ÷ leads, mesma métrica oficial do dashboard). Tamanho da bolha = volume de leads, cor = GESTÃO (checagem de paradoxo de Simpson: times com baseline de SLA/Conversão diferente podem inverter o sinal da correlação agregada). <b>Métrica fixa</b> — mesma fotografia do SLA usada nas outras abas, não acompanha os filtros do topo.<br><span id="vendsla_corr"></span></div>
-<div class="card"><h3>Vendedor × SLA (≤2min)</h3><canvas id="ch_vendsla"></canvas></div>
-<div class="tablecard"><table id="tbl_vendsla"><thead><tr>
-<th>Vendedor</th><th>Gestão</th><th class="num">Leads</th><th class="num">Vidas</th><th class="num">Conversão</th><th class="num">SLA ≤2min</th>
-</tr></thead><tbody></tbody></table></div>
-</div>
-
-<div id="tab-comp" class="tab-panel">
-<div class="note"><b>Vinculado × Total.</b> Esta visão credita <b>todas</b> as vendas do promotor (<b>Vidas totais</b>, bate com a VENDA_DIGITAL). As <b>Vidas vinculadas</b> são só as que casaram com um lead por <b>telefone + data</b> (venda na conversa ou depois) — a metodologia do Conversão Ano Todo. A <b>Diferença</b> são vendas sem lead casado. <b>Conversão (total)</b> = vidas totais ÷ leads (pode passar de 100%); <b>Conversão (vinculada)</b> = vidas vinculadas ÷ leads (≤ 100%). Respeita os filtros do topo (Tipo CT/Origem, quando ativos, só decidem quem aparece — não há quebra Vinculado×Total por tipo/origem para reescopar os números).</div>
-<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-<input id="comp_busca" class="sel" placeholder="🔎 Buscar..." oninput="renderComp(filtered())" style="min-width:190px">
-<label style="font-size:12px;font-weight:600;color:var(--muted)">Ver por:</label>
-<select id="comp_viewby" class="sel" onchange="setCompView()">
-<option value="nome">Promotor</option>
-<option value="sup">Supervisor</option>
-<option value="gestao">Gestor</option>
-</select>
-<label style="font-size:12px;font-weight:600;color:var(--muted)">Quartil:</label>
-<select id="comp_quartil" class="sel" onchange="renderComp(filtered())">
-<option value="">Todos</option>
-<option value="Q1">Q1 — Elite</option>
-<option value="Q2">Q2 — Bom</option>
-<option value="Q3">Q3 — Mediano</option>
-<option value="Q4">Q4 — Baixo</option>
-</select>
-</div>
-<div class="tablecard"><table id="tbl_comp"><thead><tr>
-<th class="num">#</th><th id="comp_h0">Promotor</th><th class="num" id="comp_h_score" style="display:none">Score</th>
-<th class="num">Leads</th><th class="num">Vidas totais</th><th class="num">Vidas vinculadas</th><th class="num">Diferença</th><th class="num">% vínculo</th><th class="num">Conversão (total)</th><th class="num">CONVERSÃO (VINCULADA)</th>
 </tr></thead><tbody></tbody></table></div>
 </div>
 
@@ -478,8 +443,10 @@ function filtered(){
     if(!FILTERS.every(function(f){return f.sel.size===0||f.sel.has(r[f.col]);}))return false;
   var fOrig=document.getElementById('f_orig_cross').value;
   if(fOrig){var ao=(ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!ao||!ao[KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(fOrig)]])return false;}   // gate por (nome,mes) — respeita o filtro de Mes
+  var fTipoLead=document.getElementById('f_tipolead_cross').value;
   var fTipo=document.getElementById('f_tipo_cross').value;
-  if(fTipo){var at=(TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!at||!at[fTipo])return false;}   // presenca ja' significa vd>=1 NAQUELE MES (TIPO CT = CANAL da venda)
+  if(fTipoLead){var al=(LEADTIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!al||!al[fTipoLead])return false;}   // Tipo(lead): linha tem leads OU vidas-ligadas daquele tipo (conversao por tipo do lead)
+  else if(fTipo){var at=(TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!at||!at[fTipo])return false;}   // so' Produto: presenca por vida do produto (CANAL) — comportamento atual
   return true;
   });
 }
@@ -492,50 +459,55 @@ function groupBy(rows,col,ord){
   else a.sort(function(x,y){return y.vd-x.vd;});
   return a;
 }
-// ===== Cross-filtro Tipo CT / Origem (Ano Todo) =====
-// f_tipo_cross e f_orig_cross, antes, so funcionavam como "portao" dentro de filtered() (decidem
-// quem aparece), mas os totais lt/vd continuavam sendo do vendedor em TODOS os tipos/origens —
-// por isso o Detalhe (e outras abas) nao batia com os KPIs/Quartil, que ja reescopavam certo.
-// crossScope reescopa lt/vd/vv de um array de grupos usando TIPO_BY_NOME_MES/ORIG_BY_NOME_MES
-// (quebrados por NOME+MES, mesmo grao do RAW). Precisa das LINHAS de verdade (rowsOf/g._rows), nao
-// so' os nomes: cada linha contribui so' com o pedaco do SEU proprio mes, entao o cross-filtro
-// RESPEITA o filtro de Mes automaticamente (fix 03/07/2026: antes, Mes=Jul + Tipo CT=PME mostrava
-// o total ANUAL de PME — ~16 mil — em vez do recorte real de Julho — 146). Como cada linha do RAW
-// e' unica por (nome,mes), basta somar direto (sem dedup: nao ha risco de contar a mesma linha 2x).
-// Se os dois filtros estiverem ativos, Tipo CT prevalece (nao existe base cruzada Tipo x Origem).
-// vv nao existe quebrado por tipo/origem, entao vira = vd (mesma convencao ja usada na aba Quartil).
-// TIPO CT: TIPO_BY_NOME_MES[nome][mes][tipo].lt e' o total de leads do vendedor NAQUELE MES (igual
-// em todo bucket de tipo -- lead nao tem CANAL/Tipo CT, so' a venda tem); so' .vd e' especifico do
-// tipo (classificado pelo CANAL real da venda). Por isso, sob Tipo CT, "Leads Totais" nao muda e
-// "Conversao" vira vidas-do-tipo / leads-totais (decisao do David).
-function crossFilterActive(){return !!(document.getElementById('f_tipo_cross').value||document.getElementById('f_orig_cross').value);}
+// ===== Cross-filtro Produto (venda) / Tipo (lead) / Origem (Ano Todo) =====
+// Tres cross-filtros (modelo de composicao — pedido David 06/07/2026):
+//   * Produto (venda) [f_tipo_cross]: recorta as VIDAS pelo CANAL real da venda (PF/PME/ADESAO,
+//     mesma regra do relatorio diario, cobertura ~99,9%). Leads = total. -> TIPO_BY_NOME_MES{lt,vd}.
+//   * Tipo (lead) [f_tipolead_cross]: visao de conversao pelo TIPO do LEAD (fila Session Team, mesma
+//     classificacao do bloco LEADS|TIPO do GUP; PF/PME/ADESAO/PPO/OUTROS). lt = leads do tipo; vd =
+//     vidas VINCULADAS ligadas a esses leads (casadas por telefone -> cobertura PARCIAL, ~67%; e' um
+//     piso). Governa AS DUAS pontas -> quando ativo prevalece sobre Produto nas vidas.
+//     -> LEADTIPO_BY_NOME_MES[nome][mes][tipo] = {lt,vd}.
+//   * Origem [f_orig_cross]: eixo de ORIGEM do lead; FALLBACK do lado sem filtro especifico.
+// Precedencia (rowCrossVal): LEADS = Tipo(lead) -> Origem -> total; VIDAS = Tipo(lead) -> Produto ->
+// Origem -> total. crossScope reescopa lt/vd/vv de cada grupo somando rowCrossVal por LINHA (nome+mes,
+// mesmo grao do RAW) — fonte unica de verdade; RESPEITA o filtro de Mes (cada linha so' com o seu mes).
+// vv nao existe quebrado, entao vira = vd. Membership (filtered): Tipo(lead) ativo -> linha com leads
+// OU vidas-ligadas do tipo (permite conversao 0%); senao, Produto usa a presenca de venda do produto.
+function crossFilterActive(){return !!(document.getElementById('f_tipo_cross').value||document.getElementById('f_orig_cross').value||document.getElementById('f_tipolead_cross').value);}
 // {lt,vd} de UMA linha do RAW respeitando o cross-filtro (ou os valores brutos se nenhum ativo).
 // Usado pelos graficos POR MES (monthAgg, renderOrg), que precisam aplicar linha a linha (nome+mes).
 function rowCrossVal(r){
+  // Cross-filtros (precedencia por lado):
+  //   LEADS: Tipo(lead) -> Origem -> total.
+  //   VIDAS: Tipo(lead) (vidas VINCULADAS ligadas ao lead do tipo) -> Produto(venda)/CANAL -> Origem -> total.
+  // Tipo(lead) governa AS DUAS pontas (leads do tipo + vidas ligadas), entao quando ativo prevalece
+  // sobre Produto nas vidas (nao existe base cruzada tipo-lead x produto). LEADTIPO/TIPO = {lt,vd}.
+  var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;
   var tipoSel=(document.getElementById('f_tipo_cross')||{value:''}).value;
-  if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];return t?{lt:t.lt,vd:t.vd}:{lt:0,vd:0};}
   var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
-  if(origSel){var oLbl=KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(origSel)];var o=((ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[oLbl];return o?{lt:o.lt,vd:o.vd}:{lt:0,vd:0};}
-  // sem cross-filtro: vd respeita o filtro VIDAS (Total/Vinculado mesmo mes)
-  return {lt:r[C.LT],vd:(vincVV()?(r[C.VV]||0):r[C.VD])};
+  var oLbl=origSel?KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(origSel)]:null;
+  var oRow=origSel?(((ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[oLbl]):null;
+  var lRow=leadSel?(((LEADTIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel]):null;
+  var lt = leadSel?(lRow?lRow.lt:0) : origSel?(oRow?oRow.lt:0) : r[C.LT];
+  var vd;
+  if(leadSel){vd=lRow?lRow.vd:0;}
+  else if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];vd=t?t.vd:0;}
+  else if(origSel){vd=oRow?oRow.vd:0;}
+  else{vd=(vincVV()?(r[C.VV]||0):r[C.VD]);}
+  return {lt:lt,vd:vd};
 }
 function crossScope(arr,rowsOf){
-  var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
-  var tipoSel=(document.getElementById('f_tipo_cross')||{value:''}).value;
-  if(!origSel&&!tipoSel)return;
-  var oLbl=origSel?KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(origSel)]:null;
+  // reescopa lt/vd/vv de cada grupo somando rowCrossVal por LINHA (nome+mes) -> fonte unica de
+  // verdade do modelo de composicao (Tipo(lead)->Leads, Produto(venda)->Vidas, Origem = fallback
+  // por lado). Cada linha do RAW e' unica por (nome,mes), entao soma direta (sem risco de dupla
+  // contagem) e o cross-filtro RESPEITA o filtro de Mes automaticamente.
+  if(!crossFilterActive())return;
   arr.forEach(function(g){
     var rows=rowsOf?rowsOf(g):(g._rows||[]);
-    if(origSel){
-      var lt=0,vd=0;
-      rows.forEach(function(r){var o=((ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[oLbl];if(o){lt+=o.lt;vd+=o.vd;}});
-      g.lt=lt;g.vd=vd;g.vv=vd;
-    }
-    if(tipoSel){
-      var lt2=0,vd2=0;
-      rows.forEach(function(r){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];if(t){lt2+=t.lt;vd2+=t.vd;}});
-      g.lt=lt2;g.vd=vd2;g.vv=vd2;
-    }
+    var lt=0,vd=0;
+    rows.forEach(function(r){var cv=rowCrossVal(r);lt+=cv.lt;vd+=cv.vd;});
+    g.lt=lt;g.vd=vd;g.vv=vd;
   });
 }
 // ===== SLA <=2min por grupo (atendimento) =====
@@ -670,20 +642,33 @@ function render(){
   PAGE.full=bypTbl;PAGE.meta=meta;applyTblSearch();syncGestaoChips();
   // apurado geral por mes (leads, vendas/vidas, conversao)
   renderGeralMes(rows);
-  renderOrg(rows);renderOrgTempo(rows);renderTempo(rows);renderTATConv();renderVendSLA();renderComp(rows);renderExtrato();renderQuartilV();
+  renderOrg(rows);renderOrgTempo(rows);renderTempo(rows);renderExtrato();renderQuartilV();renderOrigemTab(rows);   // abas Tempo de Atendimento e Vinculado x Total removidas (David 06/07/2026); Leads por Origem agora segue o filtro de Mes do topo
 }
 
 // ========== Leads por Origem (colapsavel na aba Geral + aba propria) ==========
-// Reusa o cubo ORIGEM_STATS[nome][mes][ORIGEM]={t,p,c,v}. Cada linha do RAW e' (nome x mes),
-// entao somar ORIGEM_STATS[nome][mes] sobre as linhas ja respeita QUALQUER filtro (incl. Mes).
+// Reusa o cubo ORIGEM_STATS[nome][mes][ORIGEM]={t,p,c,v, tT,pT (leads por tipo do lead), vP,cP (vidas/
+// contratos por produto), vT,cT (vidas/contratos VINCULADOS por tipo do lead)}. Somar sobre as linhas
+// ja respeita os filtros de QUEM + Mes. Alem disso aplica os CROSS-FILTROS (pedido David 06/07/2026):
+// Tipo(lead) -> leads=tT/pT e vidas ligadas=vT/cT (prevalece nas vidas); senao Produto(venda) -> vidas
+// por CANAL=vP/cP; Origem restringe a origem selecionada. Assim o funil corresponde aos filtros.
 function origemAgg(rows){
+  var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t/p
+  var prodSel=(document.getElementById('f_tipo_cross')||{value:''}).value;       // Produto(venda) -> v/c
+  var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;       // Origem -> so' a origem escolhida
   var acc={};
   rows.forEach(function(r){
     var by=ORIGEM_STATS[r[C.NOME]]; if(!by)return;
     var d=by[r[C.MES]]; if(!d)return;
     for(var og in d){
+      if(origSel&&og!==origSel)continue;
+      var s=d[og];
+      var t=leadSel?((s.tT&&s.tT[leadSel])||0):s.t;
+      var p=leadSel?((s.pT&&s.pT[leadSel])||0):s.p;
+      // vidas/contratos: Tipo(lead) (vinculadas ligadas ao tipo do lead) -> Produto (CANAL) -> total
+      var v=leadSel?((s.vT&&s.vT[leadSel])||0):prodSel?((s.vP&&s.vP[prodSel])||0):s.v;
+      var c=leadSel?((s.cT&&s.cT[leadSel])||0):prodSel?((s.cP&&s.cP[prodSel])||0):s.c;
       if(!acc[og])acc[og]={og:og,t:0,p:0,c:0,v:0};
-      var s=d[og];acc[og].t+=s.t;acc[og].p+=s.p;acc[og].c+=s.c;acc[og].v+=s.v;
+      acc[og].t+=t;acc[og].p+=p;acc[og].c+=c;acc[og].v+=v;
     }
   });
   return Object.values(acc).sort(function(x,y){return y.t-x.t;});
@@ -719,17 +704,88 @@ function toggleOrigemRow(rid,tr){
   d.style.display=show?'':'none';
   tr.classList.toggle('open',show);
 }
-// Aba propria: mes vem do seletor local; respeita os filtros de QUEM (todos menos o de Mes).
-function passesWho(r){return FILTERS.every(function(f){return f.isMes||f.sel.size===0||f.sel.has(r[f.col]);});}
-function renderOrigemTab(){
-  var sel=document.getElementById('orig_mes');if(!sel)return;
-  if(!sel.options.length){
-    var opts='';for(var mm=1;mm<=MES_FIM;mm++)opts+='<option value="'+mm+'">'+(MESNOME[mm]||mm)+'</option>';
-    sel.innerHTML=opts;sel.value=MES_FIM;
+// ===== Tabela "Leads por Tipo" (agregado por TIPO -> expansivel por FILA/Session Team) =====
+// Mesmas 8 metricas do "Leads por Origem". Usa o cubo TIPOFILA_STATS[nome][mes][tipo][fila]={t,p,v,c}.
+// Alimentada por filteredWho() (WHO + Mes; NAO reage aos cross-filtros Tipo(lead)/Produto/Origem,
+// que sao eixos proprios) — por isso a tabela e' uma quebra "limpa" por tipo/fila do recorte de topo.
+function filteredWho(){return RAW.filter(function(r){return FILTERS.every(function(f){return f.sel.size===0||f.sel.has(r[f.col]);});});}
+function _omCells(x){return '<td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td>';}
+var TIPO_ORD_TAB=['PF','PME','ADESAO','PPO','OUTROS'];
+// Agrega em 3 niveis: TIPO -> FILA (Session Team) -> VENDEDOR (NOME). O vendedor ja' e' a chave de topo
+// do cubo TIPOFILA_STATS[nome][mes][tipo][fila], entao basta acumular por r[C.NOME].
+function tipoFilaAgg(rows){
+  var acc={};
+  rows.forEach(function(r){
+    var nome=r[C.NOME];
+    var by=TIPOFILA_STATS[nome]; if(!by)return;
+    var d=by[r[C.MES]]; if(!d)return;
+    for(var tp in d){
+      var T=acc[tp]; if(!T)T=acc[tp]={tipo:tp,t:0,p:0,c:0,v:0,filas:{}};
+      var byf=d[tp];
+      for(var fl in byf){
+        var s=byf[fl];
+        T.t+=s.t;T.p+=s.p;T.c+=s.c;T.v+=s.v;
+        var F=T.filas[fl]; if(!F)F=T.filas[fl]={fila:fl,t:0,p:0,c:0,v:0,vend:{}};
+        F.t+=s.t;F.p+=s.p;F.c+=s.c;F.v+=s.v;
+        var V=F.vend[nome]; if(!V)V=F.vend[nome]={nome:nome,t:0,p:0,c:0,v:0};
+        V.t+=s.t;V.p+=s.p;V.c+=s.c;V.v+=s.v;
+      }
+    }
+  });
+  var arr=Object.values(acc).map(function(x){
+    x.filas=Object.values(x.filas).map(function(f){f.vend=Object.values(f.vend).sort(function(a,b){return b.t-a.t;});return f;}).sort(function(a,b){return b.t-a.t;});
+    return x;
+  });
+  arr.sort(function(a,b){var ia=TIPO_ORD_TAB.indexOf(a.tipo),ib=TIPO_ORD_TAB.indexOf(b.tipo);ia=ia<0?99:ia;ib=ib<0?99:ib;return (ia-ib)||(b.t-a.t);});
+  return arr;
+}
+function _esc(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function tipoTableBody(rows){
+  var a=tipoFilaAgg(rows);
+  if(!a.length)return '<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  var tot={t:0,p:0,c:0,v:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;});
+  function crt(has){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?'▶':'')+'</span>';}
+  var body='';
+  a.forEach(function(x,i){
+    var hasF=x.filas.length>0;
+    body+='<tr class="tipo-row" data-t="'+i+'"'+(hasF?' style="cursor:pointer" onclick="tgTipo('+i+',this)"':'')+'><td>'+crt(hasF)+' <b>'+_esc(x.tipo)+'</b></td>'+_omCells(x)+'</tr>';
+    x.filas.forEach(function(f,j){
+      var hasV=f.vend.length>0;
+      body+='<tr class="fila-row" data-t="'+i+'" data-f="'+i+'_'+j+'" style="display:none'+(hasV?';cursor:pointer':'')+'"'+(hasV?' onclick="tgFila('+i+','+j+',this)"':'')+'><td style="padding-left:24px">'+crt(hasV)+' '+_esc(f.fila)+'</td>'+_omCells(f)+'</tr>';
+      f.vend.forEach(function(vv){
+        body+='<tr class="vend-row" data-t="'+i+'" data-f="'+i+'_'+j+'" style="display:none;background:var(--soft,#f8fafc)"><td style="padding-left:52px;color:var(--muted)">'+_esc(vv.nome)+'</td>'+_omCells(vv)+'</tr>';
+      });
+    });
+  });
+  body+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL GERAL</td>'+_omCells(tot)+'</tr>';
+  return '<tbody>'+body+'</tbody>';
+}
+// nivel 1: TIPO -> mostra/esconde as filas (e, ao fechar, reseta/esconde os vendedores)
+function tgTipo(i,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.fila-row[data-t="'+i+'"]').forEach(function(x){x.style.display=open?'':'none';});
+  if(!open){
+    document.querySelectorAll('tr.vend-row[data-t="'+i+'"]').forEach(function(x){x.style.display='none';});
+    document.querySelectorAll('tr.fila-row[data-t="'+i+'"]').forEach(function(x){x.classList.remove('open');var c=x.querySelector('.crt');if(c&&c.textContent==='▼')c.textContent='▶';});
   }
-  var m=parseInt(sel.value,10);
-  var rows=RAW.filter(function(r){return passesWho(r)&&r[C.MES]===m;});
-  _origemFill('tbl_origem_tab',rows);
+}
+// nivel 2: FILA (Session Team) -> mostra/esconde os vendedores
+function tgFila(i,j,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.vend-row[data-f="'+i+'_'+j+'"]').forEach(function(x){x.style.display=open?'':'none';});
+}
+function _tipoFill(tableId,rows){
+  var t=document.getElementById(tableId);if(!t)return;
+  var head=t.querySelector('thead').outerHTML;
+  t.innerHTML=head+tipoTableBody(rows);
+}
+// Aba propria "Leads por Origem" + "Leads por Tipo". Origem usa filtered() (respeita TODOS os filtros
+// do topo, inclusive cross); Tipo usa filteredWho() (WHO + Mes). Sem seletor de mes local (06/07/2026).
+function renderOrigemTab(rows){
+  _origemFill('tbl_origem_tab', rows || filtered());
+  _tipoFill('tbl_tipo_tab', filteredWho());
 }
 
 // ---------- aba Vinculado x Total ----------
@@ -1549,6 +1605,8 @@ function renderQuartilV(){
 
 const ORIG_BY_NOME={};
 const ORIG_BY_NOME_MES={};
+const LEADTIPO_BY_NOME_MES={};
+const TIPOFILA_STATS={};
 const ORIGEM_STATS={};
 const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
@@ -1592,7 +1650,9 @@ function _initUI(){
     if(M.ORIG_BY_NOME)Object.assign(ORIG_BY_NOME,M.ORIG_BY_NOME);
     if(M.ORIG_BY_NOME_MES)Object.assign(ORIG_BY_NOME_MES,M.ORIG_BY_NOME_MES);
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
+    if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.ORIGEM_STATS)Object.assign(ORIGEM_STATS,M.ORIGEM_STATS);
+    if(M.TIPOFILA_STATS)Object.assign(TIPOFILA_STATS,M.TIPOFILA_STATS);
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
     _initUI();
