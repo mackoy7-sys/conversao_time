@@ -126,11 +126,11 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 
 <div class="tab-nav">
 <button class="tab-btn active" onclick="switchTab('geral',this)">Visão Geral</button>
-<button class="tab-btn" onclick="switchTab('origem',this);renderOrigemTab();">Leads por Origem</button>
+<button class="tab-btn" onclick="switchTab('origem',this)">Leads por Origem</button>
 <button class="tab-btn" onclick="switchTab('org',this)">Próprio × Terceiros</button>
 <button class="tab-btn" onclick="switchTab('tempo',this)">Tempo de Casa</button>
 <button class="tab-btn" onclick="switchTab('extrato',this)">Extrato do Vendedor</button>
-<button class="tab-btn" onclick="switchTab('quartil',this);renderQuartilV();">Análise de Quartil</button>
+<button class="tab-btn" onclick="switchTab('quartil',this)">Análise de Quartil</button>
 </div>
 
 <div class="filters">
@@ -199,9 +199,9 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <h3 style="font-size:14px;font-weight:700">Leads por Origem <span style="color:var(--muted);font-weight:400">· respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
 </div>
 <table id="tbl_origem_tab"><thead><tr>
-<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Leads e Produtivos são exatos. <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP.</div>
+<div class="note" style="margin-top:8px">Leads e Produtivos são exatos. As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL: PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA); <b>Vidas</b> é o total de vidas vinculadas da origem (≥ soma dos produtos, pois há vidas sem CANAL identificado). <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP. Com o filtro <b>Produto (venda)</b> ativo, só a coluna do produto escolhido fica preenchida; com <b>Tipo (lead)</b> ativo, as vidas passam a ser as ligadas àquele tipo de lead (prevalece sobre o Produto).</div>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
@@ -211,7 +211,6 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <th>Tipo / Fila / Vendedor</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas PME</th><th class="num">Vidas PF</th><th class="num">Vidas TOTAL</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
 <div class="note" style="margin-top:8px"><b>Tipo</b> = classificação do lead pela fila (Session Team), igual ao bloco LEADS | TIPO do GUP; expanda TIPO → fila → vendedor. As colunas <b>Vidas ADESÃO/PME/PF</b> separam as vidas ligadas por <b>produto da venda</b> (CANAL); <b>Vidas TOTAL</b> é a soma. <b>Contratos</b> e <b>Vidas</b> são vidas vinculadas (casadas por telefone ao lead daquele tipo/fila) — cobertura parcial em PME/ADESÃO, então uma linha de lead PME pode ter mais vidas em PF do que em PME (o cliente virou plano individual).</div>
-</div>
 </div>
 </div>
 
@@ -425,8 +424,8 @@ function buildMS(f){
 }
 function msToggle(e,id){e.stopPropagation();var el=document.getElementById(id);var was=el.classList.contains('open');document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});if(!was)el.classList.add('open');}
 function msFilter(inp){var pop=inp.parentNode;pop.querySelectorAll('label[data-t]').forEach(function(l){l.style.display=l.getAttribute('data-t').indexOf(inp.value.toLowerCase())>=0?'':'none';});}
-function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;syncSel(id);render();}
-function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;syncSel(id);render();}
+function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;syncSel(id);renderD();}
+function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;syncSel(id);renderD();}
 function syncSel(id){
   var f=FILTERS.find(function(x){return x.id===id;});f.sel.clear();
   var el=document.getElementById(id);
@@ -436,7 +435,7 @@ function syncSel(id){
   else{var arr=Array.from(f.sel).map(function(v){return lbl(v,f.isMes);});btn.textContent=f.sel.size<=2?arr.join(', '):f.sel.size+' selecionados';btn.classList.add('act');}
 }
 function resetF(){FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});var sb=document.getElementById('tbl_busca');if(sb)sb.value='';render();}
-document.addEventListener('click',function(){document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});});
+document.addEventListener('click',function(e){if(e.target.closest('.ms'))return;document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});});   // fecha so em clique FORA do filtro; clicar numa opcao/busca mantem aberto (marcar varias)
 
 function filtered(){
   return RAW.filter(function(r){
@@ -581,6 +580,11 @@ function rowsTable(id,arr,labelFn){
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 
 // ---------- render ----------
+// Debounce (08/07/2026): marcar varias opcoes num filtro multi-escolha (que agora fica aberto)
+// dispara msChange/msAll a cada clique; sem isso, cada tick refazia um render pesado (varre os cubos
+// de ~4,2 MB na aba Origem). Junta as marcacoes em rajada num render so', mantendo o update "ao vivo".
+var _rT=null;
+function renderD(){if(_rT)clearTimeout(_rT);_rT=setTimeout(function(){_rT=null;render();},150);}
 function render(){
   var rows=filtered();
   // KPIs (reescopados por Tipo CT/Origem via crossScope, linha a linha — respeita Mes tambem)
@@ -645,10 +649,18 @@ function render(){
   }
   bypTbl.forEach(function(g,i){g.rank=i+1;});
   PAGE.full=bypTbl;PAGE.meta=meta;applyTblSearch();syncGestaoChips();
-  // apurado geral por mes (leads, vendas/vidas, conversao)
-  renderGeralMes(rows);
-  renderOrg(rows);renderOrgTempo(rows);renderTempo(rows);renderExtrato();renderQuartilV();renderOrigemTab(rows);   // abas Tempo de Atendimento e Vinculado x Total removidas (David 06/07/2026); Leads por Origem agora segue o filtro de Mes do topo
+  // PERF (08/07/2026): renderizar SO a aba visivel. Os KPIs + Detalhe por Vendedor + quartis acima sao
+  // baratos (groupBy s/ varrer cubos) e alimentam a Visao Geral; o caro (cubos de ~4,2 MB + graficos das
+  // outras abas) so roda quando a aba esta a' vista. switchTab() dispara render() ao trocar de aba.
+  var at=activeTab();
+  if(at==='geral')renderGeralMes(rows);              // grafico "Apurado geral por mes" so na Visao Geral
+  else if(at==='org'){renderOrg(rows);renderOrgTempo(rows);}
+  else if(at==='tempo')renderTempo(rows);
+  else if(at==='extrato')renderExtrato();
+  else if(at==='quartil')renderQuartilV();
+  else if(at==='origem')renderOrigemTab(rows);       // abas Tempo de Atendimento / Vinculado x Total removidas (David 06/07/2026)
 }
+function activeTab(){var p=document.querySelector('.tab-panel.active');return p?p.id.replace('tab-',''):'geral';}
 
 // ========== Leads por Origem (colapsavel na aba Geral + aba propria) ==========
 // Reusa o cubo ORIGEM_STATS[nome][mes][ORIGEM]={t,p,c,v, tT,pT (leads por tipo do lead), vP,cP (vidas/
@@ -656,6 +668,19 @@ function render(){
 // ja respeita os filtros de QUEM + Mes. Alem disso aplica os CROSS-FILTROS (pedido David 06/07/2026):
 // Tipo(lead) -> leads=tT/pT e vidas ligadas=vT/cT (prevalece nas vidas); senao Produto(venda) -> vidas
 // por CANAL=vP/cP; Origem restringe a origem selecionada. Assim o funil corresponde aos filtros.
+// Cabecalho clicavel reutilizavel (mesma UX da tabela "Detalhe por Vendedor"): th.sortable + seta na
+// coluna ativa; onclick chama a funcao de sort passada. cols=[{t,k,n}] (n=1 -> alinhado a direita).
+function _sortableHead(cols,st,fn){
+  return '<thead><tr>'+cols.map(function(c){
+    var act=st.key===c.k,arr=act?' <span class="arr">'+(st.dir==='asc'?'▲':'▼')+'</span>':'';
+    return '<th class="sortable'+(c.n?' num':'')+(act?' sorted':'')+'" onclick="'+fn+'(\''+c.k+'\')">'+c.t+arr+'</th>';
+  }).join('')+'</tr></thead>';
+}
+// ---- ordenacao da tabela "Leads por Origem" (clique no header) ----
+var ORIGEM_COLS=[{t:'Origem',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Leads Produtivos',k:'p',n:1},{t:'% Produtivos',k:'pp',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
+let ORIGEM_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (igual ao comportamento anterior)
+function _origemSortVal(x,key){if(key==='og')return x.og;if(key==='pp')return x.t>0?x.p/x.t:-1;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
+function sortOrigem(key){if(ORIGEM_SORT.key===key)ORIGEM_SORT.dir=ORIGEM_SORT.dir==='asc'?'desc':'asc';else{ORIGEM_SORT.key=key;ORIGEM_SORT.dir=key==='og'?'asc':'desc';}_origemFill('tbl_origem_tab',filtered());}
 function origemAgg(rows){
   var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t/p
   var prodSel=(document.getElementById('f_tipo_cross')||{value:''}).value;       // Produto(venda) -> v/c
@@ -672,8 +697,16 @@ function origemAgg(rows){
       // vidas/contratos: Tipo(lead) (vinculadas ligadas ao tipo do lead) -> Produto (CANAL) -> total
       var v=leadSel?((s.vT&&s.vT[leadSel])||0):prodSel?((s.vP&&s.vP[prodSel])||0):s.v;
       var c=leadSel?((s.cT&&s.cT[leadSel])||0):prodSel?((s.cP&&s.cP[prodSel])||0):s.c;
-      if(!acc[og])acc[og]={og:og,t:0,p:0,c:0,v:0};
-      acc[og].t+=t;acc[og].p+=p;acc[og].c+=c;acc[og].v+=v;
+      // vidas separadas por PRODUTO (colunas Vidas PF/PME/ADESAO): MESMA precedencia -> Tipo(lead)
+      // usa vTP[tipo]{PF,PME,ADESAO}; senao Produto zera as outras colunas; senao vP (todos).
+      var vpf,vpme,vade;
+      if(leadSel){var m=(s.vTP&&s.vTP[leadSel])||{};vpf=m.PF||0;vpme=m.PME||0;vade=m.ADESAO||0;}
+      else{var P=s.vP||{};
+        if(prodSel){vpf=prodSel==='PF'?(P.PF||0):0;vpme=prodSel==='PME'?(P.PME||0):0;vade=prodSel==='ADESAO'?(P.ADESAO||0):0;}
+        else{vpf=P.PF||0;vpme=P.PME||0;vade=P.ADESAO||0;}
+      }
+      if(!acc[og])acc[og]={og:og,t:0,p:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+      acc[og].t+=t;acc[og].p+=p;acc[og].c+=c;acc[og].v+=v;acc[og].vpf+=vpf;acc[og].vpme+=vpme;acc[og].vade+=vade;
     }
   });
   return Object.values(acc).sort(function(x,y){return y.t-x.t;});
@@ -681,17 +714,17 @@ function origemAgg(rows){
 function _opct(n,d){return d>0?(n/d*100).toFixed(1).replace('.',',')+'%':'—';}
 function origemTableBody(rows){
   var a=origemAgg(rows);
-  if(!a.length)return '<tbody><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
-  var tot={t:0,p:0,c:0,v:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;});
-  function tr(og,x,extra){return '<tr'+(extra||'')+'><td>'+og+'</td><td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td></tr>';}
+  if(!a.length)return '<tbody><tr><td colspan="11" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  a.sort(function(x,y){var av=_origemSortVal(x,ORIGEM_SORT.key),bv=_origemSortVal(y,ORIGEM_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return ORIGEM_SORT.dir==='asc'?r:-r;});
+  var tot={t:0,p:0,c:0,v:0,vpf:0,vpme:0,vade:0};a.forEach(function(x){tot.t+=x.t;tot.p+=x.p;tot.c+=x.c;tot.v+=x.v;tot.vpf+=x.vpf;tot.vpme+=x.vpme;tot.vade+=x.vade;});
+  function tr(og,x,extra){return '<tr'+(extra||'')+'><td>'+og+'</td><td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.vpf)+'</td><td class="num">'+nf(x.vpme)+'</td><td class="num">'+nf(x.vade)+'</td><td class="num">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td></tr>';}
   var body=a.map(function(x){return tr(x.og,x,'');}).join('');
   body+=tr('TOTAL GERAL',tot,' style="font-weight:700;border-top:2px solid var(--border)"');
   return '<tbody>'+body+'</tbody>';
 }
 function _origemFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
-  var head=t.querySelector('thead').outerHTML;
-  t.innerHTML=head+origemTableBody(rows);
+  t.innerHTML=_sortableHead(ORIGEM_COLS,ORIGEM_SORT,'sortOrigem')+origemTableBody(rows);
 }
 // Funil por LINHA (Detalhe por Vendedor): monta o funil de origem do recorte g._rows (as linhas
 // RAW ja' filtradas daquele vendedor/grupo). Segue o "Ver por" e o filtro de Mes automaticamente.
@@ -699,9 +732,9 @@ function origemDetailHTML(g){
   return '<div class="origem-det"><div class="origem-det-h">Leads por Origem · '+g.k+'</div>'
     +'<table class="origem-mini"><thead><tr>'
     +'<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th>'
-    +'<th class="num">Contratos</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>'
+    +'<th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>'
     +'</tr></thead>'+origemTableBody(g._rows||[])+'</table>'
-    +'<div class="note" style="margin:8px 0 0">Leads e Produtivos exatos. Contratos (≈ telefones distintos casados) e Vidas são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO.</div></div>';
+    +'<div class="note" style="margin:8px 0 0">Leads e Produtivos exatos. Vidas PF/PME/ADESÃO separam as vidas vinculadas por produto (CANAL); Vidas é o total (≥ soma dos produtos). Contratos e Vidas são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO.</div></div>';
 }
 function toggleOrigemRow(rid,tr){
   var d=document.getElementById(rid);if(!d)return;
@@ -717,6 +750,12 @@ function filteredWho(){return RAW.filter(function(r){return FILTERS.every(functi
 function _addVp(o,vp){if(!vp)return;if(!o.vp)o.vp={};for(var k in vp)o.vp[k]=(o.vp[k]||0)+vp[k];}
 function _omCells(x){var vp=x.vp||{};return '<td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.p)+'</td><td class="num">'+_opct(x.p,x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(vp.ADESAO||0)+'</td><td class="num">'+nf(vp.PME||0)+'</td><td class="num">'+nf(vp.PF||0)+'</td><td class="num" style="font-weight:600">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td>';}
 var TIPO_ORD_TAB=['PF','PME','ADESAO','PPO','OUTROS'];
+// ---- ordenacao da tabela "Leads por Tipo" (clique no header) — ordena os 3 niveis (TIPO/fila/vendedor) ----
+var TIPO_COLS=[{t:'Tipo / Fila / Vendedor',k:'name'},{t:'Leads Totais',k:'t',n:1},{t:'Leads Produtivos',k:'p',n:1},{t:'% Produtivos',k:'pp',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas TOTAL',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
+let TIPO_SORT={key:null,dir:'desc'};   // null = ordem semantica padrao (TIPO_ORD_TAB nos tipos + Leads desc)
+function _tipoSortVal(x,key){if(key==='name')return x.tipo||x.fila||x.nome||'';if(key==='pp')return x.t>0?x.p/x.t:-1;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;var vp=x.vp||{};if(key==='vpf')return vp.PF||0;if(key==='vpme')return vp.PME||0;if(key==='vade')return vp.ADESAO||0;return x[key]||0;}
+function _tipoCmp(a,b){var av=_tipoSortVal(a,TIPO_SORT.key),bv=_tipoSortVal(b,TIPO_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return TIPO_SORT.dir==='asc'?r:-r;}
+function sortTipo(key){if(TIPO_SORT.key===key)TIPO_SORT.dir=TIPO_SORT.dir==='asc'?'desc':'asc';else{TIPO_SORT.key=key;TIPO_SORT.dir=key==='name'?'asc':'desc';}_tipoFill('tbl_tipo_tab',filteredWho());}
 // Agrega em 3 niveis: TIPO -> FILA (Session Team) -> VENDEDOR (NOME). O vendedor ja' e' a chave de topo
 // do cubo TIPOFILA_STATS[nome][mes][tipo][fila], entao basta acumular por r[C.NOME].
 function tipoFilaAgg(rows){
@@ -738,11 +777,14 @@ function tipoFilaAgg(rows){
       }
     }
   });
+  var defCmp=function(a,b){return b.t-a.t;};   // padrao: Leads Totais desc (quando nao ha sort por header)
+  var lvlCmp=TIPO_SORT.key?_tipoCmp:defCmp;
   var arr=Object.values(acc).map(function(x){
-    x.filas=Object.values(x.filas).map(function(f){f.vend=Object.values(f.vend).sort(function(a,b){return b.t-a.t;});return f;}).sort(function(a,b){return b.t-a.t;});
+    x.filas=Object.values(x.filas).map(function(f){f.vend=Object.values(f.vend).sort(lvlCmp);return f;}).sort(lvlCmp);
     return x;
   });
-  arr.sort(function(a,b){var ia=TIPO_ORD_TAB.indexOf(a.tipo),ib=TIPO_ORD_TAB.indexOf(b.tipo);ia=ia<0?99:ia;ib=ib<0?99:ib;return (ia-ib)||(b.t-a.t);});
+  if(TIPO_SORT.key)arr.sort(_tipoCmp);
+  else arr.sort(function(a,b){var ia=TIPO_ORD_TAB.indexOf(a.tipo),ib=TIPO_ORD_TAB.indexOf(b.tipo);ia=ia<0?99:ia;ib=ib<0?99:ib;return (ia-ib)||(b.t-a.t);});
   return arr;
 }
 function _esc(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -784,8 +826,7 @@ function tgFila(i,j,tr){
 }
 function _tipoFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
-  var head=t.querySelector('thead').outerHTML;
-  t.innerHTML=head+tipoTableBody(rows);
+  t.innerHTML=_sortableHead(TIPO_COLS,TIPO_SORT,'sortTipo')+tipoTableBody(rows);
 }
 // Aba propria "Leads por Origem" + "Leads por Tipo". Origem usa filtered() (respeita TODOS os filtros
 // do topo, inclusive cross); Tipo usa filteredWho() (WHO + Mes). Sem seletor de mes local (06/07/2026).
@@ -1441,7 +1482,7 @@ function renderExtrato(){
   ]},options:{plugins:{legend:{position:'bottom'}},scales:{y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}}}});
 }
 
-function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');}
+function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');render();}   // render() agora despacha so' a aba ativa
 
 // ---------- Análise de Quartil (tab-quartil) ----------
 function renderQuartilV(){
