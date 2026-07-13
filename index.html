@@ -305,6 +305,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
       <option value="Q3">Q3 — Mediano</option>
       <option value="Q4">Q4 — Baixo</option>
     </select>
+    <button onclick="downloadResumoCSV()" title="Baixa a tabela de vendedores (score, quartil, leads, vidas, ligadas, conversão, SLA, atingimentos) conforme os filtros aplicados" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Exportar auditoria (CSV)</button>
   </div>
   <div style="overflow-x:auto">
   <table id="tbl_qv">
@@ -1499,6 +1500,49 @@ function renderExtrato(){
 function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');render();}   // render() agora despacha so' a aba ativa
 
 // ---------- Análise de Quartil (tab-quartil) ----------
+// Exporta o "Resumo por Vendedor" (auditoria) em CSV, a partir da populacao ja calculada em
+// renderQuartilV (window._QV_LAST): score, quartil, leads, vidas, ligadas, conversao, SLA e
+// atingimentos. Respeita os filtros do topo e o "Ver por"/quartil da aba. Mesmas colunas do XLSX.
+function downloadResumoCSV(){
+  var S=window._QV_LAST;
+  if(!S||!S.rows||!S.rows.length){alert('Nada para exportar. Abra a aba "Análise de Quartil" e ajuste os filtros.');return;}
+  var vb=S.vb, sep=';';
+  function esc(v){v=(v==null?'':''+v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  function p1(x){return (x==null)?'':(x*100).toFixed(1).replace('.',',');}
+  function pcv(v,l){return l>0?(v/l*100).toFixed(1).replace('.',','):'';}
+  var ent=vb==='sup'?'Supervisor':vb==='gestao'?'Gestão':'Vendedor';
+  var head=['#','Quartil','Score (0-100)',ent,'Gestão','Supervisor','Área','Organização','Status','Tempo de casa',
+            'Leads','Leads produtivos','Vidas','Vidas ligadas','% ligadas','Conversão %','SLA <=2min %',
+            'At. Volume %','At. Conversão-chave %','At. Principal %','At. Demais fila %'];
+  var mSel=null;try{FILTERS.forEach(function(f){if(f.col===C.MES)mSel=f.sel;});}catch(e){}
+  var mesLbl=(mSel&&mSel.size)?Array.from(mSel).sort().map(function(m){return MESNOME[m]||m;}).join(', '):'Todos';
+  var L=[];
+  L.push(esc('Resumo por Vendedor (auditoria) — Ver por: '+ent+' | Mês: '+mesLbl+' | meta de volume (prorrateada): '+Math.round(S.volTgt||0)+' vidas'));
+  L.push('');
+  L.push(head.map(esc).join(sep));
+  S.rows.forEach(function(ag,i){
+    var r0=(ag._rows&&ag._rows[0])?ag._rows[0]:[];
+    var V=(ag._effVd!=null?ag._effVd:(ag.vd||0));
+    var lp=0;(ag._rows||[]).forEach(function(r){lp+=(r[C.LP]||0);});
+    var sla=slaPctVal(ag);
+    L.push([
+      i+1, ag.q, (ag._score!=null?(ag._score*100).toFixed(1).replace('.',','):''),
+      ag.k,
+      (vb==='gestao'?ag.k:(r0[C.GESTAO]||'')),
+      (vb==='sup'?ag.k:(ag.sup||r0[C.SUP]||'')),
+      (ag.area||r0[C.AREA]||''),
+      (r0[C.ORG]||''), (r0[C.STATUS]||''), (ag.tempo||''),
+      ag.lt, lp, V, (ag.vv||0),
+      pcv(ag.vv||0,V), pcv(V,ag.lt),
+      (sla==null?'':sla.toFixed(1).replace('.',',')),
+      p1(ag._attVol), p1(ag._attConv), p1(ag._attP), p1(ag._attD)
+    ].map(esc).join(sep));
+  });
+  var blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='resumo_vendedor_auditoria_'+vb+'_'+mesLbl.replace(/[^a-z0-9]+/gi,'')+'.csv';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+}
 function renderQuartilV(){
   var vbSel=document.getElementById('qv_viewby').value;
   var gcol=vbSel==='sup'?C.SUP:vbSel==='gestao'?C.GESTAO:C.NOME;
@@ -1638,6 +1682,7 @@ function renderQuartilV(){
   // filtro holofote por nome: só afeta as linhas exibidas (score/posição já calculados sobre a população)
   if(nameSel.size>0 && vbSel==='nome')tableRows=tableRows.filter(function(ag){return nameSel.has(ag.k);});
   tableRows.sort(function(a,b){return (b._score||0)-(a._score||0);});
+  window._QV_LAST={rows:tableRows,vb:vbSel,volTgt:volTgt};   // p/ o botao "Exportar auditoria (CSV)"
   document.getElementById('qv-rows').textContent='('+tableRows.length+' '+vbLabel+')';
   document.querySelector('#tbl_qv tbody').innerHTML=tableRows.map(function(ag){
     var cor=QC[ag.q];
