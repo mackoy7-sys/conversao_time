@@ -118,7 +118,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </script>
 <div class="wrap">
 <div class="head">
-<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 50%</b> (volume, meta 60 vidas/mês) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> (conversão vs meta por origem) · ref. 30/06/2026</p></div>
+<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 50%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> (conversão vs meta por origem) · ref. 30/06/2026</p></div>
 <div style="text-align:right"><div style="font-size:28px;font-weight:800" id="hcount">297</div><div style="font-size:12px;opacity:.85">vendedores</div></div>
 </div>
 
@@ -535,7 +535,20 @@ var VOL_TARGET_MES=60;
 var _ALLMONTHS=null;
 function totalMonths(){if(_ALLMONTHS==null){try{var s=new Set();RAW.forEach(function(r){s.add(r[C.MES]);});_ALLMONTHS=s.size||1;}catch(e){_ALLMONTHS=6;}}return _ALLMONTHS;}
 function periodMonths(){var sel=null;try{FILTERS.forEach(function(x){if(x.col===C.MES)sel=x.sel;});}catch(e){}return (sel&&sel.size>0)?sel.size:totalMonths();}
-function volTarget(){return VOL_TARGET_MES*periodMonths();}
+// Proração por dia: lê a data "ref. dd/mm/aaaa" do relatório e devolve (dia decorrido ÷ dias do mês), 0<f<=1.
+// Assim a meta de volume não exige 60 no mês inteiro logo no começo do mês; escala com os dias decorridos.
+var _REFFAC=null;
+function refProration(){
+  if(_REFFAC!=null)return _REFFAC;
+  var f=1;
+  try{
+    var m=(document.body.innerText||'').match(/ref\.?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if(m){var day=+m[1],mon=+m[2],yr=+m[3];var dim=new Date(yr,mon,0).getDate();if(dim>0){f=day/dim;if(f>1)f=1;if(f<=0)f=1;}}
+  }catch(e){f=1;}
+  _REFFAC=f;return f;
+}
+// Meta de volume do período: meses completos contam 60 cada; o mês corrente (ref.) é prorrateado pelos dias decorridos.
+function volTarget(){var pm=periodMonths();return VOL_TARGET_MES*((pm-1)+refProration());}
 var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
@@ -1348,7 +1361,8 @@ function renderExtrato(){
   var pctR=function(r){return r==null?'—':(r*100).toFixed(0);};
   var attV=function(a){return a==null?'sem leads':(a*100).toFixed(0)+'% da meta';};
   var _pm=periodMonths();
-  var volTxt=(ag._attVol==null?'—':(_pm>1?(nf(Math.round(effV/_pm))+' vidas/mês'):(nf(effV)+' vidas no mês'))+' / 60 ('+(ag._attVol*100).toFixed(0)+'%)');
+  var _volTgtE=volTarget();
+  var volTxt=(ag._attVol==null?'—':nf(effV)+' vidas / '+nf(Math.round(_volTgtE))+' meta ('+(ag._attVol*100).toFixed(0)+'%)');
   var dims=[
     ['VENDA — volume (meta 60 vidas/mês)','peso 50%','#0072ce',pctR(ag._rv),volTxt],
     ['PRINCIPAL (C.Abnd., C.Abnd.Con., Conecta, Eugenia)','peso 30%','#7c3aed',pctR(ag._rk),attV(ag._attP)],
@@ -1540,8 +1554,9 @@ function renderQuartilV(){
   // Rótulo dinâmico do score
   (function(){var el=document.getElementById('qv_score_lbl');if(!el)return;
     var pm=periodMonths();
-    var base=pm>1?('vidas/mês ÷ 60 — média de '+pm+' meses'):('vidas no mês em análise ÷ 60');
-    el.innerHTML='Score: <b style="color:#0072ce">VENDA 50%</b> = atingimento de volume (<b>meta 60 vidas/mês</b> · '+base+') · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> = conversão vs meta por origem (anual).<br><b style="color:#16a34a">Porta do Q1 (dupla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(volTgt)+' vidas = Ating. volume ≥ 100%) <b>E</b> ≥ <b>95% da meta de conversão</b> (Atingim. meta conv. ≥ 95%); senão, no máximo Q2.';
+    var facPct=Math.round(refProration()*100);
+    var base=pm>1?('meta 60/mês prorrateada pelos dias — média de '+pm+' meses'):('meta 60/mês prorrateada pelos dias decorridos ('+facPct+'% do mês)');
+    el.innerHTML='Score: <b style="color:#0072ce">VENDA 50%</b> = atingimento de volume (<b>'+base+'</b>) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> = conversão vs meta por origem (anual).<br><b style="color:#16a34a">Porta do Q1 (dupla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(Math.round(volTgt))+' vidas prorrateadas = Ating. volume ≥ 100%) <b>E</b> ≥ <b>95% da meta de conversão</b> (Atingim. meta conv. ≥ 95%); senão, no máximo Q2.';
   })();
 
   function origAgg(items){
