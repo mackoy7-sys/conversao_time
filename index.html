@@ -118,7 +118,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </script>
 <div class="wrap">
 <div class="head">
-<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 50%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> (conversão vs meta por origem) · ref. 30/06/2026</p></div>
+<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 50%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> (conversão vs meta por origem) · ref. <span id="refdate">30/06/2026</span></p></div>
 <div style="text-align:right"><div style="font-size:28px;font-weight:800" id="hcount">297</div><div style="font-size:12px;opacity:.85">vendedores</div></div>
 </div>
 
@@ -536,14 +536,19 @@ var VOL_TARGET_MES=60;
 var _ALLMONTHS=null;
 function totalMonths(){if(_ALLMONTHS==null){try{var s=new Set();RAW.forEach(function(r){s.add(r[C.MES]);});_ALLMONTHS=s.size||1;}catch(e){_ALLMONTHS=6;}}return _ALLMONTHS;}
 function periodMonths(){var sel=null;try{FILTERS.forEach(function(x){if(x.col===C.MES)sel=x.sel;});}catch(e){}return (sel&&sel.size>0)?sel.size:totalMonths();}
-// Proração por dia: lê a data "ref. dd/mm/aaaa" do relatório e devolve (dia decorrido ÷ dias do mês), 0<f<=1.
+// Proração por dia: usa a data de referência (dd/mm/aaaa) e devolve (dia decorrido ÷ dias do mês), 0<f<=1.
 // Assim a meta de volume não exige 60 no mês inteiro logo no começo do mês; escala com os dias decorridos.
+// REF_DATE é a data-corte dos dados: no standalone é carimbada pelo build; no live é hidratada do meta
+// (M.REF_DATE) a cada carga — por isso NUNCA fica presa numa virada de mês. Fallback = texto do "ref.".
+let REF_DATE="30/06/2026";
 var _REFFAC=null;
 function refProration(){
   if(_REFFAC!=null)return _REFFAC;
   var f=1;
   try{
-    var m=(document.body.innerText||'').match(/ref\.?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    var s=(typeof REF_DATE==='string'&&REF_DATE)?REF_DATE:'';
+    var m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(!m)m=(document.body.innerText||'').match(/ref\.?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
     if(m){var day=+m[1],mon=+m[2],yr=+m[3];var dim=new Date(yr,mon,0).getDate();if(dim>0){f=day/dim;if(f>1)f=1;if(f<=0)f=1;}}
   }catch(e){f=1;}
   _REFFAC=f;return f;
@@ -1755,6 +1760,7 @@ function _initUI(){
     if(M.CORR_SLA_CONV_PARTIAL!=null)CORR_SLA_CONV_PARTIAL=M.CORR_SLA_CONV_PARTIAL;
     if(M.CORR_SLA_CONV_BY_GESTAO)Object.assign(CORR_SLA_CONV_BY_GESTAO,M.CORR_SLA_CONV_BY_GESTAO);
     if(M.MES_FIM!=null)MES_FIM=M.MES_FIM;
+    if(M.REF_DATE){REF_DATE=M.REF_DATE;_REFFAC=null;var _rd=document.getElementById('refdate');if(_rd)_rd.textContent=M.REF_DATE;}
     if(M.ORIG_BY_NOME)Object.assign(ORIG_BY_NOME,M.ORIG_BY_NOME);
     if(M.ORIG_BY_NOME_MES)Object.assign(ORIG_BY_NOME_MES,M.ORIG_BY_NOME_MES);
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
