@@ -563,8 +563,24 @@ function refProration(){
   }catch(e){f=1;}
   _REFFAC=f;return f;
 }
-// Meta de volume do período: meses completos contam 60 cada; o mês corrente (ref.) é prorrateado pelos dias decorridos.
-function volTarget(){var pm=periodMonths();return VOL_TARGET_MES*((pm-1)+refProration());}
+// REF_DATE em partes {d, mo, y}. Base da proração por dia.
+function refParts(){var m=(typeof REF_DATE==='string'?REF_DATE:'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?{d:+m[1],mo:+m[2],y:+m[3]}:null;}
+// Meses efetivamente selecionados (ou todos presentes na base se nenhum filtro).
+function selectedMonths(){var sel=null;try{FILTERS.forEach(function(x){if(x.col===C.MES)sel=x.sel;});}catch(e){}
+  if(sel&&sel.size>0)return Array.from(sel).map(Number);
+  var s=new Set();RAW.forEach(function(r){s.add(+r[C.MES]);});return Array.from(s);}
+// Meta de volume do período, PRORRATEADA POR DIA e POR MÊS:
+// - mês anterior ao mês do REF_DATE = completo (60);
+// - mês do REF_DATE (mês corrente/parcial) = 60 × (dia ÷ dias-do-mês);
+// - mês posterior (sem dado) = 0. Assim, ao ver Julho no dia 13, a meta cai p/ ~25 e o Q1 volta a ter gente.
+function volTarget(){
+  var rp=refParts(),months=selectedMonths();
+  if(!rp)return VOL_TARGET_MES*months.length;
+  var dim=new Date(rp.y,rp.mo,0).getDate();var fac=dim>0?Math.min(1,rp.d/dim):1;
+  var t=0;months.forEach(function(mm){ if(mm<rp.mo)t+=VOL_TARGET_MES; else if(mm===rp.mo)t+=VOL_TARGET_MES*fac; });
+  if(t<=0)t=VOL_TARGET_MES;   // guarda p/ seleção só de mês futuro (evita divisão por zero)
+  return t;
+}
 var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
@@ -1903,6 +1919,11 @@ function _initUI(){
     if(M.CORR_SLA_CONV_BY_GESTAO)Object.assign(CORR_SLA_CONV_BY_GESTAO,M.CORR_SLA_CONV_BY_GESTAO);
     if(M.MES_FIM!=null)MES_FIM=M.MES_FIM;
     if(M.REF_DATE){REF_DATE=M.REF_DATE;_REFFAC=null;var _rd=document.getElementById('refdate');if(_rd)_rd.textContent=M.REF_DATE;}
+    // Ground truth da data-corte: maior dt_carga das linhas (ISO yyyy-mm-dd). Sobrepõe a meta REF_DATE se estiver defasada,
+    // para a proração de volume acompanhar o dia real dos dados (ex.: Julho parcial dia 13) sem depender de update manual da meta.
+    try{var _mx='';rows.forEach(function(r){if(r.dt_carga&&(''+r.dt_carga)>_mx)_mx=''+r.dt_carga;});
+      if(_mx){var _p=_mx.slice(0,10).split('-');if(_p.length===3){REF_DATE=_p[2]+'/'+_p[1]+'/'+_p[0];_REFFAC=null;var _rd2=document.getElementById('refdate');if(_rd2)_rd2.textContent=REF_DATE;}}
+    }catch(e){}
     if(M.ORIG_BY_NOME)Object.assign(ORIG_BY_NOME,M.ORIG_BY_NOME);
     if(M.ORIG_BY_NOME_MES)Object.assign(ORIG_BY_NOME_MES,M.ORIG_BY_NOME_MES);
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
