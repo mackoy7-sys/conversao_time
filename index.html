@@ -48,6 +48,20 @@ td.num,th.num{text-align:right}
 .origem-mini th{border-bottom:1px solid #e2e8f0;padding:6px 10px}
 .origem-mini td{border-bottom:1px solid #eef2f7;padding:6px 10px;white-space:nowrap}
 .origem-mini tr:hover td{background:#f1f5f9}
+/* Compactar colunas (David 15/07): tabela ocupa 100% da largura, mas a SOBRA vai so pras colunas de TEXTO;
+   os numeros huggam o conteudo (width:1px + nowrap global) e ficam agrupados a direita, sem gaps entre eles.
+   Padding escopado por FILHO DIRETO (nao '#tbl td', que por especificidade de ID vazaria no .origem-mini
+   aninhado) + mais denso. */
+#tbl{width:100%;max-width:100%}
+#tbl>thead>tr>th{padding:7px 10px}
+#tbl>tbody>tr.vrow>td{padding:6px 10px}
+#tbl>thead>tr>th.num,#tbl>tbody>tr.vrow>td.num{width:1px}
+.origem-mini{width:100%;max-width:100%}
+.origem-mini th{padding:5px 9px}
+.origem-mini td{padding:5px 9px}
+.origem-mini th.num,.origem-mini td.num{width:1px}
+/* drill-down: nao deixa a largura intrinseca (colspan) distorcer as colunas da tabela externa */
+.vdet>td>.origem-det{width:0;min-width:100%;overflow-x:auto}
 th.sortable{cursor:pointer}
 th.sortable:hover{color:var(--accent)}
 th.sorted{color:var(--accent)}
