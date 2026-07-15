@@ -196,12 +196,12 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div id="tab-origem" class="tab-panel">
 <div class="tablecard">
 <div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Origem <span style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<h3 style="font-size:14px;font-weight:700">Leads por Origem <span style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
 </div>
 <table id="tbl_origem_tab"><thead><tr>
 <th>Origem / Situação / Tag</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Cada origem abre em <b>Produtivos</b> e <b>Improdutivos</b> (regra Hapvida da <i>Tag de encerramento</i>: tags 10/10.B/13/14/16/17/18/24/29/33 <b>e sem tag</b> = produtivo; demais = improdutivo), e cada uma dessas abre nas <b>tags</b> — todas as métricas seguem essa agregação e somam de volta à origem. As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL: PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA); <b>Vidas</b> é o total de vidas vinculadas (≥ soma dos produtos, pois há vidas sem CANAL identificado). <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP. Com o filtro <b>Produto (venda)</b> ativo, só a coluna do produto escolhido fica preenchida; com <b>Tipo (lead)</b> ativo, as vidas passam a ser as ligadas àquele tipo de lead (prevalece sobre o Produto).</div>
+<div class="note" style="margin-top:8px">Cada origem abre em <b>Produtivos</b>, <b>Improdutivos</b> e <b>Sem tag</b> (regra Hapvida da <i>Tag de encerramento</i>: tags 10/10.B/13/14/16/17/18/24/29/33 = produtivo; demais = improdutivo; leads <b>sem tag</b> ficam num bucket próprio), e cada uma dessas abre nas <b>tags</b> — todas as métricas seguem essa agregação e somam de volta à origem. As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL: PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA); <b>Vidas</b> é o total de vidas vinculadas (≥ soma dos produtos, pois há vidas sem CANAL identificado). <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP. Com o filtro <b>Produto (venda)</b> ativo, só a coluna do produto escolhido fica preenchida; com <b>Tipo (lead)</b> ativo, as vidas passam a ser as ligadas àquele tipo de lead (prevalece sobre o Produto).</div>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
@@ -214,12 +214,12 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Situação <span style="color:var(--muted);font-weight:400">· agregado por <b>Produtivos / Improdutivos</b> (todas as origens juntas) → clique para expandir as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<h3 style="font-size:14px;font-weight:700">Leads por Situação <span style="color:var(--muted);font-weight:400">· agregado por <b>Produtivos / Improdutivos / Sem tag</b> (todas as origens juntas) → clique para expandir as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
 </div>
 <table id="tbl_sit_tab"><thead><tr>
 <th>Situação / Tag</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Mesmas métricas da tabela "Leads por Origem", mas agregadas por <b>situação</b> em vez de origem: <b>Produtivo</b> = tags 10/10.B/13/14/16/17/18/24/29/33 <b>e sem tag</b>; <b>Improdutivo</b> = demais tags. Cada situação abre nas suas <b>tags</b>. É a mesma agregação da tabela de origem vista "de cima": os totais batem com o TOTAL GERAL de "Leads por Origem".</div>
+<div class="note" style="margin-top:8px">Mesmas métricas da tabela "Leads por Origem", mas agregadas por <b>situação</b> em vez de origem: <b>Produtivo</b> = tags 10/10.B/13/14/16/17/18/24/29/33; <b>Improdutivo</b> = demais tags; <b>Sem tag</b> = leads sem <i>Tag de encerramento</i> (bucket próprio). Cada situação abre nas suas <b>tags</b>. É a mesma agregação da tabela de origem vista "de cima": os totais batem com o TOTAL GERAL de "Leads por Origem".</div>
 </div>
 </div>
 </div>
@@ -729,6 +729,10 @@ function sortOrigem(key){if(ORIGEM_SORT.key===key)ORIGEM_SORT.dir=ORIGEM_SORT.di
 // PRODUTIVO/IMPRODUTIVO derivado da TAG (mesma regra do build: flag_produtivo/PROD_OK; 'SEM TAG'=vazio->produtivo).
 var PROD_OK_TAGS={'10':1,'10.B':1,'13':1,'14':1,'16':1,'17':1,'18':1,'24':1,'29':1,'33':1};
 function _tagIsProd(tag){if(!tag||tag==='SEM TAG')return true;return !!PROD_OK_TAGS[String(tag).split('-')[0].trim().toUpperCase()];}
+// Classe de 3 vias p/ os buckets das tabelas de Origem/Situacao: 'S'=sem tag (agregacao propria),
+// senao 'P'/'I' pela regra PROD_OK. Aqui SEM TAG deixa de contar como Produtivo (vira bucket proprio);
+// _tagIsProd (acima) segue inalterado p/ a coluna "Leads Produtivos" da tabela plana (KPI GUP).
+function _tagClass(tag){if(!tag||tag==='SEM TAG')return 'S';return _tagIsProd(tag)?'P':'I';}
 // Metricas de 1 celula-tag do cubo ORIGEM_TAG_STATS respeitando os cross-filtros Tipo(lead)/Produto (MESMA
 // precedencia do funil antigo). Retorna {t,c,v,vpf,vpme,vade} — usado tanto no nivel origem quanto nos
 // niveis Produtivo/Improdutivo e Tag (somando as celulas), garantindo pai = soma dos filhos sob qq filtro.
@@ -760,13 +764,14 @@ function origemAgg(rows){
     for(var og in d){
       if(origSel&&og!==origSel)continue;
       var tags=d[og];
-      var A=acc[og]; if(!A)A=acc[og]={og:og,t:0,p:0,c:0,v:0,vpf:0,vpme:0,vade:0,_P:_zero(),_I:_zero(),_tags:{}};
+      var A=acc[og]; if(!A)A=acc[og]={og:og,t:0,p:0,c:0,v:0,vpf:0,vpme:0,vade:0,_P:_zero(),_I:_zero(),_S:_zero(),_tags:{}};
       for(var tg in tags){
         var m=_ogCells(tags[tg],leadSel,prodSel);
         var pr=_tagIsProd(tg);
         _ogAdd(A,m);
         if(pr)A.p+=m.t;                       // "produtivos" (leads) — coerente com o pT antigo sob filtro
-        _ogAdd(pr?A._P:A._I,m);               // bucket Produtivo/Improdutivo
+        var cls=_tagClass(tg);
+        _ogAdd(cls==='S'?A._S:cls==='P'?A._P:A._I,m);   // bucket Produtivo/Improdutivo/Sem tag
         var T=A._tags[tg]; if(!T)T=A._tags[tg]={tag:tg,pr:pr,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
         _ogAdd(T,m);
       }
@@ -808,10 +813,10 @@ function origemTabBody(rows){
   a.forEach(function(x,i){
     _ogAdd(tot,x);
     body+='<tr class="og-row" data-o="'+i+'" style="cursor:pointer" onclick="tgOrig('+i+',this)"><td>'+crt(true)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(x)+'</tr>';
-    [['P','Produtivos',x._P],['I','Improdutivos',x._I]].forEach(function(bk){
+    [['P','Produtivos',x._P],['I','Improdutivos',x._I],['S','Sem tag',x._S]].forEach(function(bk){
       var code=bk[0],lbl=bk[1],B=bk[2];
       var tags=Object.keys(x._tags).map(function(k){return x._tags[k];})
-                 .filter(function(tt){return code==='P'?tt.pr:!tt.pr;}).sort(function(p,q){return q.t-p.t;});
+                 .filter(function(tt){return _tagClass(tt.tag)===code;}).sort(function(p,q){return q.t-p.t;});
       var hasT=tags.length>0;
       body+='<tr class="ob-row" data-o="'+i+'" data-b="'+i+'_'+code+'" style="display:none'+(hasT?';cursor:pointer':'')+'"'+(hasT?' onclick="tgProd('+i+',\''+code+'\',this)"':'')+'><td style="padding-left:24px">'+crt(hasT)+' <b>'+lbl+'</b></td>'+_otCells(B)+'</tr>';
       tags.forEach(function(tt){
@@ -852,7 +857,7 @@ function situacaoAgg(rows){
   var prodSel=(document.getElementById('f_tipo_cross')||{value:''}).value;
   var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;
   function _zero(){return {t:0,c:0,v:0,vpf:0,vpme:0,vade:0,_tags:{}};}
-  var P=_zero(),I=_zero();
+  var P=_zero(),I=_zero(),S=_zero();
   rows.forEach(function(r){
     var by=ORIGEM_TAG_STATS[r[C.NOME]]; if(!by)return;
     var d=by[r[C.MES]]; if(!d)return;
@@ -861,14 +866,15 @@ function situacaoAgg(rows){
       var tags=d[og];
       for(var tg in tags){
         var m=_ogCells(tags[tg],leadSel,prodSel);
-        var B=_tagIsProd(tg)?P:I;
+        var cls=_tagClass(tg);
+        var B=cls==='S'?S:cls==='P'?P:I;
         _ogAdd(B,m);
         var T=B._tags[tg]; if(!T)T=B._tags[tg]={tag:tg,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
         _ogAdd(T,m);
       }
     }
   });
-  return {P:P,I:I};
+  return {P:P,I:I,S:S};
 }
 var SITTAB_COLS=[{t:'Situação / Tag',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let SITTAB_SORT={key:'t',dir:'desc'};   // ordena as TAGS dentro de cada situação (o nivel situação fica fixo)
@@ -876,12 +882,12 @@ function _sitSortVal(x,key){if(key==='og')return x.tag||'';if(key==='cc')return 
 function sortSit(key){if(SITTAB_SORT.key===key)SITTAB_SORT.dir=SITTAB_SORT.dir==='asc'?'desc':'asc';else{SITTAB_SORT.key=key;SITTAB_SORT.dir=key==='og'?'asc':'desc';}_sitTabFill('tbl_sit_tab',filtered());}
 function sitTabBody(rows){
   var a=situacaoAgg(rows);
-  var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};_ogAdd(tot,a.P);_ogAdd(tot,a.I);
+  var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};_ogAdd(tot,a.P);_ogAdd(tot,a.I);_ogAdd(tot,a.S);
   if(!tot.t&&!tot.v)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
   function crt(has){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?'▶':'')+'</span>';}
   function cmp(x,y){var av=_sitSortVal(x,SITTAB_SORT.key),bv=_sitSortVal(y,SITTAB_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return SITTAB_SORT.dir==='asc'?r:-r;}
   var body='';
-  [['P','Produtivos',a.P],['I','Improdutivos',a.I]].forEach(function(bk){
+  [['P','Produtivos',a.P],['I','Improdutivos',a.I],['S','Sem tag',a.S]].forEach(function(bk){
     var code=bk[0],lbl=bk[1],B=bk[2];
     var tags=Object.keys(B._tags).map(function(k){return B._tags[k];}).sort(cmp);
     var hasT=tags.length>0;
