@@ -843,6 +843,49 @@ function tgProd(i,code,tr){
   var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
   document.querySelectorAll('tr.ot-row[data-b="'+i+'_'+code+'"]').forEach(function(x){x.style.display=open?'':'none';});
 }
+// ===== Versao NAMESPACED da tabela expansivel Origem->P/I/S->Tag p/ o drill-down "Detalhe por Vendedor" =====
+// Cada drill-down de vendedor tem seu proprio ns (o rid da linha, ex. "vdet3"); as linhas carregam
+// data-ns e os toggles restringem o querySelectorAll a esse ns, para nao colidir entre drill-downs
+// abertos nem com a tabela principal tbl_origem_tab (que usa tgOrig/tgProd globais). So o corpo (tbody);
+// o thead vem do chamador (origemDetailHTML).
+function origemTabBodyNs(rows,ns){
+  var a=origemAgg(rows);
+  if(!a.length)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  a.sort(function(x,y){var av=_origemTabSortVal(x,ORIGEMTAB_SORT.key),bv=_origemTabSortVal(y,ORIGEMTAB_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return ORIGEMTAB_SORT.dir==='asc'?r:-r;});
+  function crt(has){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?'▶':'')+'</span>';}
+  var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+  var body='';
+  a.forEach(function(x,i){
+    _ogAdd(tot,x);
+    body+='<tr class="og-row" data-ns="'+ns+'" data-o="'+i+'" style="cursor:pointer" onclick="tgOrigNs(\''+ns+'\','+i+',this)"><td>'+crt(true)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(x)+'</tr>';
+    [['P','Produtivos',x._P],['I','Improdutivos',x._I],['S','Sem tag',x._S]].forEach(function(bk){
+      var code=bk[0],lbl=bk[1],B=bk[2];
+      var tags=Object.keys(x._tags).map(function(k){return x._tags[k];})
+                 .filter(function(tt){return _tagClass(tt.tag)===code;}).sort(function(p,q){return q.t-p.t;});
+      var hasT=tags.length>0;
+      body+='<tr class="ob-row" data-ns="'+ns+'" data-o="'+i+'" data-b="'+i+'_'+code+'" style="display:none'+(hasT?';cursor:pointer':'')+'"'+(hasT?' onclick="tgProdNs(\''+ns+'\','+i+',\''+code+'\',this)"':'')+'><td style="padding-left:24px">'+crt(hasT)+' <b>'+lbl+'</b></td>'+_otCells(B)+'</tr>';
+      tags.forEach(function(tt){
+        body+='<tr class="ot-row" data-ns="'+ns+'" data-o="'+i+'" data-b="'+i+'_'+code+'" style="display:none;background:var(--soft,#f8fafc)"><td style="padding-left:52px;color:var(--muted)">'+_esc(tt.tag)+'</td>'+_otCells(tt)+'</tr>';
+      });
+    });
+  });
+  body+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL GERAL</td>'+_otCells(tot)+'</tr>';
+  return '<tbody>'+body+'</tbody>';
+}
+function tgOrigNs(ns,i,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.ob-row[data-ns="'+ns+'"][data-o="'+i+'"]').forEach(function(x){x.style.display=open?'':'none';});
+  if(!open){
+    document.querySelectorAll('tr.ot-row[data-ns="'+ns+'"][data-o="'+i+'"]').forEach(function(x){x.style.display='none';});
+    document.querySelectorAll('tr.ob-row[data-ns="'+ns+'"][data-o="'+i+'"]').forEach(function(x){x.classList.remove('open');var c=x.querySelector('.crt');if(c&&c.textContent==='▼')c.textContent='▶';});
+  }
+}
+function tgProdNs(ns,i,code,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.ot-row[data-ns="'+ns+'"][data-b="'+i+'_'+code+'"]').forEach(function(x){x.style.display=open?'':'none';});
+}
 function _origemTabFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
   t.innerHTML=_sortableHead(ORIGEMTAB_COLS,ORIGEMTAB_SORT,'sortOrigemTab')+origemTabBody(rows);
@@ -910,13 +953,11 @@ function _sitTabFill(tableId,rows){
 }
 // Funil por LINHA (Detalhe por Vendedor): monta o funil de origem do recorte g._rows (as linhas
 // RAW ja' filtradas daquele vendedor/grupo). Segue o "Ver por" e o filtro de Mes automaticamente.
-function origemDetailHTML(g){
+function origemDetailHTML(g,ns){
+  var head='<thead><tr>'+ORIGEMTAB_COLS.map(function(c){return '<th'+(c.n?' class="num"':'')+'>'+c.t+'</th>';}).join('')+'</tr></thead>';
   return '<div class="origem-det"><div class="origem-det-h">Leads por Origem · '+g.k+'</div>'
-    +'<table class="origem-mini"><thead><tr>'
-    +'<th>Origem</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th>'
-    +'<th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>'
-    +'</tr></thead>'+origemTableBody(g._rows||[])+'</table>'
-    +'<div class="note" style="margin:8px 0 0">Leads e Produtivos exatos. Vidas PF/PME/ADESÃO separam as vidas vinculadas por produto (CANAL); Vidas é o total (≥ soma dos produtos). Contratos e Vidas são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO.</div></div>';
+    +'<table class="origem-mini">'+head+origemTabBodyNs(g._rows||[],ns)+'</table>'
+    +'<div class="note" style="margin:8px 0 0">Expanda a Origem → Produtivos / Improdutivos / Sem tag → Tag. Vidas PF/PME/ADESÃO separam as vidas vinculadas por produto (CANAL); Vidas é o total (≥ soma dos produtos). Contratos e Vidas são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO.</div></div>';
 }
 function toggleOrigemRow(rid,tr){
   var d=document.getElementById(rid);if(!d)return;
@@ -1105,7 +1146,7 @@ function renderTablePage(){
     html+='<tr class="vrow" style="cursor:pointer" onclick="toggleOrigemRow(\''+rid+'\',this)">';
     for(var ci=0;ci<cols.length;ci++)html+=cellFor(g,mt,cols[ci].k,rc,pos);
     html+='</tr>';
-    html+='<tr id="'+rid+'" class="vdet" style="display:none"><td colspan="'+cols.length+'">'+origemDetailHTML(g)+'</td></tr>';
+    html+='<tr id="'+rid+'" class="vdet" style="display:none"><td colspan="'+cols.length+'">'+origemDetailHTML(g,rid)+'</td></tr>';
   }
   if(!arr.length)html='<tr><td colspan="'+cols.length+'" style="color:var(--muted)">Sem '+noun+' para o filtro atual.</td></tr>';
   document.querySelector('#tbl tbody').innerHTML=html;
