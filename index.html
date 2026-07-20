@@ -768,7 +768,23 @@ function render(){
   else if(at==='extrato')renderExtrato();
   else if(at==='quartil')renderQuartilV();
   else if(at==='geo')renderGeo();                    // aba "Estados & Cidades" (le tabelas _uf ao vivo, lazy)
-  else if(at==='origem')renderOrigemTab(rows);       // abas Tempo de Atendimento / Vinculado x Total removidas (David 06/07/2026)
+  else if(at==='origem'){                            // "Analise dos Leads" — abas Tempo de Atend./Vinculado x Total removidas (David 06/07/2026)
+    if(_LEADS_LOADED){renderOrigemTab(rows);}
+    else{                                            // lazy: baixa os 3 cubos pesados na 1a abertura (espelha renderGeo)
+      ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab'].forEach(function(id){
+        var t=document.getElementById(id);if(t)t.innerHTML='<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:22px">Carregando análise dos leads…</td></tr></tbody>';
+      });
+      if(!_LEADS_LOADING){
+        _LEADS_LOADING=true;
+        _loadLeads().then(function(){_LEADS_LOADED=true;_LEADS_LOADING=false;if(activeTab()==='origem')renderOrigemTab(filtered());})
+          .catch(function(e){_LEADS_LOADING=false;console.error('leads load',e);
+            ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab'].forEach(function(id){
+              var t=document.getElementById(id);if(t)t.innerHTML='<tbody><tr><td colspan="9" style="text-align:center;color:#991b1b;padding:22px">Erro ao carregar a análise dos leads: '+((e&&e.message)||e)+'</td></tr></tbody>';
+            });
+          });
+      }
+    }
+  }
 }
 function activeTab(){var p=document.querySelector('.tab-panel.active');return p?p.id.replace('tab-',''):'geral';}
 
@@ -1187,6 +1203,17 @@ function _tipoFill(tableId,rows){
 }
 // Aba propria "Leads por Origem" + "Leads por Tipo". Origem usa filtered() (respeita TODOS os filtros
 // do topo, inclusive cross); Tipo usa filteredWho() (WHO + Mes). Sem seletor de mes local (06/07/2026).
+// Lazy-load dos 3 cubos pesados (ORIGEM_TAG_STATS/ORIGEMFILA_STATS/TIPOFILA_STATS ~17,5 MB) — so'
+// baixados na 1a abertura da aba "Analise dos Leads". Espelha _loadGeo(); tira ~17,5 MB do boot.
+async function _loadLeads(){
+  var mv=await SB.from('conversao_vendedor_meta').select('chave,payload').in('chave',['ORIGEM_TAG_STATS','ORIGEMFILA_STATS','TIPOFILA_STATS']);
+  if(mv.error)throw mv.error;
+  (mv.data||[]).forEach(function(r){
+    if(r.chave==='ORIGEM_TAG_STATS')Object.assign(ORIGEM_TAG_STATS,r.payload);
+    else if(r.chave==='ORIGEMFILA_STATS')Object.assign(ORIGEMFILA_STATS,r.payload);
+    else if(r.chave==='TIPOFILA_STATS')Object.assign(TIPOFILA_STATS,r.payload);
+  });
+}
 function renderOrigemTab(rows){
   _origemTabFill('tbl_origem_tab', rows || filtered());
   _tipoFill('tbl_tipo_tab', filteredWho());
@@ -2411,6 +2438,7 @@ const LEADTIPO_PROD={};
 const TIPOFILA_STATS={};
 const ORIGEM_TAG_STATS={};
 const ORIGEMFILA_STATS={};
+var _LEADS_LOADED=false, _LEADS_LOADING=false;   // lazy-load dos 3 cubos pesados (aba "Analise dos Leads")
 const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
@@ -2419,10 +2447,12 @@ const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CO
 const SUPA_URL="https://vzzmlikrlgqaaxrufrwq.supabase.co";
 const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6em1saWtybGdxYWF4cnVmcndxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMDI4MjUsImV4cCI6MjA5Nzg3ODgyNX0.kXZrukGda9scxndlZCXzDbpLwFigR1EamI3LMtgBBWw";
 const SB=window.supabase.createClient(SUPA_URL,SUPA_ANON);
-async function _fetchAll(t,c){
+async function _fetchAll(t,c,applyFn){
   var PAGE=1000, from=0, all=[];
   while(true){
-    var r=await SB.from(t).select(c).range(from,from+PAGE-1);
+    var q=SB.from(t).select(c);
+    if(applyFn)q=applyFn(q);
+    var r=await q.range(from,from+PAGE-1);
     if(r.error)throw r.error;
     all=all.concat(r.data);
     if(!r.data||r.data.length<PAGE)break;
@@ -2438,10 +2468,16 @@ function _initUI(){
 }
 (async function boot(){
   try{
-    var rows=await _fetchAll('conversao_vendedor_raw','*');
+    // PERF: raw + meta LEVE em paralelo. Os 3 cubos pesados (ORIGEM_TAG_STATS/ORIGEMFILA_STATS/
+    // TIPOFILA_STATS ~17,5 MB) sao EXCLUIDOS do boot e baixados sob demanda ao abrir "Analise dos
+    // Leads" (_loadLeads). Derruba o payload de boot de ~21 MB p/ ~3,5 MB.
+    var _boot=await Promise.all([
+      _fetchAll('conversao_vendedor_raw','*'),
+      _fetchAll('conversao_vendedor_meta','chave,payload',function(q){return q.not('chave','in','("ORIGEM_TAG_STATS","ORIGEMFILA_STATS","TIPOFILA_STATS")');})
+    ]);
+    var rows=_boot[0], mrows=_boot[1];
     rows.forEach(function(r){RAW.push([r.nome,r.area,r.unidade,r.supervisor,r.gestao,r.supdir,r.organizacao,r.faixa_tempo_casa,r.status,r.tempo_exato,+r.mes,+r.leads_tot,+r.leads_prod,+r.vidas,(r.ttfs_dias==null?'':r.ttfs_dias),+r.vidas_vinc]);});
     RAW.forEach(function(r){if(r[C.AREA]==='BOAS VINDAS')r[C.AREA]='NACIONAL';});
-    var mrows=await _fetchAll('conversao_vendedor_meta','chave,payload');
     var M={};mrows.forEach(function(r){M[r.chave]=r.payload;});
     if(M.SLA_BY_NOME)Object.assign(SLA_BY_NOME,M.SLA_BY_NOME);
     if(M.TAT_CONV)M.TAT_CONV.forEach(function(x){TAT_CONV.push(x);});
@@ -2461,9 +2497,7 @@ function _initUI(){
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
-    if(M.ORIGEM_TAG_STATS)Object.assign(ORIGEM_TAG_STATS,M.ORIGEM_TAG_STATS);
-    if(M.TIPOFILA_STATS)Object.assign(TIPOFILA_STATS,M.TIPOFILA_STATS);
-    if(M.ORIGEMFILA_STATS)Object.assign(ORIGEMFILA_STATS,M.ORIGEMFILA_STATS);
+    // ORIGEM_TAG_STATS / TIPOFILA_STATS / ORIGEMFILA_STATS -> lazy em _loadLeads() (aba "Analise dos Leads")
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
     _initUI();
