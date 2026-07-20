@@ -235,6 +235,16 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </tr></thead><tbody></tbody></table>
 <div class="note" style="margin-top:8px">Mesmas métricas da tabela "Leads por Origem", mas agregadas por <b>situação</b> em vez de origem: <b>Produtivo</b> = tags 10/10.B/13/14/16/17/18/24/29/33; <b>Improdutivo</b> = demais tags; <b>Sem tag</b> = leads sem <i>Tag de encerramento</i> (bucket próprio). Cada situação abre nas suas <b>tags</b>. É a mesma agregação da tabela de origem vista "de cima": os totais batem com o TOTAL GERAL de "Leads por Origem".</div>
 </div>
+<div class="tablecard" style="margin-top:16px">
+<div style="margin-bottom:14px">
+<h3 style="font-size:14px;font-weight:700">Leads por Origem × Fila <span style="color:var(--muted);font-weight:400">· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> dentro de cada origem. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+</div>
+<input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',filtered())" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
+<table id="tbl_orifila_tab"><thead><tr>
+<th>Origem / Fila</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+</tr></thead><tbody></tbody></table>
+<div class="note" style="margin-top:8px">Mostra <b>quais filas (Session Team)</b> compõem cada origem de lead. Cada origem abre nas suas filas; as métricas de cada fila somam de volta ao total da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem/fila — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
+</div>
 </div>
 </div>
 
@@ -904,6 +914,75 @@ function _origemTabFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
   t.innerHTML=_sortableHead(ORIGEMTAB_COLS,ORIGEMTAB_SORT,'sortOrigemTab')+origemTabBody(rows);
 }
+// ===== Tabela "Leads por Origem × Fila" (aba propria) — ORIGEM -> Fila (Session Team) ===============
+// Cubo ORIGEMFILA_STATS[nome][mes][ORIGEM][fila] (mesma celula do ORIGEM_TAG_STATS, chave interna=fila
+// em vez de tag). MESMAS metricas da "Leads por Origem" (Leads/Contratos/Vidas PF-PME-ADESAO/Vidas/%Conv);
+// expansivel em 2 niveis (Origem -> Fila). Respeita TODOS os filtros do topo, inclusive os cross-filtros
+// Tipo(lead)/Produto/Origem (via _ogCells, reaproveitado). Classes/atributos de linha PROPRIOS
+// (ofo-row/off-row, data-ofo) + toggle tgOFOrig p/ NAO colidir com a tabela de origem (og-row/data-o/tgOrig).
+var ORIGEMFILA_COLS=[{t:'Origem / Fila',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
+let ORIGEMFILA_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
+function _orifilaSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
+function sortOrifila(key){if(ORIGEMFILA_SORT.key===key)ORIGEMFILA_SORT.dir=ORIGEMFILA_SORT.dir==='asc'?'desc':'asc';else{ORIGEMFILA_SORT.key=key;ORIGEMFILA_SORT.dir=key==='og'?'asc':'desc';}_orifilaFill('tbl_orifila_tab',filtered());}
+// Agrega ORIGEMFILA_STATS por ORIGEM (soma as filas) expondo, por origem, o detalhe por fila (_filas).
+function orifilaAgg(rows){
+  var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t
+  var prodSel=(document.getElementById('f_tipo_cross')||{value:''}).value;       // Produto(venda) -> v/c
+  var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;       // Origem -> so' a origem escolhida
+  var acc={};
+  rows.forEach(function(r){
+    var by=ORIGEMFILA_STATS[r[C.NOME]]; if(!by)return;
+    var d=by[r[C.MES]]; if(!d)return;
+    for(var og in d){
+      if(origSel&&og!==origSel)continue;
+      var filas=d[og];
+      var A=acc[og]; if(!A)A=acc[og]={og:og,t:0,c:0,v:0,vpf:0,vpme:0,vade:0,_filas:{}};
+      for(var fl in filas){
+        var m=_ogCells(filas[fl],leadSel,prodSel);
+        _ogAdd(A,m);
+        var F=A._filas[fl]; if(!F)F=A._filas[fl]={fila:fl,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+        _ogAdd(F,m);
+      }
+    }
+  });
+  return Object.values(acc).sort(function(x,y){return y.t-x.t;});
+}
+function _ofNorm(s){return (''+s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function orifilaBody(rows){
+  var a=orifilaAgg(rows);
+  var q=_ofNorm((document.getElementById('orifila_q')||{value:''}).value.trim());   // busca por fila
+  if(!a.length)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  a.sort(function(x,y){var av=_orifilaSortVal(x,ORIGEMFILA_SORT.key),bv=_orifilaSortVal(y,ORIGEMFILA_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return ORIGEMFILA_SORT.dir==='asc'?r:-r;});
+  function crt(has,open){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?(open?'▼':'▶'):'')+'</span>';}
+  var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+  var body='',idx=0;
+  a.forEach(function(x){
+    var filas=Object.keys(x._filas).map(function(k){return x._filas[k];}).sort(function(p,r){return r.t-p.t;});
+    if(q)filas=filas.filter(function(f){return _ofNorm(f.fila).indexOf(q)>=0;});   // filtra pela fila buscada
+    if(q&&!filas.length)return;   // na busca, origem sem fila correspondente some
+    // com busca ativa, o total da origem = soma das filas ENCONTRADAS (pai = soma dos filhos visiveis)
+    var xr=q?filas.reduce(function(acc,f){_ogAdd(acc,f);return acc;},{t:0,c:0,v:0,vpf:0,vpme:0,vade:0}):x;
+    var i=idx++,hasF=filas.length>0,open=!!q;   // busca ativa -> ja mostra as filas encontradas
+    _ogAdd(tot,xr);
+    body+='<tr class="ofo-row'+(open?' open':'')+'" data-ofo="'+i+'"'+(hasF?' style="cursor:pointer" onclick="tgOFOrig('+i+',this)"':'')+'><td>'+crt(hasF,open)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(xr)+'</tr>';
+    filas.forEach(function(f){
+      body+='<tr class="off-row" data-ofo="'+i+'" style="display:'+(open?'':'none')+';background:var(--soft,#f8fafc)"><td style="padding-left:24px;color:var(--muted)">'+_esc(f.fila)+'</td>'+_otCells(f)+'</tr>';
+    });
+  });
+  if(!body)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Nenhuma fila encontrada na busca.</td></tr></tbody>';
+  body+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL GERAL'+(q?' (filtrado)':'')+'</td>'+_otCells(tot)+'</tr>';
+  return '<tbody>'+body+'</tbody>';
+}
+// nivel 1: ORIGEM -> mostra/esconde as filas (Session Team)
+function tgOFOrig(i,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.off-row[data-ofo="'+i+'"]').forEach(function(x){x.style.display=open?'':'none';});
+}
+function _orifilaFill(tableId,rows){
+  var t=document.getElementById(tableId);if(!t)return;
+  t.innerHTML=_sortableHead(ORIGEMFILA_COLS,ORIGEMFILA_SORT,'sortOrifila')+orifilaBody(rows);
+}
 // ===== Tabela "Leads por Situação" (aba propria) — SITUAÇÃO (Produtivo/Improdutivo) -> Tag ==========
 // Mesma base do cubo ORIGEM_TAG_STATS e MESMAS metricas da "Leads por Origem", porem agregando por
 // SITUAÇÃO (todas as origens juntas) em vez de por origem. Produtivo/Improdutivo derivado da tag
@@ -1071,6 +1150,7 @@ function renderOrigemTab(rows){
   _origemTabFill('tbl_origem_tab', rows || filtered());
   _tipoFill('tbl_tipo_tab', filteredWho());
   _sitTabFill('tbl_sit_tab', rows || filtered());
+  _orifilaFill('tbl_orifila_tab', rows || filtered());
 }
 
 // ---------- aba Vinculado x Total ----------
@@ -1917,7 +1997,9 @@ function renderQuartilV(){
     var cvChTxt=cvCh==null?'–':cvCh.toFixed(1)+'%';
     return '<tr>'+
       '<td><span class="q-badge '+ag.q.toLowerCase()+'b" style="width:36px;height:22px;border-radius:6px;font-size:12px">'+ag.q+'</span></td>'+
-      '<td>'+ag.k+'</td>'+
+      '<td>'+(vbSel==='nome'
+        ? '<a href="https://painelvendedores-hap.vercel.app/?v='+encodeURIComponent(ag.k)+'" target="_blank" rel="noopener" title="Abrir o painel individual de '+ag.k+'" style="color:#0072ce;text-decoration:none;font-weight:600">'+ag.k+' <span style="font-size:11px">↗</span></a>'
+        : ag.k)+'</td>'+
       '<td>'+ag.area+'</td>'+
       '<td>'+ag.sup+'</td>'+
       '<td class="num"><b style="color:'+cor+'">'+(ag._score*100).toFixed(0)+'</b></td>'+
@@ -1940,6 +2022,7 @@ const LEADTIPO_BY_NOME_MES={};
 const LEADTIPO_PROD={};
 const TIPOFILA_STATS={};
 const ORIGEM_TAG_STATS={};
+const ORIGEMFILA_STATS={};
 const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
@@ -1992,6 +2075,7 @@ function _initUI(){
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
     if(M.ORIGEM_TAG_STATS)Object.assign(ORIGEM_TAG_STATS,M.ORIGEM_TAG_STATS);
     if(M.TIPOFILA_STATS)Object.assign(TIPOFILA_STATS,M.TIPOFILA_STATS);
+    if(M.ORIGEMFILA_STATS)Object.assign(ORIGEMFILA_STATS,M.ORIGEMFILA_STATS);
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
     _initUI();
