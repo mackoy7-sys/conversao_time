@@ -145,6 +145,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <button class="tab-btn" onclick="switchTab('tempo',this)">Tempo de Casa</button>
 <button class="tab-btn" onclick="switchTab('extrato',this)">Extrato do Vendedor</button>
 <button class="tab-btn" onclick="switchTab('quartil',this)">Análise de Quartil</button>
+<button class="tab-btn" onclick="switchTab('geo',this)">Estados &amp; Cidades</button>
 </div>
 
 <div class="filters">
@@ -207,15 +208,65 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 </div>
 
+<div id="tab-geo" class="tab-panel">
+<div class="note" style="margin-bottom:var(--gap)">📍 <b>Visão geográfica.</b> O <b>Estado (UF)</b> tem conversão completa (leads + vidas + taxa) — a UF do beneficiário vem da venda; quando o lead não converteu, usa-se o DDD do telefone. A <b>Cidade</b> mostra apenas <b>volume de vendas</b> e a fatia dentro do estado — leads não têm cidade (só DDD→estado), então <b>não há taxa de conversão por cidade</b>. Respeita todos os filtros do topo (vendedor, gestão, mês, etc.).</div>
+<div class="kpis">
+<div class="kpi"><div class="lbl">Estados atendidos</div><div class="val" id="g_uf_n">0</div><div class="sub">com venda ou lead</div></div>
+<div class="kpi"><div class="lbl">Estado líder (vidas)</div><div class="val" id="g_uf_top" style="font-size:24px">—</div><div class="sub" id="g_uf_top_sub">&nbsp;</div></div>
+<div class="kpi"><div class="lbl">Cidades atendidas</div><div class="val" id="g_cid_n">0</div><div class="sub">com vendas no recorte</div></div>
+<div class="kpi"><div class="lbl">Cidade líder</div><div class="val" id="g_cid_top" style="font-size:24px">—</div><div class="sub" id="g_cid_top_sub">&nbsp;</div></div>
+</div>
+<div class="card" style="margin-bottom:var(--gap)"><h3>Top 10 Estados (vidas) <span style="color:var(--muted);font-weight:400" title="UF do beneficiário na venda; leads sem venda usam o DDD do telefone (não há endereço do lead)">· vidas (barra) · conversão (linha tracejada)</span></h3><canvas id="ch_uf"></canvas></div>
+<div class="tablecard">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+<h3 style="font-size:14px;font-weight:700">Conversão por Estado <span id="geo_sub" style="color:var(--muted);font-weight:400"></span></h3>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha o que aparece ao expandir cada estado">
+<button id="geo_mode_cid" type="button" onclick="geoMode('cid')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Cidades</button>
+<button id="geo_mode_vend" type="button" onclick="geoMode('vend')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Vendedores</button>
+</div>
+<span style="font-size:12px;color:var(--muted)">🖱️ clique num estado p/ expandir · cabeçalho p/ ordenar</span>
+</div>
+</div>
+<div style="overflow:auto;max-height:560px">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb;color:var(--muted)">
+<th class="geo-sortable" data-k="uf" style="padding:6px 8px;cursor:pointer">Estado / Cidade</th>
+<th class="geo-sortable" data-k="lt" style="padding:6px 8px;text-align:right;cursor:pointer">Leads</th>
+<th class="geo-sortable" data-k="vd" style="padding:6px 8px;text-align:right;cursor:pointer">Vidas</th>
+<th class="geo-sortable" data-k="cv" style="padding:6px 8px;text-align:right;cursor:pointer">Conversão</th>
+<th class="geo-sortable" data-k="share" style="padding:6px 8px;text-align:right;cursor:pointer" title="Estado / N/D: fatia nas vidas totais do recorte (mês). Cidade/Vendedor: fatia dentro do seu estado.">% vidas</th></tr></thead>
+<tbody id="tbl_geo_b"></tbody>
+<tfoot id="tbl_geo_foot"></tfoot>
+</table>
+</div>
+<div class="note" id="geo_note_cid" style="margin-top:8px">Ao expandir um estado aparecem as <b>cidades</b> (recorte de <b>volume de vendas</b> dentro do estado). Não há taxa de conversão por cidade — leads não têm cidade (só DDD→estado), então a conversão fica só no nível do estado; a <b>% vidas</b> da cidade é a fatia dela nas vidas do estado. Use o toggle <b>Vendedores</b> para ver, no lugar das cidades, os vendedores de cada estado.</div>
+<div class="note" id="geo_note_vend" style="margin-top:8px;display:none">Ao expandir um estado aparecem os <b>vendedores</b> com a badge <b>Q1–Q4</b> ao lado do nome — o <b>quartil do vendedor no período</b> (mesma classificação da aba <b>Análise de Quartil</b>: VENDA 50% + PRINCIPAL 30% + DEMAIS FILA 20%, com a porta dupla do Q1). É propriedade do vendedor, então <b>não muda de um estado para outro</b>. Leads / Vidas / Conversão são <b>dentro do estado</b>; a <b>% vidas</b> do vendedor é a fatia dele nas vidas do estado. O bucket <b>ADMINISTRATIVO</b> é <b>removido</b> deste modo (foco só em vendedores), então o TOTAL fica abaixo do total do mês do modo Cidades. NÃO MAPEADO aparece sem badge.</div>
+</div>
+</div>
+
 <div id="tab-origem" class="tab-panel">
 <div class="tablecard">
-<div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Origem <span style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+<h3 style="font-size:14px;font-weight:700">Leads por Origem <span id="oriview_sub" style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha como cada origem se abre">
+<button id="oriview_sit_btn" type="button" onclick="oriView('sit')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Por Situação</button>
+<button id="oriview_fila_btn" type="button" onclick="oriView('fila')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Por Fila</button>
 </div>
+</div>
+<div id="oriview_sit">
 <table id="tbl_origem_tab"><thead><tr>
 <th>Origem / Situação / Tag</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
 <div class="note" style="margin-top:8px">Cada origem abre em <b>Produtivos</b>, <b>Improdutivos</b> e <b>Sem tag</b> (regra Hapvida da <i>Tag de encerramento</i>: tags 10/10.B/13/14/16/17/18/24/29/33 = produtivo; demais = improdutivo; leads <b>sem tag</b> ficam num bucket próprio), e cada uma dessas abre nas <b>tags</b> — todas as métricas seguem essa agregação e somam de volta à origem. As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL: PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA); <b>Vidas</b> é o total de vidas vinculadas (≥ soma dos produtos, pois há vidas sem CANAL identificado). <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP. Com o filtro <b>Produto (venda)</b> ativo, só a coluna do produto escolhido fica preenchida; com <b>Tipo (lead)</b> ativo, as vidas passam a ser as ligadas àquele tipo de lead (prevalece sobre o Produto).</div>
+</div>
+<div id="oriview_fila" style="display:none">
+<input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',filtered())" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
+<table id="tbl_orifila_tab"><thead><tr>
+<th>Origem / Fila</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+</tr></thead><tbody></tbody></table>
+<div class="note" style="margin-top:8px">Mostra <b>quais filas (Session Team)</b> compõem cada origem de lead. Cada origem abre nas suas filas; as métricas de cada fila somam de volta ao total da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem/fila — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
+</div>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
@@ -234,18 +285,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <th>Situação / Tag</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
 <div class="note" style="margin-top:8px">Mesmas métricas da tabela "Leads por Origem", mas agregadas por <b>situação</b> em vez de origem: <b>Produtivo</b> = tags 10/10.B/13/14/16/17/18/24/29/33; <b>Improdutivo</b> = demais tags; <b>Sem tag</b> = leads sem <i>Tag de encerramento</i> (bucket próprio). Cada situação abre nas suas <b>tags</b>. É a mesma agregação da tabela de origem vista "de cima": os totais batem com o TOTAL GERAL de "Leads por Origem".</div>
-</div>
-<div class="tablecard" style="margin-top:16px">
-<div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Origem × Fila <span style="color:var(--muted);font-weight:400">· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> dentro de cada origem. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
-</div>
-<input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',filtered())" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
-<table id="tbl_orifila_tab"><thead><tr>
-<th>Origem / Fila</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
-</tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Mostra <b>quais filas (Session Team)</b> compõem cada origem de lead. Cada origem abre nas suas filas; as métricas de cada fila somam de volta ao total da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem/fila — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
-</div>
-</div>
+</div></div>
 </div>
 
 <div id="tab-org" class="tab-panel">
@@ -727,6 +767,7 @@ function render(){
   else if(at==='tempo')renderTempo(rows);
   else if(at==='extrato')renderExtrato();
   else if(at==='quartil')renderQuartilV();
+  else if(at==='geo')renderGeo();                    // aba "Estados & Cidades" (le tabelas _uf ao vivo, lazy)
   else if(at==='origem')renderOrigemTab(rows);       // abas Tempo de Atendimento / Vinculado x Total removidas (David 06/07/2026)
 }
 function activeTab(){var p=document.querySelector('.tab-panel.active');return p?p.id.replace('tab-',''):'geral';}
@@ -1151,6 +1192,23 @@ function renderOrigemTab(rows){
   _tipoFill('tbl_tipo_tab', filteredWho());
   _sitTabFill('tbl_sit_tab', rows || filtered());
   _orifilaFill('tbl_orifila_tab', rows || filtered());
+}
+// Toggle da visualizacao unificada "Leads por Origem": 'sit' (Origem -> Produtivo/Improdutivo/Sem tag ->
+// Tag) ou 'fila' (Origem -> Fila/Session Team). So' mostra/esconde os dois <div> — as duas tabelas ja'
+// sao preenchidas por renderOrigemTab (respeitam todos os filtros do topo); nao re-renderiza aqui, entao
+// a escolha do toggle PERSISTE quando os filtros mudam.
+function oriView(m){
+  var sit=m!=='fila';
+  var ds=document.getElementById('oriview_sit'),df=document.getElementById('oriview_fila');
+  if(ds)ds.style.display=sit?'':'none';
+  if(df)df.style.display=sit?'none':'';
+  var bs=document.getElementById('oriview_sit_btn'),bf=document.getElementById('oriview_fila_btn');
+  if(bs){bs.style.background=sit?'#0072ce':'#fff';bs.style.color=sit?'#fff':'#334155';}
+  if(bf){bf.style.background=sit?'#fff':'#0072ce';bf.style.color=sit?'#334155':'#fff';}
+  var sub=document.getElementById('oriview_sub');
+  if(sub)sub.innerHTML=sit
+    ?'· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)'
+    :'· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> dentro de cada origem. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)';
 }
 
 // ---------- aba Vinculado x Total ----------
@@ -1801,6 +1859,336 @@ function renderExtrato(){
   ]},options:{plugins:{legend:{position:'bottom'}},scales:{y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}}}});
 }
 
+/* ============ Estados & Cidades (versao LEVE) ==================================================
+   Le as tabelas _uf ao vivo (conversao_vendedor_raw_uf + VIDAS_BY_CIDADE do meta_uf), LAZY na 1a
+   abertura da aba. NAO baixa o cubo ORIGEM_TAG_STATS (36MB) — a aba geografica nao precisa dele.
+   Producao (raw/meta pre-UF) intocada; reusa quartilMap/crossScope/assignQuartis/QCOL/mkChart. */
+var RAW_UF=[], VIDAS_BY_CIDADE={}, _GEO_LOADED=false, _GEO_LOADING=false, _GESTAO_BY_NOME=null;
+var _GEO_ROWS=[], _GEOV_ROWS=[];
+var GEO_SORT={key:'vd',dir:'desc'}, GEO_OPEN={}, GEO_SHOWALL={}, GEO_MODE='cid';
+var GEOV_SORT={key:'vd',dir:'desc'}, GEOV_OPEN={}, GEOV_SHOWALL={};
+async function _loadGeo(){
+  var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas');
+  RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0};});
+  var mv=await SB.from('conversao_vendedor_meta_uf').select('chave,payload').like('chave','VIDAS_BY_CIDADE%');
+  if(mv.error)throw mv.error;
+  var single=null,chunks=[];
+  (mv.data||[]).forEach(function(r){if(r.chave==='VIDAS_BY_CIDADE')single=r.payload;else if(/^VIDAS_BY_CIDADE#\d+$/.test(r.chave))chunks.push(r);});
+  if(single){Object.assign(VIDAS_BY_CIDADE,single);}
+  else if(chunks.length){chunks.sort(function(a,b){return a.chave.localeCompare(b.chave);});Object.assign(VIDAS_BY_CIDADE,JSON.parse(chunks.map(function(c){return c.payload;}).join('')));}
+}
+function renderGeo(){
+  var tb=document.getElementById('tbl_geo_b');
+  if(!_GEO_LOADED){
+    if(tb)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:22px">Carregando dados geográficos (estados e cidades)…</td></tr>';
+    if(_GEO_LOADING)return;
+    _GEO_LOADING=true;
+    _loadGeo().then(function(){_GEO_LOADED=true;_GEO_LOADING=false;if(activeTab()==='geo')renderGeo();})
+      .catch(function(e){_GEO_LOADING=false;console.error('geo load',e);if(tb)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#991b1b;padding:22px">Erro ao carregar dados geográficos: '+_geoEsc(e.message||e)+'</td></tr>';});
+    return;
+  }
+  var rows=_geoFilteredUF();
+  renderTopEstados(rows);
+  renderGeoKpis(rows);
+  renderGeoMain(rows);
+}
+function _geoMesSel(){var s=null;FILTERS.forEach(function(f){if(f.col===C.MES)s=f.sel;});return s||new Set();}
+function _geoWhoNomes(){var s=new Set();RAW.forEach(function(r){var ok=FILTERS.every(function(f){return f.col===C.MES?true:(f.sel.size===0||f.sel.has(r[f.col]));});if(ok)s.add(r[C.NOME]);});return s;}
+function _geoFilteredUF(){var nomes=_geoWhoNomes(),ms=_geoMesSel();return RAW_UF.filter(function(r){return nomes.has(r.nm)&&(ms.size===0||ms.has(r.ms));});}
+function _gestaoOf(nm){if(!_GESTAO_BY_NOME){_GESTAO_BY_NOME={};RAW.forEach(function(r){_GESTAO_BY_NOME[r[C.NOME]]=r[C.GESTAO];});}return _GESTAO_BY_NOME[nm];}
+function _geoEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function ufAgg(rows){var r={};rows.forEach(function(x){var uf=x.uf;if(!uf||uf==='N/D')return;if(!r[uf])r[uf]={lt:0,vd:0};r[uf].lt+=x.lt;r[uf].vd+=x.vd;});return r;}
+function cidadeAgg(){var byUF={};_geoFilteredUF().forEach(function(r){var by=VIDAS_BY_CIDADE[r.nm];if(!by)return;var bm=by[r.ms];if(!bm)return;var d=bm[r.uf];if(!d)return;if(!byUF[r.uf])byUF[r.uf]={};for(var cid in d){var cell=d[cid];var v=(cell&&cell.v)||0;if(v)byUF[r.uf][cid]=(byUF[r.uf][cid]||0)+v;}});return byUF;}
+function ufVendAgg(rows){var by={};rows.forEach(function(x){var uf=x.uf||'N/D';var nm=x.nm;if(!by[uf])by[uf]={};if(!by[uf][nm])by[uf][nm]={lt:0,vd:0};by[uf][nm].lt+=x.lt;by[uf][nm].vd+=x.vd;});return by;}
+function renderTopEstados(rows){
+  var agg=ufAgg(rows);
+  var arr=Object.keys(agg).map(function(uf){return {uf:uf,lt:agg[uf].lt,vd:agg[uf].vd};});
+  arr.sort(function(a,b){return b.vd-a.vd;});
+  arr=arr.slice(0,10);
+  var labels=arr.map(function(x){return x.uf;});
+  var vd=arr.map(function(x){return x.vd;});
+  var cv=arr.map(function(x){return convVal(x.vd,x.lt);});
+  var maxL=Math.max.apply(null,vd.concat([1]));
+  var cvOk=cv.filter(function(x){return x!==null;});
+  var maxC=Math.max.apply(null,cvOk.concat([1]));
+  var y1max=Math.max(5,Math.ceil(maxC*1.35/5)*5);
+  mkChart('ch_uf',{data:{labels:labels,datasets:[
+    {type:'bar',label:'Vidas',data:vd,backgroundColor:GRN,borderRadius:4,barPercentage:.6,order:2,yAxisID:'y'},
+    {type:'line',label:'Conversão %',data:cv.map(function(c){return c===null?null:+c.toFixed(1);}),borderColor:AMB,backgroundColor:AMB,borderWidth:2,borderDash:[7,4],pointRadius:4,tension:.3,order:1,yAxisID:'y1'}
+  ]},options:{
+    layout:{padding:{top:22}},
+    plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
+      if(c.dataset.label==='Conversão %')return 'Conversão: '+(c.parsed.y==null?'—':c.parsed.y.toFixed(1)+'%');
+      return c.dataset.label+': '+nf(c.parsed.y);
+    }}}},
+    scales:{
+      y:{min:0,max:maxL*1.15,position:'left',title:{display:true,text:'vidas'},ticks:{precision:0}},
+      y1:{min:0,max:y1max,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'conversão %'},ticks:{stepSize:y1max/5,callback:function(v){return Math.round(v)+'%';}}}
+    }
+  },plugins:[barLabels]});
+}
+function renderGeoKpis(rows){
+  var agg=ufAgg(rows),ufs=Object.keys(agg),topUf=null;
+  ufs.forEach(function(uf){if(!topUf||agg[uf].vd>agg[topUf].vd)topUf=uf;});
+  document.getElementById('g_uf_n').textContent=nf(ufs.length);
+  var te=document.getElementById('g_uf_top'),ts=document.getElementById('g_uf_top_sub');
+  if(topUf){var cv=convVal(agg[topUf].vd,agg[topUf].lt);te.textContent=topUf;ts.textContent=nf(agg[topUf].vd)+' vidas'+(cv===null?'':' · '+cv.toFixed(1)+'% conv.');}
+  else{te.textContent='—';ts.innerHTML='&nbsp;';}
+  var byUF=cidadeAgg(),cidCount=0,topCid=null,topCidV=0,topCidUf='';
+  Object.keys(byUF).forEach(function(uf){
+    Object.keys(byUF[uf]).forEach(function(cid){
+      if(cid==='N/D')return;
+      cidCount++;
+      if(byUF[uf][cid]>topCidV){topCidV=byUF[uf][cid];topCid=cid;topCidUf=uf;}
+    });
+  });
+  document.getElementById('g_cid_n').textContent=nf(cidCount);
+  var ce=document.getElementById('g_cid_top'),cs=document.getElementById('g_cid_top_sub');
+  if(topCid){ce.textContent=topCid;ce.style.fontSize=(topCid.length>14?'16px':'24px');cs.textContent=topCidUf+' · '+nf(topCidV)+' vidas';}
+  else{ce.textContent='—';cs.innerHTML='&nbsp;';}
+}
+function renderGeoMain(rows){_GEO_ROWS=rows;_GEOV_ROWS=rows;if(GEO_MODE==='vend')renderUFVendTable(rows);else renderUFTable(rows);}
+function geoMode(m){
+  if(GEO_MODE===m)return;
+  GEO_MODE=m;
+  var on='border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff';
+  var offC='border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155';
+  var offV=offC+';border-left:1px solid #d5dde6';
+  var bc=document.getElementById('geo_mode_cid'),bv=document.getElementById('geo_mode_vend');
+  if(bc)bc.style.cssText=(m==='cid'?on:offC);
+  if(bv)bv.style.cssText=(m==='vend'?on+';border-left:1px solid #d5dde6':offV);
+  var nc=document.getElementById('geo_note_cid'),nv=document.getElementById('geo_note_vend');
+  if(nc)nc.style.display=(m==='cid'?'':'none');
+  if(nv)nv.style.display=(m==='vend'?'':'none');
+  renderGeoMain(_GEO_ROWS);
+}
+function geoSort(k){
+  if(GEO_SORT.key===k)GEO_SORT.dir=(GEO_SORT.dir==='asc'?'desc':'asc');
+  else{GEO_SORT.key=k;GEO_SORT.dir=(k==='uf'?'asc':'desc');}
+  renderUFTable(_GEO_ROWS);
+}
+function geoToggle(uf){GEO_OPEN[uf]=!GEO_OPEN[uf];renderUFTable(_GEO_ROWS);}
+function geoShowAll(uf){GEO_SHOWALL[uf]=!GEO_SHOWALL[uf];renderUFTable(_GEO_ROWS);}
+function renderUFTable(rows){
+  _GEO_ROWS=rows;
+  var agg=ufAgg(rows);
+  var byCid=cidadeAgg();
+  var gLt=0,gVd=0,sLt=0,sVd=0;
+  rows.forEach(function(x){gLt+=x.lt;gVd+=x.vd;if(x.uf&&x.uf!=='N/D'){sLt+=x.lt;sVd+=x.vd;}});
+  var ndLt=gLt-sLt, ndVd=gVd-sVd;
+  var tot=gVd;
+  var arr=Object.keys(agg).map(function(uf){
+    var a=agg[uf];
+    return {uf:uf,lt:a.lt,vd:a.vd,cv:convVal(a.vd,a.lt),share:tot?a.vd/tot*100:0};
+  });
+  arr.sort(function(a,b){
+    var k=GEO_SORT.key,r;
+    if(k==='uf')r=String(a.uf).localeCompare(String(b.uf),'pt-BR');
+    else{var av=a[k],bv=b[k];if(av===null)av=-1;if(bv===null)bv=-1;r=av-bv;}
+    return GEO_SORT.dir==='asc'?r:-r;
+  });
+  var tb=document.getElementById('tbl_geo_b');if(!tb)return;
+  var totCid=0;
+  var out=[];
+  arr.forEach(function(x){
+    var cids=byCid[x.uf]||{};
+    var cidKeys=Object.keys(cids);
+    totCid+=cidKeys.length;
+    var hasCid=cidKeys.length>0;
+    var open=!!GEO_OPEN[x.uf];
+    var caret=hasCid?(open?'▾ ':'▸ '):'&nbsp;&nbsp;';
+    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(open?'#f1f6fb':'#fff')+';'+(hasCid?'cursor:pointer':'')+'"'+(hasCid?(' onclick="geoToggle(\''+x.uf+'\')"'):'')+'>'+
+      '<td style="padding:7px 8px;font-weight:700">'+caret+x.uf+(hasCid?(' <span style="color:var(--muted);font-weight:400;font-size:11px">('+cidKeys.length+' cid.)</span>'):'')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+nf(x.lt)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:600">'+nf(x.vd)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+(x.cv===null?'—':x.cv.toFixed(1)+'%')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+x.share.toFixed(1)+'%</td></tr>');
+    if(open&&hasCid){
+      var sumC=cidKeys.reduce(function(s,c){return s+cids[c];},0);
+      var carr=cidKeys.map(function(c){return {c:c,v:cids[c],pct:sumC?cids[c]/sumC*100:0};});
+      carr.sort(function(a,b){return b.v-a.v;});
+      var showAll=!!GEO_SHOWALL[x.uf];
+      var lim=(showAll||carr.length<=10)?carr.length:10;
+      carr.slice(0,lim).forEach(function(cc){
+        out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
+          '<td style="padding:4px 8px 4px 30px;color:#334155">'+_geoEsc(cc.c)+'</td>'+
+          '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+          '<td style="padding:4px 8px;text-align:right">'+nf(cc.v)+'</td>'+
+          '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+          '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+cc.pct.toFixed(1)+'%</td></tr>');
+      });
+      if(carr.length>10){
+        out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="geoShowAll(\''+x.uf+'\')">'+
+          '<td colspan="5" style="padding:5px 8px 5px 30px;color:#0072ce;font-weight:600;font-size:12px">'+
+          (showAll?'▴ ver menos (top 10)':'▾ ver mais ('+(carr.length-10)+' cidades)')+'</td></tr>');
+      }
+    }
+  });
+  if(ndVd>0||ndLt>0){
+    var ndc=convVal(ndVd,ndLt);
+    out.push('<tr style="border-bottom:1px solid #eef2f7;background:#fff" title="Vidas/leads sem estado identificado (venda sem cidade/UF ou lead cujo DDD não mapeia UF). No mês corrente tende a ser tudo até rodar o backfill venda_uf_consulta.">'+
+      '<td style="padding:7px 8px;font-weight:700;color:var(--muted)">&nbsp;&nbsp;N/D <span style="font-weight:400;font-size:11px">· sem estado</span></td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+nf(ndLt)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:600;color:var(--muted)">'+nf(ndVd)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(ndc===null?'—':ndc.toFixed(1)+'%')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(tot?(ndVd/tot*100).toFixed(1):'0.0')+'%</td></tr>');
+  }
+  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
+  var foot=document.getElementById('tbl_geo_foot');
+  if(foot){
+    if(!out.length){foot.innerHTML='';}
+    else{
+      var gc=convVal(gVd,gLt), fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
+      foot.innerHTML='<tr>'+
+        '<td style="'+fc+'">TOTAL (mês)</td>'+
+        '<td style="'+fc+';text-align:right">'+nf(gLt)+'</td>'+
+        '<td style="'+fc+';text-align:right">'+nf(gVd)+'</td>'+
+        '<td style="'+fc+';text-align:right">'+(gc===null?'—':gc.toFixed(1)+'%')+'</td>'+
+        '<td style="'+fc+';text-align:right">100%</td></tr>';
+    }
+  }
+  var sub=document.getElementById('geo_sub');
+  if(sub)sub.textContent=arr.length?('· '+arr.length+' estados · '+nf(totCid)+' cidades'):(gVd>0?'· sem estado identificado (N/D)':'');
+  document.querySelectorAll('#tab-geo .geo-sortable').forEach(function(th){
+    var k=th.getAttribute('data-k');
+    var base;
+    if(k==='uf'){base='Estado / Cidade';}
+    else{base=th.getAttribute('data-lbl');if(base===null){base=th.textContent.trim();th.setAttribute('data-lbl',base);}}
+    th.onclick=function(){geoSort(k);};
+    th.textContent=base+(GEO_SORT.key===k?(GEO_SORT.dir==='asc'?' ▲':' ▼'):'');
+  });
+}
+function quartilMap(){
+  var _nameF=null;for(var _i=0;_i<FILTERS.length;_i++){if(FILTERS[_i].id==='f_nome'){_nameF=FILTERS[_i];break;}}
+  var _saved=_nameF?_nameF.sel:null;
+  if(_nameF)_nameF.sel=new Set();
+  var rows=filtered().filter(function(r){
+    if(r[C.GESTAO]==='ADMINISTRATIVO')return false;
+    var k=r[C.NOME];
+    if(k==='NÃO MAPEADO'||k==='N/D'||k==='ADMINISTRATIVO')return false;
+    return true;
+  });
+  if(_nameF)_nameF.sel=_saved;
+  var m={};
+  rows.forEach(function(r){
+    var k=r[C.NOME];
+    if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,_names:new Set(),_rows:[]};
+    m[k].lt+=r[C.LT];m[k].vd+=r[C.VD];m[k].vv+=r[C.VV];m[k]._names.add(r[C.NOME]);m[k]._rows.push(r);
+  });
+  var ags=Object.values(m);
+  crossScope(ags);
+  assignQuartis(ags);
+  var map={};ags.forEach(function(g){map[g.k]={q:g.q,score:g._score};});
+  return map;
+}
+function qBadge(q){
+  if(!q)return '<span style="display:inline-block;min-width:22px;text-align:center;background:#e2e8f0;color:#94a3b8;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Sem quartil (bucket não-vendedor)">—</span>';
+  var c=QCOL[q]||'#94a3b8';
+  return '<span style="display:inline-block;min-width:22px;text-align:center;background:'+c+';color:#fff;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Quartil '+q+'">'+q+'</span>';
+}
+function geovSort(k){
+  if(GEOV_SORT.key===k)GEOV_SORT.dir=(GEOV_SORT.dir==='asc'?'desc':'asc');
+  else{GEOV_SORT.key=k;GEOV_SORT.dir=(k==='uf'?'asc':'desc');}
+  renderUFVendTable(_GEOV_ROWS);
+}
+function ufVendToggle(uf){GEOV_OPEN[uf]=!GEOV_OPEN[uf];renderUFVendTable(_GEOV_ROWS);}
+function ufVendShowAll(uf){GEOV_SHOWALL[uf]=!GEOV_SHOWALL[uf];renderUFVendTable(_GEOV_ROWS);}
+function renderUFVendTable(rows){
+  _GEOV_ROWS=rows;
+  var frows=rows.filter(function(x){return _gestaoOf(x.nm)!=='ADMINISTRATIVO';});
+  var agg=ufAgg(frows);
+  var byVend=ufVendAgg(frows);
+  var qmap=quartilMap();
+  var gLt=0,gVd=0,sLt=0,sVd=0;
+  frows.forEach(function(x){gLt+=x.lt;gVd+=x.vd;if(x.uf&&x.uf!=='N/D'){sLt+=x.lt;sVd+=x.vd;}});
+  var ndLt=gLt-sLt,ndVd=gVd-sVd;
+  var tot=gVd;
+  var arr=Object.keys(agg).map(function(uf){
+    var a=agg[uf];
+    return {uf:uf,lt:a.lt,vd:a.vd,cv:convVal(a.vd,a.lt),share:tot?a.vd/tot*100:0};
+  });
+  arr.sort(function(a,b){
+    var k=GEOV_SORT.key,r;
+    if(k==='uf')r=String(a.uf).localeCompare(String(b.uf),'pt-BR');
+    else{var av=a[k],bv=b[k];if(av===null)av=-1;if(bv===null)bv=-1;r=av-bv;}
+    return GEOV_SORT.dir==='asc'?r:-r;
+  });
+  var tb=document.getElementById('tbl_geo_b');if(!tb)return;
+  var out=[];
+  function vendChildren(uf,stateVd){
+    var vv=byVend[uf]||{};
+    var carr=Object.keys(vv).map(function(nm){
+      var d=vv[nm];
+      return {nm:nm,lt:d.lt,vd:d.vd,cv:convVal(d.vd,d.lt),pct:stateVd?d.vd/stateVd*100:0,q:(qmap[nm]||{}).q};
+    });
+    carr.sort(function(a,b){return b.vd-a.vd;});
+    var showAll=!!GEOV_SHOWALL[uf];
+    var lim=(showAll||carr.length<=10)?carr.length:10;
+    carr.slice(0,lim).forEach(function(cc){
+      out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
+        '<td style="padding:4px 8px 4px 30px;color:#334155">'+qBadge(cc.q)+_geoEsc(cc.nm)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+nf(cc.lt)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+nf(cc.vd)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+(cc.cv===null?'—':cc.cv.toFixed(1)+'%')+'</td>'+
+        '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+cc.pct.toFixed(1)+'%</td></tr>');
+    });
+    if(carr.length>10){
+      out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="ufVendShowAll(\''+uf+'\')">'+
+        '<td colspan="5" style="padding:5px 8px 5px 30px;color:#0072ce;font-weight:600;font-size:12px">'+
+        (showAll?'▴ ver menos (top 10)':'▾ ver mais ('+(carr.length-10)+' vendedores)')+'</td></tr>');
+    }
+  }
+  arr.forEach(function(x){
+    var nv=Object.keys(byVend[x.uf]||{}).length;
+    var hasV=nv>0;
+    var open=!!GEOV_OPEN[x.uf];
+    var caret=hasV?(open?'▾ ':'▸ '):'&nbsp;&nbsp;';
+    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(open?'#f1f6fb':'#fff')+';'+(hasV?'cursor:pointer':'')+'"'+(hasV?(' onclick="ufVendToggle(\''+x.uf+'\')"'):'')+'>'+
+      '<td style="padding:7px 8px;font-weight:700">'+caret+x.uf+(hasV?(' <span style="color:var(--muted);font-weight:400;font-size:11px">('+nv+' vend.)</span>'):'')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+nf(x.lt)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:600">'+nf(x.vd)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+(x.cv===null?'—':x.cv.toFixed(1)+'%')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+x.share.toFixed(1)+'%</td></tr>');
+    if(open&&hasV)vendChildren(x.uf,x.vd);
+  });
+  if(ndVd>0||ndLt>0){
+    var ndc=convVal(ndVd,ndLt);
+    var ndOpen=!!GEOV_OPEN['N/D'];
+    var ndHasV=Object.keys(byVend['N/D']||{}).length>0;
+    var ndCaret=ndHasV?(ndOpen?'▾ ':'▸ '):'&nbsp;&nbsp;';
+    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(ndOpen?'#f1f6fb':'#fff')+';'+(ndHasV?'cursor:pointer':'')+'"'+(ndHasV?(' onclick="ufVendToggle(\'N/D\')"'):'')+' title="Vidas/leads sem estado identificado (venda sem cidade/UF ou lead cujo DDD não mapeia UF).">'+
+      '<td style="padding:7px 8px;font-weight:700;color:var(--muted)">'+ndCaret+'N/D <span style="font-weight:400;font-size:11px">· sem estado</span></td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+nf(ndLt)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:600;color:var(--muted)">'+nf(ndVd)+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(ndc===null?'—':ndc.toFixed(1)+'%')+'</td>'+
+      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(tot?(ndVd/tot*100).toFixed(1):'0.0')+'%</td></tr>');
+    if(ndOpen&&ndHasV)vendChildren('N/D',ndVd);
+  }
+  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
+  var foot=document.getElementById('tbl_geo_foot');
+  if(foot){
+    if(!out.length){foot.innerHTML='';}
+    else{
+      var gc=convVal(gVd,gLt),fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
+      foot.innerHTML='<tr>'+
+        '<td style="'+fc+'">TOTAL (mês)</td>'+
+        '<td style="'+fc+';text-align:right">'+nf(gLt)+'</td>'+
+        '<td style="'+fc+';text-align:right">'+nf(gVd)+'</td>'+
+        '<td style="'+fc+';text-align:right">'+(gc===null?'—':gc.toFixed(1)+'%')+'</td>'+
+        '<td style="'+fc+';text-align:right">100%</td></tr>';
+    }
+  }
+  var sub=document.getElementById('geo_sub');
+  if(sub)sub.textContent=arr.length?('· '+arr.length+' estados'):(gVd>0?'· sem estado identificado (N/D)':'');
+  document.querySelectorAll('#tab-geo .geo-sortable').forEach(function(th){
+    var k=th.getAttribute('data-k');
+    var base;
+    if(k==='uf'){base='Estado / Vendedor';}
+    else{base=th.getAttribute('data-lbl');if(base===null){base=th.textContent.trim();th.setAttribute('data-lbl',base);}}
+    th.onclick=function(){geovSort(k);};
+    th.textContent=base+(GEOV_SORT.key===k?(GEOV_SORT.dir==='asc'?' ▲':' ▼'):'');
+  });
+}
 function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');render();}   // render() agora despacha so' a aba ativa
 
 // ---------- Análise de Quartil (tab-quartil) ----------
