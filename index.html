@@ -158,7 +158,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </div>
 
 <div class="filters">
-<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="PRODUTO da venda — classificado pelo CANAL real (mesma regra do relatório diário): PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA. Recorta só as VIDAS pelo produto vendido; os Leads não mudam. Independente do filtro Tipo (lead).">Produto (venda)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label title="TIPO do LEAD — fila do lead (Session Team), MESMA classificação do bloco LEADS | TIPO do relatório de leads por dia (GUP): PF/PME/ADESÃO/PPO/OUTROS. Mostra os LEADS daquele tipo, as VIDAS LIGADAS a esses leads (vinculadas por telefone) e a conversão (vidas ligadas ÷ leads), por vendedor. Cobertura das vidas é parcial (só vinculadas; PME/ADESÃO casam pouco telefone→lead) — é um piso, menor que o Produto (venda) que usa CANAL. Se marcar junto com Produto, o Tipo (lead) prevalece nas vidas.">Tipo (lead)</label><select id="f_tipolead_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option><option>PPO</option><option>OUTROS</option></select></div><div class="fg"><label>Vidas</label><select id="f_vinc" class="sel" onchange="render()"><option value="vd">Total</option><option value="vv">Vinculado (mesmo mês)</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
+<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="PRODUTO da venda — classificado pelo CANAL real (mesma regra do relatório diário): PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA. Recorta só as VIDAS pelo produto vendido; os Leads não mudam. Independente do filtro Tipo (lead).">Produto (venda)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label title="TIPO do LEAD — fila do lead (Session Team), MESMA classificação do bloco LEADS | TIPO do relatório de leads por dia (GUP): PF/PME/ADESÃO/PPO/OUTROS. Mostra os LEADS daquele tipo, as VIDAS LIGADAS a esses leads (vinculadas por telefone) e a conversão (vidas ligadas ÷ leads), por vendedor. Cobertura das vidas é parcial (só vinculadas; PME/ADESÃO casam pouco telefone→lead) — é um piso, menor que o Produto (venda) que usa CANAL. Se marcar junto com Produto, o Tipo (lead) prevalece nas vidas.">Tipo (lead)</label><select id="f_tipolead_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option><option>PPO</option><option>OUTROS</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
 <div class="fg"><label>Supervisor</label><div class="ms" id="f_sup"></div></div>
 <div class="fg"><label>Unidade</label><div class="ms" id="f_unidade"></div></div>
 <div class="fg"><label>Gestão</label><div class="ms" id="f_gestao"></div></div>
@@ -1733,9 +1733,12 @@ function renderExtrato(){
   var cor=QC[ag.q];
   var effV=(ag._effVd!=null?ag._effVd:ag.vd);
   var convGlobal=ag.lt>0?effV/ag.lt*100:0;   // Conv. geral respeita o filtro VIDAS (Total/Vinculado)
-  var convVV=ag.lt>0?ag.vv/ag.lt*100:0;
-  // conv. origens-chave: média das origens-chave com leads (Ano Todo)
+  // Conv. Vinculada + Vidas Vinculadas com Lead = eixo DONO DO LEAD (ORIG_BY_NOME) — única noção de vínculo (David 21/07/2026)
   var ob=ORIG_BY_NOME[nome]||{};
+  function _donoCv(g){var o=ORIG_BY_NOME[g.nome]||{};var v=0,l=0;KEY_ORIG_LBL.forEach(function(k){var x=o[k];if(x){v+=x.vd;l+=x.lt;}});return l>0?v/l*100:0;}
+  var _vincDono=KEY_ORIG_LBL.reduce(function(s,k){var o=ob[k];return s+(o?(o.vd||0):0);},0);
+  var convVV=_donoCv(ag);
+  // conv. origens-chave: média das origens-chave com leads (Ano Todo)
   var keyConvs=KEY_ORIG_LBL.map(function(l){var o=ob[l];return (o&&o.lt>0)?o.vd/o.lt*100:null;}).filter(function(x){return x!==null;});
   var convKey=keyConvs.length?keyConvs.reduce(function(s,x){return s+x;},0)/keyConvs.length:0;
 
@@ -1830,7 +1833,7 @@ function renderExtrato(){
     ['Leads Totais',nf(ag.lt),'','#0072ce'],
     ['Leads Produtivos',_crossExt?'—':nf(ag.lp),_crossExt?'sem quebra por Tipo CT/Origem':(ag.lt?(ag.lp/ag.lt*100).toFixed(1)+'% dos totais':''),'#00a3a1'],
     ['Vidas Vendidas',nf(ag.vd),'','#16a34a'],
-    ['Vidas Vinculadas',nf(ag.vv),_crossExt?'sem quebra Vinculada×Total por Tipo CT/Origem':(ag.vd?(ag.vv/ag.vd*100).toFixed(1)+'% das vidas':''),'#d97706'],
+    ['Vidas Vinculadas com Lead',nf(_vincDono),_crossExt?'no recorte selecionado':'vidas dos leads recebidos (dono do lead)','#d97706'],
     ['Conv. Geral (V/L)',convGlobal.toFixed(2)+'%','vidas ÷ leads totais','#7c3aed'],
   ].map(function(kk){var lbl=kk[0],val=kk[1],sub=kk[2],col=kk[3];return ''+
     '<div class="kpi" style="border-left-color:'+col+'">'+
@@ -1853,7 +1856,7 @@ function renderExtrato(){
   var grp=ags.filter(function(a){return a.q===ag.q;});
   var avgVd=grp.reduce(function(s,a){return s+a.vd;},0)/grp.length;
   var avgCvG=grp.reduce(function(s,a){return s+(a.lt>0?a.vd/a.lt*100:0);},0)/grp.length;
-  var avgCvV=grp.reduce(function(s,a){return s+(a.lt>0?a.vv/a.lt*100:0);},0)/grp.length;
+  var avgCvV=grp.reduce(function(s,a){return s+_donoCv(a);},0)/grp.length;
   var firstName=ag.nome.split(' ')[0];
   mkChart('ch_extrato_comp',{type:'bar',data:{
     labels:['Vidas','Conv.Geral %','Conv.Vinculada %'],
