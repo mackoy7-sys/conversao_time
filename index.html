@@ -136,7 +136,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </script>
 <div class="wrap">
 <div class="head">
-<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 50%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> (conversão vs meta por origem) · ref. <span id="refdate">30/06/2026</span></p></div>
+<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 60%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> (conversão vs meta por origem) · ref. <span id="refdate">30/06/2026</span></p></div>
 <div style="text-align:right"><div style="font-size:28px;font-weight:800" id="hcount">297</div><div style="font-size:12px;opacity:.85">vendedores</div></div>
 </div>
 
@@ -203,9 +203,9 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </div>
 </div>
 <div id="gestao_chips" class="chips"></div>
-<div id="tbl_quartil_nota" class="note" style="display:none"><b>Como funciona o Score / Quartil.</b> O <b>Score</b> (0–100) combina 3 critérios em percentil dentro do grupo: <b>VENDA 50% + PRINCIPAL 30% + DEMAIS FILA 20%</b>.<br>
-• <b>VENDA (50%) — atingimento de volume:</b> vidas do período ÷ <b>meta de 60 vidas/mês</b> (a meta escala pelo nº de meses selecionados — ex.: 6 meses = 360; 1 mês = 60). É o balizador de volume e segue o filtro de <b>Mês</b>, então o quartil <b>reordena conforme o mês</b>.<br>
-• <b>PRINCIPAL (30%) e DEMAIS FILA (20%) — atingimento de meta de conversão por origem:</b> vidas ÷ vidas esperadas, onde esperadas = Σ(leads da origem × meta). Metas: PRINCIPAL — C.Abnd.Con. 8%, Conecta 8%, C.Abnd. 8%, Eugenia 10%; DEMAIS FILA — Espontâneo 5%. Base de origens é "Ano Todo" (não há origem por mês), por isso esses 2 critérios não variam com o filtro de Mês.<br>
+<div id="tbl_quartil_nota" class="note" style="display:none"><b>Como funciona o Score / Quartil.</b> O <b>Score</b> (0–100) combina 3 critérios em percentil dentro do grupo: <b>VENDA 60% + PRINCIPAL 30% + DEMAIS FILA 10%</b>.<br>
+• <b>VENDA (60%) — atingimento de volume:</b> vidas do período ÷ <b>meta de 60 vidas/mês</b> (a meta escala pelo nº de meses selecionados — ex.: 6 meses = 360; 1 mês = 60). É o balizador de volume e segue o filtro de <b>Mês</b>, então o quartil <b>reordena conforme o mês</b>.<br>
+• <b>PRINCIPAL (30%) e DEMAIS FILA (10%) — atingimento de meta de conversão por origem:</b> vidas ÷ vidas esperadas, onde esperadas = Σ(leads da origem × meta). Metas: PRINCIPAL — C.Abnd.Con. 8%, Conecta 8%, C.Abnd. 8%, Eugenia 10%; DEMAIS FILA — Espontâneo 5%. Base de origens é "Ano Todo" (não há origem por mês), por isso esses 2 critérios não variam com o filtro de Mês.<br>
 Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>Q3 — Mediano</b>, <b>Q4 — Baixo</b> (25% piores). <b style="color:#16a34a">Porta do Q1 (dupla, obrigatória):</b> só é elegível ao Q1 quem <b>atingir a meta de volume</b> (60 vidas/mês × nº de meses = Ating. volume ≥ 100%) <b>E</b> alcançar <b>≥ 95% da meta de conversão</b> (atingimento de conversão das origens-chave ≥ 95%, base anual). Quem falha em qualquer uma fica no máximo no Q2, mesmo com score alto. O Q1 é preenchido pelos de maior score que passam nas duas portas (pode ficar com menos de 25% — ou vazio — se não houver elegíveis). <b>Obs.:</b> a base por vendedor só contém 5 origens — as demais filas do plano de metas (Mídia, Televendas, Leads Frios, VPC, Campanhas, Repique, Outros, Flamengo) não estão disponíveis por vendedor, então DEMAIS FILA reflete apenas Espontâneo. Recalculado conforme o <b>"Ver por"</b> (Promotor / Supervisor / Gestor) e respeita os filtros do topo.</div>
 <table id="tbl"><thead><tr>
 <th class="num">#</th>
@@ -250,7 +250,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </table>
 </div>
 <div class="note" id="geo_note_cid" style="margin-top:8px">Ao expandir um estado aparecem as <b>cidades</b> (recorte de <b>volume de vendas</b> dentro do estado). Não há taxa de conversão por cidade — leads não têm cidade (só DDD→estado), então a conversão fica só no nível do estado; a <b>% vidas</b> da cidade é a fatia dela nas vidas do estado. Use o toggle <b>Vendedores</b> para ver, no lugar das cidades, os vendedores de cada estado.</div>
-<div class="note" id="geo_note_vend" style="margin-top:8px;display:none">Ao expandir um estado aparecem os <b>vendedores</b> com a badge <b>Q1–Q4</b> ao lado do nome — o <b>quartil do vendedor no período</b> (mesma classificação da aba <b>Análise de Quartil</b>: VENDA 50% + PRINCIPAL 30% + DEMAIS FILA 20%, com a porta dupla do Q1). É propriedade do vendedor, então <b>não muda de um estado para outro</b>. Leads / Vidas / Conversão são <b>dentro do estado</b>; a <b>% vidas</b> do vendedor é a fatia dele nas vidas do estado. O bucket <b>ADMINISTRATIVO</b> é <b>removido</b> deste modo (foco só em vendedores), então o TOTAL fica abaixo do total do mês do modo Cidades. NÃO MAPEADO aparece sem badge.</div>
+<div class="note" id="geo_note_vend" style="margin-top:8px;display:none">Ao expandir um estado aparecem os <b>vendedores</b> com a badge <b>Q1–Q4</b> ao lado do nome — o <b>quartil do vendedor no período</b> (mesma classificação da aba <b>Análise de Quartil</b>: VENDA 60% + PRINCIPAL 30% + DEMAIS FILA 10%, com a porta dupla do Q1). É propriedade do vendedor, então <b>não muda de um estado para outro</b>. Leads / Vidas / Conversão são <b>dentro do estado</b>; a <b>% vidas</b> do vendedor é a fatia dele nas vidas do estado. O bucket <b>ADMINISTRATIVO</b> é <b>removido</b> deste modo (foco só em vendedores), então o TOTAL fica abaixo do total do mês do modo Cidades. NÃO MAPEADO aparece sem badge.</div>
 </div>
 </div>
 
@@ -375,7 +375,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
       <option value="gestao">Gestão</option>
     </select>
   </div>
-  <div id="qv_score_lbl" style="font-size:12px;color:var(--muted);margin-top:18px">Score: atingimento de meta — VENDA 50% · PRINCIPAL 30% · DEMAIS FILA 20%</div>
+  <div id="qv_score_lbl" style="font-size:12px;color:var(--muted);margin-top:18px">Score: atingimento de meta — VENDA 60% · PRINCIPAL 30% · DEMAIS FILA 10%</div>
 </div>
 <div class="q-grid" id="qv-cards"></div>
 <div class="tablecard">
@@ -658,7 +658,7 @@ var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
 function effVd(g){return (vincVV()?(g.vv||0):(g.vd||0));}
-// quartil: VENDA 50% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 20% (conversão vs meta por origem, base anual)
+// quartil: VENDA 60% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 10% (conversão vs meta por origem, base anual)
 function assignQuartis(a){
   var n=a.length;if(!n)return;
   var tgt=volTarget(); _curVolTgt=tgt;
@@ -672,7 +672,7 @@ function assignQuartis(a){
     g._attD=attainOf(acc,'D');             // DEMAIS FILA: conversão vs meta (anual)
   });
   rankBy('_attVol','_rv');rankBy('_attP','_rk');rankBy('_attD','_rc');
-  a.forEach(function(g){var s=0,w=0;if(g._rv!=null){s+=0.50*g._rv;w+=0.50;}if(g._rk!=null){s+=0.30*g._rk;w+=0.30;}if(g._rc!=null){s+=0.20*g._rc;w+=0.20;}g._score=w>0?s/w:0;});
+  a.forEach(function(g){var s=0,w=0;if(g._rv!=null){s+=0.60*g._rv;w+=0.60;}if(g._rk!=null){s+=0.30*g._rk;w+=0.30;}if(g._rc!=null){s+=0.10*g._rc;w+=0.10;}g._score=w>0?s/w:0;});
   // PORTA DUPLA do Q1: só entra no Q1 quem ATINGE a meta de VOLUME (≥100% = 60×meses) E ≥95% da meta de CONVERSÃO (atingimento de conversão das origens-chave).
   // Q1 = os de maior score que passam nas DUAS portas, até ~25% do grupo (recompleta com os próximos elegíveis). Demais por score.
   function q1Eligivel(g){return g._attVol!=null && g._attVol>=1 && g._attConv!=null && g._attConv>=0.95;}
@@ -1755,7 +1755,7 @@ function renderExtrato(){
     '</div>'+
     '</div>';
 
-  /* ---- Score decomposto (atingimento de meta: VENDA 50% · PRINCIPAL 30% · DEMAIS FILA 20%) ---- */
+  /* ---- Score decomposto (atingimento de meta: VENDA 60% · PRINCIPAL 30% · DEMAIS FILA 10%) ---- */
   var total=(ag._score*100).toFixed(0);
   var pctR=function(r){return r==null?'—':(r*100).toFixed(0);};
   var attV=function(a){return a==null?'sem leads':(a*100).toFixed(0)+'% da meta';};
@@ -1763,9 +1763,9 @@ function renderExtrato(){
   var _volTgtE=volTarget();
   var volTxt=(ag._attVol==null?'—':nf(effV)+' vidas / '+nf(Math.round(_volTgtE))+' meta ('+(ag._attVol*100).toFixed(0)+'%)');
   var dims=[
-    ['VENDA — volume (meta 60 vidas/mês)','peso 50%','#0072ce',pctR(ag._rv),volTxt],
+    ['VENDA — volume (meta 60 vidas/mês)','peso 60%','#0072ce',pctR(ag._rv),volTxt],
     ['PRINCIPAL (C.Abnd., C.Abnd.Con., Conecta, Eugenia)','peso 30%','#7c3aed',pctR(ag._rk),attV(ag._attP)],
-    ['DEMAIS FILA (Espontâneo)','peso 20%','#00a3a1',pctR(ag._rc),attV(ag._attD)],
+    ['DEMAIS FILA (Espontâneo)','peso 10%','#00a3a1',pctR(ag._rc),attV(ag._attD)],
   ];
   // ---- Painel: Qualificação do Quartil (portas + veredito) ----
   var volPct=ag._attVol==null?null:Math.round(ag._attVol*100);
@@ -2330,7 +2330,7 @@ function renderQuartilV(){
     var pm=periodMonths();
     var facPct=Math.round(refProration()*100);
     var base=pm>1?('meta 60/mês prorrateada pelos dias — média de '+pm+' meses'):('meta 60/mês prorrateada pelos dias decorridos ('+facPct+'% do mês)');
-    el.innerHTML='Score: <b style="color:#0072ce">VENDA 50%</b> = atingimento de volume (<b>'+base+'</b>) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 20%</b> = conversão vs meta por origem (anual).<br><b style="color:#16a34a">Porta do Q1 (dupla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(Math.round(volTgt))+' vidas prorrateadas = Ating. volume ≥ 100%) <b>E</b> ≥ <b>95% da meta de conversão</b> (Atingim. meta conv. ≥ 95%); senão, no máximo Q2.';
+    el.innerHTML='Score: <b style="color:#0072ce">VENDA 60%</b> = atingimento de volume (<b>'+base+'</b>) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> = conversão vs meta por origem (anual).<br><b style="color:#16a34a">Porta do Q1 (dupla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(Math.round(volTgt))+' vidas prorrateadas = Ating. volume ≥ 100%) <b>E</b> ≥ <b>95% da meta de conversão</b> (Atingim. meta conv. ≥ 95%); senão, no máximo Q2.';
   })();
 
   function origAgg(items){
