@@ -2276,6 +2276,41 @@ function downloadResumoCSV(){
   a.download='resumo_vendedor_auditoria_'+vb+'_'+mesLbl.replace(/[^a-z0-9]+/gi,'')+'.csv';
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
 }
+// ---- ordenacao da tabela "Ranking por Quartil" (clique no header, mesma UX do Detalhe por Vendedor) ----
+var QV_SORT={key:'sc',dir:'desc'};
+var QV_TXTKEYS={q:1,nome:1,area:1,sup:1,tempo:1};
+function qvCols(){
+  return [
+    {t:'Q',k:'q'},{t:'Nome',k:'nome'},{t:'Área',k:'area'},{t:'Supervisor',k:'sup'},
+    {t:'Score',k:'sc',n:1},
+    {t:'At. Vol.',k:'attvol',n:1,ti:'Atingimento de volume = vidas ÷ (60 × nº meses do período)'},
+    {t:'Leads',k:'lt',n:1},
+    {t:'SLA ≤2min',k:'sla',n:1,ti:'% de atendimentos respondidos em ≤2min (denominador: leads DENTRO do horário). Fotografia do período do build de SLA — não varia com o filtro de Mês.'},
+    {t:'Vidas',k:'vd',n:1},
+    {t:'Conv. geral',k:'cv',n:1,ti:'Conversão geral — TODAS as origens, no período filtrado (vidas ÷ leads)'},
+    {t:'Conv. ch.',k:'cvch',n:1,ti:'Conversão agregada das 5 origens-chave (base ANUAL): Σ vidas ÷ Σ leads das origens abaixo'},
+    {t:'Tempo de Casa',k:'tempo'},
+    {t:'Meses',k:'meses',n:1,ti:'Tempo de casa em meses'}
+  ].concat(KEY_ORIG_LBL.map(function(lbl,i){return {t:lbl,k:'ko'+i,n:1,ti:lbl+' · conversão ANUAL'};}));
+}
+function sortQV(key){if(QV_SORT.key===key)QV_SORT.dir=QV_SORT.dir==='asc'?'desc':'asc';else{QV_SORT.key=key;QV_SORT.dir=QV_TXTKEYS[key]?'asc':'desc';}renderQuartilV();}
+function tempoCasaMesesQV(s){var a=/(\d+)\s*A/i.exec(s),me=/(\d+)\s*M/i.exec(s),d=/(\d+)\s*D/i.exec(s);if(!a&&!me&&!d)return 0;return (a?+a[1]:0)*12+(me?+me[1]:0)+((d?+d[1]:0)>=15?1:0);}
+function qvSortVal(ag,key){
+  if(key==='q')return ag.q;
+  if(key==='nome')return ag.k;
+  if(key==='area')return ag.area;
+  if(key==='sup')return ag.sup;
+  if(key==='sc')return ag._score||0;
+  if(key==='attvol')return ag._attVol==null?-1:ag._attVol;
+  if(key==='lt')return ag.lt||0;
+  if(key==='sla'){var v=slaPctVal(ag);return v==null?-1:v;}
+  if(key==='vd')return ag._effVd||0;
+  if(key==='cv')return ag.lt?ag._effVd/ag.lt*100:0;
+  if(key==='cvch'){var acc=ag._accFila||{},chL=0,chV=0;KEY_ORIG_LBL.forEach(function(l){if(acc[l]){chL+=acc[l].lt;chV+=acc[l].vd;}});return chL?chV/chL*100:-1;}
+  if(key==='tempo'||key==='meses')return tempoCasaMesesQV(ag.tempoStr);
+  if(key.indexOf('ko')===0){var lbl=KEY_ORIG_LBL[+key.slice(2)],o=(ORIG_BY_NOME[ag.k]||{})[lbl];return (o&&o.lt>0)?o.cv:-1;}
+  return 0;
+}
 function renderQuartilV(){
   var vbSel=document.getElementById('qv_viewby').value;
   var gcol=vbSel==='sup'?C.SUP:vbSel==='gestao'?C.GESTAO:C.NOME;
@@ -2414,10 +2449,15 @@ function renderQuartilV(){
   var tableRows=ags.filter(function(ag){return !filterQ||ag.q===filterQ;});
   // filtro holofote por nome: só afeta as linhas exibidas (score/posição já calculados sobre a população)
   if(nameSel.size>0 && vbSel==='nome')tableRows=tableRows.filter(function(ag){return nameSel.has(ag.k);});
-  tableRows.sort(function(a,b){return (b._score||0)-(a._score||0);});
+  tableRows.sort(function(a,b){
+    var av=qvSortVal(a,QV_SORT.key),bv=qvSortVal(b,QV_SORT.key),r;
+    if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');
+    else r=av-bv;
+    return QV_SORT.dir==='asc'?r:-r;
+  });
   window._QV_LAST={rows:tableRows,vb:vbSel,volTgt:volTgt};   // p/ o botao "Exportar auditoria (CSV)"
   document.getElementById('qv-rows').textContent='('+tableRows.length+' '+vbLabel+')';
-  document.querySelector('#tbl_qv tbody').innerHTML=tableRows.map(function(ag){
+  var qvBody=tableRows.map(function(ag){
     var cor=QC[ag.q];
     var cv=ag.lt?ag._effVd/ag.lt*100:0;
     var cvCor=cv>=10?'#16a34a':cv>=5?'#d97706':'#dc2626';
@@ -2443,6 +2483,7 @@ function renderQuartilV(){
       KEY_ORIG_LBL.map(function(lbl){var o=(ORIG_BY_NOME[ag.k]||{})[lbl];if(!o||o.lt===0)return '<td class="num" style="color:#cbd5e1">—</td>';var pct=o.cv;var col=pct>=10?'#16a34a':pct>=5?'#d97706':'#dc2626';return '<td class="num" style="color:'+col+';font-weight:600">'+pct.toFixed(1)+'%</td>';}).join('')+
     '</tr>';
   }).join('');
+  document.getElementById('tbl_qv').innerHTML=_sortableHead(qvCols(),QV_SORT,'sortQV')+'<tbody>'+qvBody+'</tbody>';
 }
 
 const ORIG_BY_NOME={};
