@@ -2497,16 +2497,17 @@ const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
 
-// ===== MODO CONTINGENCIA (29/07/2026) -- dados de JSON estatico, sem Supabase ==================
-// O banco saiu do ar (PGRST002 no PostgREST + "the database system is not accepting connections"
-// no Postgres) e esta casca NAO tem dado embutido: ela buscava tudo ao vivo, entao a pagina passou
-// a abrir so' no banner de erro. O shim abaixo substitui o cliente supabase-js servindo os mesmos
-// registros de ./data/ (gerados por CONVERSAO_ANO_TODO/exportar_json_estatico.py) com a MESMA
-// superficie de chamada -- nenhum call site acima precisou mudar.
+// ===== DADOS ESTATICOS (29/07/2026) -- esta pagina nao usa mais Supabase =======================
+// Comecou como contingencia (o banco caiu inteiro e esta casca, que nao tem dado embutido, abria
+// so' no banner de erro) e o David decidiu manter: as tabelas conversao_vendedor_* eram lidas SO'
+// por esta pagina, uma vez por dia. Nao ha por que pagarem um banco hospedado nem serem um ponto
+// unico de falha -- a propria Vercel serve os arquivos. O shim abaixo substitui o cliente
+// supabase-js lendo ./data/ (gerado por CONVERSAO_ANO_TODO/exportar_json_estatico.py) com a MESMA
+// superficie de chamada: nenhum call site acima precisou mudar.
 //
-// PARA VOLTAR AO VIVO quando o Supabase normalizar: descomentar as 3 linhas do createClient,
-// comentar a linha do _staticClient, devolver o <script> do supabase-js no <head>, apagar a pasta
-// data/ do repo e republicar. Ver o plano em .claude/plans/ e a memoria conversao-offline-json.
+// Atualizar dado = rodar o exportador e dar push (a Vercel rebuilda). O unico que continua no
+// Supabase e' o cadastro de promotores, que tem CRUD pelo navegador. Ver [[saida-do-supabase]].
+// As 3 linhas do createClient ficam comentadas so' como registro do que existia antes.
 // const SUPA_URL="https://vzzmlikrlgqaaxrufrwq.supabase.co";
 // const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6em1saWtybGdxYWF4cnVmcndxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMDI4MjUsImV4cCI6MjA5Nzg3ODgyNX0.kXZrukGda9scxndlZCXzDbpLwFigR1EamI3LMtgBBWw";
 // const SB=window.supabase.createClient(SUPA_URL,SUPA_ANON);
@@ -2515,9 +2516,20 @@ function _staticClient(root){
   var _file={};   // caminho -> Promise(json). Garante 1 download por arquivo (o _fetchAll pagina
                   // em loop; sem isto cada pagina rebaixaria o arquivo inteiro).
   function _get(p){
-    if(!_file[p])_file[p]=fetch(root+'/'+p).then(function(r){
+    // Os arquivos sao commitados no repo e regerados todo dia: crus dariam ~31 MB por commit, e o
+    // historico do repo inviabilizaria. Gravados .gz dao ~4 MB e ainda carregam mais rapido.
+    if(!_file[p])_file[p]=fetch(root+'/'+p+'.gz').then(function(r){
       if(!r.ok)throw new Error('HTTP '+r.status+' em '+p);
-      return r.json();
+      return r.arrayBuffer();
+    }).then(function(buf){
+      var u=new Uint8Array(buf);
+      // 1f8b = gzip. Se algum dia a Vercel servir com Content-Encoding: gzip, o navegador ja
+      // descomprime sozinho e chega JSON puro aqui -- por isso a checagem em vez de assumir.
+      if(!(u[0]===0x1f&&u[1]===0x8b))return JSON.parse(new TextDecoder().decode(u));
+      if(typeof DecompressionStream==='undefined')
+        throw new Error('navegador sem suporte a gzip (DecompressionStream) em '+p);
+      return new Response(new Blob([u]).stream()
+        .pipeThrough(new DecompressionStream('gzip'))).json();
     });
     return _file[p];
   }
@@ -2575,14 +2587,14 @@ function _staticClient(root){
       }));
     });
   };
-  // Aviso visivel: sem isto o numero parado passa por dado real e alguem toma decisao em cima.
+  // Data-corte visivel: o dado e' uma fotografia diaria, nao ao vivo. Sem isto, numero de ontem
+  // passa por numero de hoje e alguem decide em cima.
   _get('_manifest.json').then(function(m){
     var w=document.querySelector('.wrap');if(!w||!m)return;
     var p=String(m.dt_carga||'').split('-'), d=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:m.dt_carga;
-    w.insertAdjacentHTML('afterbegin','<div style="background:#fef3c7;border:1px solid #fcd34d;'+
-      'color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px">'+
-      '<b>Modo contingência</b> — o Supabase está indisponível, então esta página está servindo um '+
-      'retrato dos dados de <b>'+d+'</b>. Os números não se atualizam até o banco voltar.</div>');
+    w.insertAdjacentHTML('afterbegin','<div style="background:#eff6ff;border:1px solid #bfdbfe;'+
+      'color:#1e40af;border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:13px">'+
+      'Dados atualizados até <b>'+d+'</b>.</div>');
   }).catch(function(){});
   return {from:function(t){return new Q(t);}};
 }
@@ -2642,7 +2654,7 @@ function _initUI(){
     _initUI();
   }catch(e){
     var w=document.querySelector('.wrap');
-    if(w)w.insertAdjacentHTML('afterbegin','<div class="note" style="background:#fee2e2;border-color:#fca5a5;color:#991b1b">Erro ao carregar os dados (modo contingência, sem Supabase): '+(e.message||e)+'</div>');
+    if(w)w.insertAdjacentHTML('afterbegin','<div class="note" style="background:#fee2e2;border-color:#fca5a5;color:#991b1b">Erro ao carregar os dados: '+(e.message||e)+'</div>');
     console.error(e);
   }
 })();
