@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conversão por Vendedor — mesmo mês</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#0f172a;--card:#fff;--header:#13294b;--accent:#0072ce;--accent2:#00a3a1;--green:#16a34a;--amber:#d97706;--text:#1e293b;--muted:#64748b;--radius:12px;--gap:16px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2498,10 +2497,95 @@ const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
 
-// init (dados AO VIVO do Supabase) -- gerado por build_web_vendedor.py
-const SUPA_URL="https://vzzmlikrlgqaaxrufrwq.supabase.co";
-const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6em1saWtybGdxYWF4cnVmcndxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMDI4MjUsImV4cCI6MjA5Nzg3ODgyNX0.kXZrukGda9scxndlZCXzDbpLwFigR1EamI3LMtgBBWw";
-const SB=window.supabase.createClient(SUPA_URL,SUPA_ANON);
+// ===== MODO CONTINGENCIA (29/07/2026) -- dados de JSON estatico, sem Supabase ==================
+// O banco saiu do ar (PGRST002 no PostgREST + "the database system is not accepting connections"
+// no Postgres) e esta casca NAO tem dado embutido: ela buscava tudo ao vivo, entao a pagina passou
+// a abrir so' no banner de erro. O shim abaixo substitui o cliente supabase-js servindo os mesmos
+// registros de ./data/ (gerados por CONVERSAO_ANO_TODO/exportar_json_estatico.py) com a MESMA
+// superficie de chamada -- nenhum call site acima precisou mudar.
+//
+// PARA VOLTAR AO VIVO quando o Supabase normalizar: descomentar as 3 linhas do createClient,
+// comentar a linha do _staticClient, devolver o <script> do supabase-js no <head>, apagar a pasta
+// data/ do repo e republicar. Ver o plano em .claude/plans/ e a memoria conversao-offline-json.
+// const SUPA_URL="https://vzzmlikrlgqaaxrufrwq.supabase.co";
+// const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6em1saWtybGdxYWF4cnVmcndxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMDI4MjUsImV4cCI6MjA5Nzg3ODgyNX0.kXZrukGda9scxndlZCXzDbpLwFigR1EamI3LMtgBBWw";
+// const SB=window.supabase.createClient(SUPA_URL,SUPA_ANON);
+const SB=_staticClient('./data');
+function _staticClient(root){
+  var _file={};   // caminho -> Promise(json). Garante 1 download por arquivo (o _fetchAll pagina
+                  // em loop; sem isto cada pagina rebaixaria o arquivo inteiro).
+  function _get(p){
+    if(!_file[p])_file[p]=fetch(root+'/'+p).then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status+' em '+p);
+      return r.json();
+    });
+    return _file[p];
+  }
+  function _likeRe(pat){   // LIKE do PostgREST -> RegExp ('VIDAS_BY_CIDADE%' pega os chunks #NNNN)
+    return new RegExp('^'+pat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*')+'$');
+  }
+  function _inList(v){     // formato do .not(col,'in','("A","B")')
+    return String(v).replace(/^\(|\)$/g,'').split(',').map(function(s){
+      return s.trim().replace(/^"|"$/g,'');
+    }).filter(Boolean);
+  }
+  function _match(f,v){
+    if(f.op==='eq')return v===f.v;
+    if(f.op==='in')return f.v.indexOf(v)>=0;
+    if(f.op==='like')return _likeRe(f.v).test(v);
+    if(f.op==='not_in')return _inList(f.v).indexOf(v)<0;
+    return true;
+  }
+  function Q(t){this.t=t;this.f=[];this.rg=null;}
+  Q.prototype.select=function(){return this;};        // projecao e' no-op: o arquivo ja veio inteiro
+  Q.prototype.order=function(){return this;};
+  Q.prototype.eq=function(c,v){this.f.push({op:'eq',c:c,v:v});return this;};
+  Q.prototype.in=function(c,a){this.f.push({op:'in',c:c,v:a});return this;};
+  Q.prototype.like=function(c,p){this.f.push({op:'like',c:c,v:p});return this;};
+  Q.prototype.not=function(c,op,v){this.f.push({op:'not_'+op,c:c,v:v});return this;};
+  Q.prototype.range=function(a,b){this.rg=[a,b];return this._run();};
+  Q.prototype.then=function(ok,err){return this._run().then(ok,err);};   // thenable: da' pra await
+  Q.prototype._run=function(){
+    var self=this;
+    return (/_meta(_uf)?$/.test(this.t)?this._meta():this._rows()).then(function(rows){
+      if(self.rg)rows=rows.slice(self.rg[0],self.rg[1]+1);   // paginacao real: sem isto o while
+      return {data:rows,error:null};                         // do _fetchAll nunca terminaria
+    }).catch(function(e){return {data:null,error:e};});
+  };
+  // Tabelas RAW: 1 arquivo com o array inteiro; filtros e paginacao resolvidos em memoria.
+  Q.prototype._rows=function(){
+    var self=this;
+    return _get(this.t+'.json').then(function(all){
+      return self.f.length?all.filter(function(r){
+        return self.f.every(function(f){return _match(f,r[f.c]);});
+      }):all;
+    });
+  };
+  // Tabelas META: 1 arquivo por chave. Resolver QUAIS chaves os filtros pedem antes de baixar e'
+  // o que preserva o lazy-load -- os 3 cubos pesados (~18 MB) so' descem quando a aba os pede.
+  Q.prototype._meta=function(){
+    var self=this;
+    return _get(this.t+'/_index.json').then(function(keys){
+      self.f.forEach(function(f){
+        if(f.c!=='chave')return;
+        keys=keys.filter(function(k){return _match(f,k);});
+      });
+      return Promise.all(keys.map(function(k){
+        return _get(self.t+'/'+k+'.json').then(function(p){return {chave:k,payload:p};});
+      }));
+    });
+  };
+  // Aviso visivel: sem isto o numero parado passa por dado real e alguem toma decisao em cima.
+  _get('_manifest.json').then(function(m){
+    var w=document.querySelector('.wrap');if(!w||!m)return;
+    var p=String(m.dt_carga||'').split('-'), d=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:m.dt_carga;
+    w.insertAdjacentHTML('afterbegin','<div style="background:#fef3c7;border:1px solid #fcd34d;'+
+      'color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px">'+
+      '<b>Modo contingência</b> — o Supabase está indisponível, então esta página está servindo um '+
+      'retrato dos dados de <b>'+d+'</b>. Os números não se atualizam até o banco voltar.</div>');
+  }).catch(function(){});
+  return {from:function(t){return new Q(t);}};
+}
 async function _fetchAll(t,c,applyFn){
   var PAGE=1000, from=0, all=[];
   while(true){
@@ -2558,7 +2642,7 @@ function _initUI(){
     _initUI();
   }catch(e){
     var w=document.querySelector('.wrap');
-    if(w)w.insertAdjacentHTML('afterbegin','<div class="note" style="background:#fee2e2;border-color:#fca5a5;color:#991b1b">Erro ao carregar dados do Supabase: '+(e.message||e)+'</div>');
+    if(w)w.insertAdjacentHTML('afterbegin','<div class="note" style="background:#fee2e2;border-color:#fca5a5;color:#991b1b">Erro ao carregar os dados (modo contingência, sem Supabase): '+(e.message||e)+'</div>');
     console.error(e);
   }
 })();
