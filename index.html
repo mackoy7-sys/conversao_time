@@ -157,7 +157,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </div>
 
 <div class="filters">
-<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="PRODUTO da venda — classificado pelo CANAL real (mesma regra do relatório diário): PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA. Recorta só as VIDAS pelo produto vendido; os Leads não mudam. Independente do filtro Tipo (lead).">Produto (venda)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label title="TIPO do LEAD — fila do lead (Session Team), MESMA classificação do bloco LEADS | TIPO do relatório de leads por dia (GUP): PF/PME/ADESÃO/PPO/OUTROS. Mostra os LEADS daquele tipo, as VIDAS LIGADAS a esses leads (vinculadas por telefone) e a conversão (vidas ligadas ÷ leads), por vendedor. Cobertura das vidas é parcial (só vinculadas; PME/ADESÃO casam pouco telefone→lead) — é um piso, menor que o Produto (venda) que usa CANAL. Se marcar junto com Produto, o Tipo (lead) prevalece nas vidas.">Tipo (lead)</label><select id="f_tipolead_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option><option>PPO</option><option>OUTROS</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
+<div class="fg"><label>Origem (Ano Todo)</label><select id="f_orig_cross" class="sel" onchange="render()"><option value="">Todas</option><option>ESPONTÂNEO</option><option>CARRINHO ABANDONADO</option><option>CARRINHO ABANDONADO CONECTA</option><option>EUGENIA</option><option>CONECTA</option></select></div><div class="fg"><label title="PRODUTO da venda — classificado pelo CANAL real (mesma regra do relatório diário): PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA. Recorta só as VIDAS pelo produto vendido; os Leads não mudam. Independente do filtro Tipo (lead).">Produto (venda)</label><select id="f_tipo_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option></select></div><div class="fg"><label title="TIPO do LEAD — fila do lead (Session Team), MESMA classificação do bloco LEADS | TIPO do relatório de leads por dia (GUP): PF/PME/ADESÃO/PPO/OUTROS. Mostra os LEADS daquele tipo, as VIDAS LIGADAS a esses leads (vinculadas por telefone) e a conversão (vidas ligadas ÷ leads), por vendedor. Cobertura das vidas é parcial (só vinculadas; PME/ADESÃO casam pouco telefone→lead) — é um piso, menor que o Produto (venda) que usa CANAL. Se marcar junto com Produto, o Tipo (lead) prevalece nas vidas.">Tipo (lead)</label><select id="f_tipolead_cross" class="sel" onchange="render()"><option value="">Todos</option><option>PF</option><option>PME</option><option>ADESAO</option><option>PPO</option><option>OUTROS</option></select></div><div class="fg"><label title="PROJETOS — vendas em lote de projeto/campanha, identificadas pelo código do CD_EMPRESA. Hoje só existe o SINTRO (CD_USUARIO começando com INT: INT14/INT15…). O SINTRO NÃO tem lead (os leads do projeto já são excluídos da base), então contar essas vidas junto infla a conversão — use &quot;Fora SINTRO&quot; para medir só a venda do dia a dia. Em &quot;Somente SINTRO&quot; os Leads ficam 0 e a conversão aparece como &quot;—&quot; (é assim mesmo).">Projetos</label><select id="f_proj" class="sel" onchange="render()"><option value="">Todos</option><option value="FORA">Fora SINTRO</option><option value="SO">Somente SINTRO</option></select></div><div class="fg"><label>Quartil</label><select id="f_q_cross" class="sel" onchange="render()"><option value="">Todos</option><option value="Q1">Q1 — Elite</option><option value="Q2">Q2 — Bom</option><option value="Q3">Q3 — Mediano</option><option value="Q4">Q4 — Baixo</option></select></div><div class="fg"><label>Vendedor</label><div class="ms" id="f_nome"></div></div>
 <div class="fg"><label>Supervisor</label><div class="ms" id="f_sup"></div></div>
 <div class="fg"><label>Unidade</label><div class="ms" id="f_unidade"></div></div>
 <div class="fg"><label>Gestão</label><div class="ms" id="f_gestao"></div></div>
@@ -407,7 +407,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 
 <script>
 const RAW=[];
-const C={NOME:0,AREA:1,UNIDADE:2,SUP:3,GESTAO:4,SUPDIR:5,ORG:6,FAIXA:7,STATUS:8,TEMPO:9,MES:10,LT:11,LP:12,VD:13,TTFS:14,VV:15};
+const C={NOME:0,AREA:1,UNIDADE:2,SUP:3,GESTAO:4,SUPDIR:5,ORG:6,FAIXA:7,STATUS:8,TEMPO:9,MES:10,LT:11,LP:12,VD:13,TTFS:14,VV:15,VDS:16,VVS:17};   // VDS/VVS = subconjunto SINTRO de VD/VV (filtro "Projetos"). Esta casca e' PRE-UF (o loader colapsa UF), por isso 16/17 e nao 17/18 como no template.
 const SLA_BY_NOME={};
 const TAT_CONV=[];
 const VEND_SLA_CONV=[];
@@ -520,8 +520,35 @@ function syncSel(id){
 function resetF(){FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});var sb=document.getElementById('tbl_busca');if(sb)sb.value='';render();}
 document.addEventListener('click',function(e){if(e.target.closest('.ms'))return;document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});});   // fecha so em clique FORA do filtro; clicar numa opcao/busca mantem aberto (marcar varias)
 
+// ===== Filtro "Projetos" (SINTRO) — pedido David 02/08/2026 =====
+// SINTRO e' um projeto vendido EM LOTE e SEM lead: os leads do projeto ja' saem da base no build
+// (mask_sintro), mas as vidas continuavam entrando -> a conversao do periodo aparecia inflada
+// (jun/26: 4.353 de 13.349 vidas). r[C.VDS]/r[C.VVS] sao SUBCONJUNTOS de r[C.VD]/r[C.VV] (nunca
+// somar; "fora" e' subtracao). Modos:
+//   ''     Todos          -> nada muda (comportamento historico)
+//   'FORA' Fora SINTRO    -> vd-vds / vv-vvs; leads intactos (nenhum lead e' SINTRO)
+//   'SO'   Somente SINTRO -> vds/vvs e leads ZERADOS (nao existe lead SINTRO -> conversao "—")
+// Aplicado UMA vez, em filtered(), sobre COPIAS das linhas -> todas as abas/tabelas/graficos que
+// consomem filtered() herdam o recorte sem precisar saber do filtro. Os cross-filtros (Produto/
+// Tipo(lead)/Origem) leem cubos, nao a linha: o recorte deles vai no rowCrossVal (folha .vs).
+function projMode(){return (document.getElementById('f_proj')||{value:''}).value;}
+function projAdj(r){
+  var p=projMode(); if(!p)return r;
+  var q=r.slice();
+  if(p==='SO'){q[C.VD]=r[C.VDS]||0;q[C.VV]=r[C.VVS]||0;q[C.LT]=0;q[C.LP]=0;}
+  else{q[C.VD]=(r[C.VD]||0)-(r[C.VDS]||0);q[C.VV]=(r[C.VV]||0)-(r[C.VVS]||0);}
+  return q;
+}
+// vidas de UMA folha de cubo ({vd, vs}) sob o filtro Projetos. vs ausente = 0 (o build so' grava
+// quando >0, p/ nao inchar o payload).
+function projCube(o){
+  if(!o)return 0;
+  var p=projMode(), v=o.vd||0, s=o.vs||0;
+  return p==='SO'?s:(p==='FORA'?(v-s):v);
+}
 function filtered(){
-  return RAW.filter(function(r){
+  var _pj=projMode();
+  var rows=RAW.filter(function(r){
     if(!FILTERS.every(function(f){return f.sel.size===0||f.sel.has(r[f.col]);}))return false;
   var fOrig=document.getElementById('f_orig_cross').value;
   if(fOrig){var ao=(ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!ao||!ao[KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(fOrig)]])return false;}   // gate por (nome,mes) — respeita o filtro de Mes
@@ -531,6 +558,11 @@ function filtered(){
   else if(fTipo){var at=(TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]];if(!at||!at[fTipo])return false;}   // so' Produto: presenca por vida do produto (CANAL) — comportamento atual
   return true;
   });
+  if(!_pj)return rows;
+  // recorta as vidas e derruba as linhas que ficaram vazias sob o recorte (senao "Somente SINTRO"
+  // listaria centenas de vendedores 0/0). Linha com lead mas sem vida CONTINUA (conversao 0% e'
+  // informacao) — por isso o teste inclui LT.
+  return rows.map(projAdj).filter(function(r){return r[C.LT]>0||r[C.VD]>0;});
 }
 
 // ---------- aggregation ----------
@@ -573,15 +605,20 @@ function rowCrossVal(r){
   var oLbl=origSel?KEY_ORIG_LBL[KEY_ORIG_FULL.indexOf(origSel)]:null;
   var oRow=origSel?(((ORIG_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[oLbl]):null;
   var lRow=leadSel?(((LEADTIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel]):null;
-  var lt = leadSel?(lRow?lRow.lt:0) : origSel?(oRow?oRow.lt:0) : r[C.LT];
+  // filtro "Projetos": nenhum lead e' SINTRO, entao 'FORA' nao mexe no lt e 'SO' zera (conversao "—").
+  var _pj=projMode();
+  var lt = _pj==='SO'?0 : (leadSel?(lRow?lRow.lt:0) : origSel?(oRow?oRow.lt:0) : r[C.LT]);
   var vd;
   if(leadSel&&tipoSel){   // OS DOIS ligados: interseccao TIPO do lead x PRODUTO da venda (so' vinculadas)
-    var lp=((LEADTIPO_PROD[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel]; vd=lp?(lp[tipoSel]||0):0;
+    // folha NUMERICA -> o recorte SINTRO vem da chave irma '<produto>#S' (ver LEADTIPO_PROD no build)
+    var lp=((LEADTIPO_PROD[r[C.NOME]]||{})[r[C.MES]]||{})[leadSel];
+    var _lv=lp?(lp[tipoSel]||0):0, _ls=lp?(lp[tipoSel+'#S']||0):0;
+    vd=_pj==='SO'?_ls:(_pj==='FORA'?(_lv-_ls):_lv);
   }
-  else if(leadSel){vd=lRow?lRow.vd:0;}   // so' Tipo(lead): vidas vinculadas ligadas ao lead do tipo
-  else if(tipoSel){var t=((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel];vd=t?t.vd:0;}   // so' Produto: vidas por CANAL
-  else if(origSel){vd=oRow?oRow.vd:0;}
-  else{vd=(vincVV()?(r[C.VV]||0):r[C.VD]);}
+  else if(leadSel){vd=projCube(lRow);}   // so' Tipo(lead): vidas vinculadas ligadas ao lead do tipo
+  else if(tipoSel){vd=projCube(((TIPO_BY_NOME_MES[r[C.NOME]]||{})[r[C.MES]]||{})[tipoSel]);}   // so' Produto: vidas por CANAL
+  else if(origSel){vd=projCube(oRow);}
+  else{vd=(vincVV()?(r[C.VV]||0):r[C.VD]);}   // r ja' vem recortado por projAdj (filtered)
   return {lt:lt,vd:vd};
 }
 function crossScope(arr,rowsOf){
@@ -2627,7 +2664,7 @@ function _initUI(){
       _fetchAll('conversao_vendedor_meta','chave,payload',function(q){return q.not('chave','in','("ORIGEM_TAG_STATS","ORIGEMFILA_STATS","TIPOFILA_STATS")');})
     ]);
     var rows=_boot[0], mrows=_boot[1];
-    rows.forEach(function(r){RAW.push([r.nome,r.area,r.unidade,r.supervisor,r.gestao,r.supdir,r.organizacao,r.faixa_tempo_casa,r.status,r.tempo_exato,+r.mes,+r.leads_tot,+r.leads_prod,+r.vidas,(r.ttfs_dias==null?'':r.ttfs_dias),+r.vidas_vinc]);});
+    rows.forEach(function(r){RAW.push([r.nome,r.area,r.unidade,r.supervisor,r.gestao,r.supdir,r.organizacao,r.faixa_tempo_casa,r.status,r.tempo_exato,+r.mes,+r.leads_tot,+r.leads_prod,+r.vidas,(r.ttfs_dias==null?'':r.ttfs_dias),+r.vidas_vinc,+r.vidas_sint||0,+r.vidas_vinc_sint||0]);});
     RAW.forEach(function(r){if(r[C.AREA]==='BOAS VINDAS')r[C.AREA]='NACIONAL';});
     var M={};mrows.forEach(function(r){M[r.chave]=r.payload;});
     if(M.SLA_BY_NOME)Object.assign(SLA_BY_NOME,M.SLA_BY_NOME);
