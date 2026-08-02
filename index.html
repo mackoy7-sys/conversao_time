@@ -1943,8 +1943,9 @@ var _GEO_ROWS=[], _GEOV_ROWS=[];
 var GEO_SORT={key:'vd',dir:'desc'}, GEO_OPEN={}, GEO_SHOWALL={}, GEO_MODE='cid';
 var GEOV_SORT={key:'vd',dir:'desc'}, GEOV_OPEN={}, GEOV_SHOWALL={};
 async function _loadGeo(){
-  var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas');
-  RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0};});
+  var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas,vidas_sint');
+  // vs = SUBCONJUNTO SINTRO de vd (filtro "Projetos"); mesma convencao do RAW de producao.
+  RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0,vs:+r.vidas_sint||0};});
   var mv=await SB.from('conversao_vendedor_meta_uf').select('chave,payload').like('chave','VIDAS_BY_CIDADE%');
   if(mv.error)throw mv.error;
   var single=null,chunks=[];
@@ -1972,9 +1973,30 @@ function _geoWhoNomes(){var s=new Set();RAW.forEach(function(r){var ok=FILTERS.e
 function _geoFilteredUF(){var nomes=_geoWhoNomes(),ms=_geoMesSel();return RAW_UF.filter(function(r){return nomes.has(r.nm)&&(ms.size===0||ms.has(r.ms));});}
 function _gestaoOf(nm){if(!_GESTAO_BY_NOME){_GESTAO_BY_NOME={};RAW.forEach(function(r){_GESTAO_BY_NOME[r[C.NOME]]=r[C.GESTAO];});}return _GESTAO_BY_NOME[nm];}
 function _geoEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function ufAgg(rows){var r={};rows.forEach(function(x){var uf=x.uf;if(!uf||uf==='N/D')return;if(!r[uf])r[uf]={lt:0,vd:0};r[uf].lt+=x.lt;r[uf].vd+=x.vd;});return r;}
-function cidadeAgg(){var byUF={};_geoFilteredUF().forEach(function(r){var by=VIDAS_BY_CIDADE[r.nm];if(!by)return;var bm=by[r.ms];if(!bm)return;var d=bm[r.uf];if(!d)return;if(!byUF[r.uf])byUF[r.uf]={};for(var cid in d){var cell=d[cid];var v=(cell&&cell.v)||0;if(v)byUF[r.uf][cid]=(byUF[r.uf][cid]||0)+v;}});return byUF;}
-function ufVendAgg(rows){var by={};rows.forEach(function(x){var uf=x.uf||'N/D';var nm=x.nm;if(!by[uf])by[uf]={};if(!by[uf][nm])by[uf][nm]={lt:0,vd:0};by[uf][nm].lt+=x.lt;by[uf][nm].vd+=x.vd;});return by;}
+/* Filtro "Projetos" (SINTRO) na aba geografica. Ate 02/08/2026 esta aba ignorava o filtro — e
+   como o SINTRO e' 82% das vidas do RN, "Fora SINTRO" mostrava o RN inteiro no ranking de estados.
+   geoVd/geoLt aplicam o mesmo ajuste que projAdj faz no RAW de producao: SO = so' o subconjunto
+   SINTRO (e leads=0, porque o projeto nao tem lead); FORA = total menos o subconjunto. */
+function geoVd(x){var p=projMode();return p==='SO'?(x.vs||0):(p==='FORA'?((x.vd||0)-(x.vs||0)):(x.vd||0));}
+function geoLt(x){return projMode()==='SO'?0:(x.lt||0);}
+function ufAgg(rows){var r={};rows.forEach(function(x){var uf=x.uf;if(!uf||uf==='N/D')return;if(!r[uf])r[uf]={lt:0,vd:0};r[uf].lt+=geoLt(x);r[uf].vd+=geoVd(x);});return r;}
+function cidadeAgg(){
+  var byUF={},seen={},p=projMode();
+  _geoFilteredUF().forEach(function(r){
+    // DEDUP (nm,ms,uf): o RAW_UF tem grao DIMS, entao um mesmo NOME pode ter >1 linha na mesma
+    // (mes,uf) — hoje so' o balde ADMINISTRATIVO. Sem isto o cubo era somado 2x (+18 vidas).
+    var k=r.nm+''+r.ms+''+r.uf; if(seen[k])return; seen[k]=1;
+    var by=VIDAS_BY_CIDADE[r.nm];if(!by)return;var bm=by[r.ms];if(!bm)return;var d=bm[r.uf];if(!d)return;
+    if(!byUF[r.uf])byUF[r.uf]={};
+    for(var cid in d){
+      var cell=d[cid],tot=(cell&&cell.v)||0,s=(cell&&cell.vs)||0;
+      var v=p==='SO'?s:(p==='FORA'?(tot-s):tot);
+      if(v)byUF[r.uf][cid]=(byUF[r.uf][cid]||0)+v;
+    }
+  });
+  return byUF;
+}
+function ufVendAgg(rows){var by={};rows.forEach(function(x){var uf=x.uf||'N/D';var nm=x.nm;if(!by[uf])by[uf]={};if(!by[uf][nm])by[uf][nm]={lt:0,vd:0};by[uf][nm].lt+=geoLt(x);by[uf][nm].vd+=geoVd(x);});return by;}
 function renderTopEstados(rows){
   var agg=ufAgg(rows);
   var arr=Object.keys(agg).map(function(uf){return {uf:uf,lt:agg[uf].lt,vd:agg[uf].vd};});
@@ -2049,7 +2071,7 @@ function renderUFTable(rows){
   var agg=ufAgg(rows);
   var byCid=cidadeAgg();
   var gLt=0,gVd=0,sLt=0,sVd=0;
-  rows.forEach(function(x){gLt+=x.lt;gVd+=x.vd;if(x.uf&&x.uf!=='N/D'){sLt+=x.lt;sVd+=x.vd;}});
+  rows.forEach(function(x){var l=geoLt(x),v=geoVd(x);gLt+=l;gVd+=v;if(x.uf&&x.uf!=='N/D'){sLt+=l;sVd+=v;}});
   var ndLt=gLt-sLt, ndVd=gVd-sVd;
   var tot=gVd;
   var arr=Object.keys(agg).map(function(uf){
@@ -2175,7 +2197,7 @@ function renderUFVendTable(rows){
   var byVend=ufVendAgg(frows);
   var qmap=quartilMap();
   var gLt=0,gVd=0,sLt=0,sVd=0;
-  frows.forEach(function(x){gLt+=x.lt;gVd+=x.vd;if(x.uf&&x.uf!=='N/D'){sLt+=x.lt;sVd+=x.vd;}});
+  frows.forEach(function(x){var l=geoLt(x),v=geoVd(x);gLt+=l;gVd+=v;if(x.uf&&x.uf!=='N/D'){sLt+=l;sVd+=v;}});
   var ndLt=gLt-sLt,ndVd=gVd-sVd;
   var tot=gVd;
   var arr=Object.keys(agg).map(function(uf){
