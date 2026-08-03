@@ -110,7 +110,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 .q-card{background:var(--card);border-radius:var(--radius);padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-top:5px solid #e2e8f0}
 .q1c{border-color:#16a34a}.q2c{border-color:#0072ce}.q3c{border-color:#d97706}.q4c{border-color:#dc2626}
 .q-badge{display:inline-flex;align-items:center;justify-content:center;width:44px;height:28px;border-radius:7px;font-size:13px;font-weight:800;color:#fff}
-.q1b{background:#16a34a}.q2b{background:#0072ce}.q3b{background:#d97706}.q4b{background:#dc2626}
+.q1b{background:#16a34a}.q2b{background:#0072ce}.q3b{background:#d97706}.q4b{background:#dc2626}.admb{background:#64748b}
 .ext-header{display:flex;align-items:center;gap:18px;background:var(--card);border-radius:var(--radius);padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.08);flex-wrap:wrap}
 .score-bar-track{height:9px;background:#f1f5f9;border-radius:6px;overflow:hidden}
 .score-bar-fill{height:100%;border-radius:6px}
@@ -694,8 +694,31 @@ var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
 function effVd(g){return (vincVV()?(g.vv||0):(g.vd||0));}
+// Vendedoras ADMINISTRATIVAS (David 03/08/2026): tem calculo proprio, entao ficam FORA do quartil e
+// tambem fora da POPULACAO que define percentis/fronteiras. Seguem normais nas tabelas, KPIs e Leads
+// por Origem — so Score/Quartil ficam "—" (e somem da aba Ranking por Quartil).
+var QV_ADM_NOMES=['PATRICIA LIMA','GIOVANNA SANTANA','TATI SILVA'];
+function _qvAdmKey(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();}
+var _QV_ADM_SET=(function(){var s={};QV_ADM_NOMES.forEach(function(x){s[_qvAdmKey(x)]=1;});return s;})();
+// So vale p/ agrupamento por PESSOA: quem agrupa por Supervisor/Gestao/Area/Unidade/Org passa
+// noAdm=true no assignQuartis (a chave la e outra dimensao e nao deve casar com nome de pessoa).
+function qvAdmExcl(g){
+  if(!g)return false;
+  var k=_qvAdmKey(typeof g==='string'?g:(g.nome!=null?g.nome:g.k));
+  if(_QV_ADM_SET[k])return true;
+  var i=k.indexOf(' - ');            // variantes com sufixo (ex.: "TATI SILVA - VENDEDOR ADM")
+  return i>0&&!!_QV_ADM_SET[k.slice(0,i)];
+}
 // quartil: VENDA 60% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 10% (conversão vs meta por origem, base anual)
-function assignQuartis(a){
+function assignQuartis(a,noAdm){
+  var _fora=[],_pop=[];
+  a.forEach(function(g){((!noAdm&&qvAdmExcl(g))?_fora:_pop).push(g);});
+  _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
+    g._qvAdm=1;g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
+    g._accFila=origAccOf(g);g._effVd=effVd(g);
+    g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._q1elig=false;
+  });
+  a=_pop;
   var n=a.length;if(!n)return;
   var tgt=volTarget(); _curVolTgt=tgt;
   function rankBy(key,rk){var v=a.filter(function(g){return g[key]!=null;});var m=v.length;a.forEach(function(g){g[rk]=null;});v.slice().sort(function(x,y){return x[key]-y[key];}).forEach(function(x,i){x[rk]=m>1?i/(m-1):1;});}
@@ -787,7 +810,7 @@ function render(){
     if(VIEWBY==='sup')return g.k&&g.k!=='N/D'&&g.k!=='NÃO MAPEADO';
     return g.k!=='NÃO MAPEADO';
   });
-  assignQuartis(bypTbl);
+  assignQuartis(bypTbl,VIEWBY!=='nome');   // exclusão das vendedoras ADM só faz sentido na visão por pessoa
   var fqSort=(document.getElementById('tbl_quartil')||{}).value||'';
   if(fqSort){
     bypTbl.sort(function(x,y){return (y._score||0)-(x._score||0);});   // por quartil: ordena por score (desc)
@@ -1299,7 +1322,7 @@ function renderComp(rows){
   });
   a.sort(function(x,y){return y.vd-x.vd;});
   a.forEach(function(g,i){g.rank=i+1;});   // rank fixo (antes da busca)
-  assignQuartis(a);
+  assignQuartis(a,COMP_VIEWBY!=='nome');
   var fq=(document.getElementById('comp_quartil')||{}).value||'';
   if(fq)a=a.filter(function(g){return g.q===fq;});
   var showScore=!!fq;
@@ -1341,9 +1364,17 @@ function buildHead(cols){
     return '<th class="sortable'+(c.n?' num':'')+(act?' sorted':'')+'"'+ti+' onclick="sortBy(\''+c.k+'\')">'+c.t+arr+'</th>';
   }).join('');
 }
+// Badge de quartil ao lado do NOME no "Detalhe por Vendedor" (David 03/08/2026).
+// Vendedoras administrativas (QV_ADM_NOMES) aparecem como "ADM" cinza; sem quartil no recorte, "—".
+function qTagHTML(g){
+  var q=g&&g.q, adm=!!(g&&g._qvAdm);
+  var lbl=q||(adm?'ADM':'—'), bg=q?(QCOL[q]||'#94a3b8'):'#94a3b8';
+  var tip=q?('Quartil '+q+(g._score!=null?' · score '+(g._score*100).toFixed(1).replace('.',','):'')):(adm?'Vendedora administrativa — cálculo próprio, fora do quartil':'Sem quartil no recorte atual');
+  return '<span class="q-badge" style="background:'+bg+';width:auto;min-width:23px;height:17px;padding:0 5px;border-radius:5px;font-size:10px;margin-right:6px;vertical-align:middle" title="'+tip+'">'+lbl+'</span>';
+}
 function cellFor(g,mt,k,rc,pos){
   if(!k)return '<td class="'+rc+'">'+pos+'.</td>';
-  if(k==='k')return '<td><span class="exp">▸</span>'+g.k+'</td>';
+  if(k==='k')return '<td><span class="exp">▸</span>'+(VIEWBY==='nome'?qTagHTML(g):'')+g.k+'</td>';
   if(k==='lt')return '<td class="num">'+nf(g.lt)+'</td>';
   if(k==='sla')return '<td class="num">'+slaPctHTML(g)+'</td>';
   if(k==='vd')return '<td class="num">'+nf(effVd(g))+'</td>';
@@ -1754,7 +1785,7 @@ function renderExtrato(){
   var ags=Object.values(m);
   crossScope(ags);   // reescopa por Tipo CT/Origem — mantem o rank/quartil/KPIs consistentes com o Detalhe (respeita Mes tambem)
   assignQuartis(ags);
-  ags.sort(function(a,b){return b._score-a._score;});
+  ags.sort(function(a,b){return (b._score||0)-(a._score||0);});   // ADM (score null) vao pro fim
   var ag=ags.find(function(a){return a.nome===nome;});
   if(!ag){
     empty.innerHTML='<div style="font-size:40px;margin-bottom:12px">⚠️</div><div style="font-size:15px;font-weight:600">Vendedor não encontrado nos filtros atuais</div><div style="font-size:13px;color:var(--muted);margin-top:6px">Tente remover filtros gerais (Mês, Status, etc.)</div>';
@@ -1762,11 +1793,16 @@ function renderExtrato(){
   }
   empty.style.display='none';content.style.display='block';
 
-  var n=ags.length;
-  var rank=ags.indexOf(ag)+1;
+  // Vendedoras ADMINISTRATIVAS ficam fora do quartil e da populacao do ranking (calculo proprio)
+  var _rkPop=ags.filter(function(a){return !a._qvAdm;});
+  var _admX=!!ag._qvAdm;
+  var n=_rkPop.length;
+  var rank=_admX?null:_rkPop.indexOf(ag)+1;
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var QN={Q1:'Elite · Top 25%',Q2:'Bom · 50–75%',Q3:'Mediano · 25–50%',Q4:'Baixo · Bottom 25%'};
-  var cor=QC[ag.q];
+  var cor=_admX?'#64748b':QC[ag.q];
+  var qLbl=_admX?'ADM':ag.q, qCls=_admX?'admb':(ag.q.toLowerCase()+'b');
+  var qDesc=_admX?'Administrativo · fora do ranking':QN[ag.q];
   var effV=(ag._effVd!=null?ag._effVd:ag.vd);
   var convGlobal=ag.lt>0?effV/ag.lt*100:0;   // Conv. geral respeita o filtro VIDAS (Total/Vinculado)
   // Conv. Vinculada + Vidas Vinculadas com Lead = eixo DONO DO LEAD (ORIG_BY_NOME) — única noção de vínculo (David 21/07/2026)
@@ -1781,21 +1817,21 @@ function renderExtrato(){
   /* ---- Header ---- */
   document.getElementById('extrato-header').innerHTML=
     '<div class="ext-header">'+
-    '<div class="q-badge '+ag.q.toLowerCase()+'b" style="width:62px;height:62px;border-radius:14px;font-size:26px;flex-shrink:0">'+ag.q+'</div>'+
+    '<div class="q-badge '+qCls+'" style="width:62px;height:62px;border-radius:14px;font-size:'+(_admX?'18px':'26px')+';flex-shrink:0">'+qLbl+'</div>'+
     '<div style="flex:1;min-width:0">'+
       '<div style="font-size:21px;font-weight:800">'+ag.nome+'</div>'+
       '<div style="font-size:13px;color:var(--muted);margin-top:4px">'+ag.area+' · '+ag.unidade+' · Supervisor: <b>'+ag.sup+'</b></div>'+
-      '<div style="margin-top:8px"><span class="pill" style="background:'+cor+'18;color:'+cor+';font-size:13px;padding:4px 12px">'+ag.q+' — '+QN[ag.q]+'</span></div>'+
+      '<div style="margin-top:8px"><span class="pill" style="background:'+cor+'18;color:'+cor+';font-size:13px;padding:4px 12px">'+qLbl+' — '+qDesc+'</span></div>'+
     '</div>'+
     '<div style="text-align:right;flex-shrink:0">'+
       '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Posição no ranking</div>'+
-      '<div style="font-size:38px;font-weight:800;line-height:1;color:'+cor+'">#'+rank+'</div>'+
+      '<div style="font-size:38px;font-weight:800;line-height:1;color:'+cor+'">'+(_admX?'—':'#'+rank)+'</div>'+
       '<div style="font-size:12px;color:var(--muted);margin-top:4px">de '+n+' vendedores</div>'+
     '</div>'+
     '</div>';
 
   /* ---- Score decomposto (atingimento de meta: VENDA 60% · PRINCIPAL 30% · DEMAIS FILA 10%) ---- */
-  var total=(ag._score*100).toFixed(0);
+  var total=(ag._score!=null?(ag._score*100).toFixed(0):'—');
   var pctR=function(r){return r==null?'—':(r*100).toFixed(0);};
   var attV=function(a){return a==null?'sem leads':(a*100).toFixed(0)+'% da meta';};
   var _pm=periodMonths();
@@ -1815,7 +1851,8 @@ function renderExtrato(){
   var convChv=chL2?(chV2/chL2*100):null;
   var inQ1=ag.q==='Q1', elig=ag._q1elig;
   var verdict, vCor;
-  if(inQ1){verdict='✓ <b>Está no Q1 (Elite)</b> — passou nas duas portas e ficou entre os de maior score do grupo.';vCor='#16a34a';}
+  if(_admX){verdict='● <b>Vendedora administrativa</b> — cálculo próprio, portanto <b>fora do quartil</b> e fora da população que define os quartis dos demais.';vCor='#64748b';}
+  else if(inQ1){verdict='✓ <b>Está no Q1 (Elite)</b> — passou nas duas portas e ficou entre os de maior score do grupo.';vCor='#16a34a';}
   else if(elig){verdict='◐ <b>Elegível ao Q1</b> (passou nas duas portas), mas ficou fora por <b>score</b> — há mais elegíveis que vagas no Q1. Classificado em <b>'+ag.q+'</b>.';vCor='#d97706';}
   else{var rs=[];if(!volOK)rs.push('volume abaixo da meta ('+(volPct==null?'—':volPct+'%')+' &lt; 100%)');if(!convOK)rs.push('conversão abaixo de 95% da meta ('+(convPctv==null?'sem dados':convPctv+'%')+')');verdict='✗ <b>Fora do Q1</b> — '+rs.join(' e ')+'. Classificado em <b>'+ag.q+'</b>.';vCor='#dc2626';}
   function gateBox(titulo,sub,ok,valor,req){var c=ok?'#16a34a':'#dc2626';var ic=ok?'✓':'✗';
@@ -1829,15 +1866,16 @@ function renderExtrato(){
       '<h3 style="margin:0">Qualificação do Quartil</h3>'+
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
         '<button onclick="downloadExtratoCSV()" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Baixar leads (CSV)</button>'+
-        '<div class="q-badge '+ag.q.toLowerCase()+'b" style="width:auto;padding:5px 14px;height:auto;border-radius:8px;font-size:14px">'+ag.q+' — '+QN[ag.q]+'</div>'+
+        '<div class="q-badge '+qCls+'" style="width:auto;padding:5px 14px;height:auto;border-radius:8px;font-size:14px">'+qLbl+' — '+qDesc+'</div>'+
       '</div>'+
     '</div>'+
     '<div style="background:'+vCor+'12;border-left:4px solid '+vCor+';padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px">'+verdict+'</div>'+
+    (_admX?'':
     '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Portas do Q1 (ambas obrigatórias)</div>'+
     '<div style="display:flex;gap:12px;flex-wrap:wrap">'+
       gateBox('Porta 1 · Volume','Vidas do período ÷ meta '+nf(_curVolTgt)+' (60/mês × '+_pm+')',volOK,(volPct==null?'—':volPct+'%'),nf(effV)+' vidas · exige ≥ 100%')+
       gateBox('Porta 2 · Conversão','Atingimento da meta de conversão (origens-chave · anual)',convOK,(convPctv==null?'—':convPctv+'%'),(convChv==null?'sem dados de origem':'conv. chave '+convChv.toFixed(1)+'%')+' · exige ≥ 95%')+
-    '</div>'+
+    '</div>')+
   '</div>';
   document.getElementById('extrato-score').innerHTML=
     qualHTML+
@@ -1855,7 +1893,7 @@ function renderExtrato(){
           '<div><span style="font-size:13px;font-weight:600">'+lbl+'</span><span style="font-size:11px;color:var(--muted);margin-left:6px">'+peso+'</span></div>'+
           '<div style="font-size:13px"><b>'+val+'</b><span style="color:var(--muted);margin:0 6px">·</span><span style="font-weight:700;color:'+col+'">'+pct+'° percentil</span></div>'+
         '</div>'+
-        '<div class="score-bar-track"><div class="score-bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
+        '<div class="score-bar-track"><div class="score-bar-fill" style="width:'+(pct==='—'?0:pct)+'%;background:'+col+'"></div></div>'+
       '</div>';
     }).join('')+
     '<div style="font-size:11px;color:var(--muted);border-top:1px solid #f1f5f9;padding-top:10px;margin-top:6px">'+
@@ -1889,7 +1927,7 @@ function renderExtrato(){
     scales:{x:{beginAtZero:true,title:{display:true,text:'Taxa de conversão (%)'},ticks:{callback:function(v){return v+'%';}}}}}});
 
   /* ---- Gráfico: comparativo com média do quartil ---- */
-  var grp=ags.filter(function(a){return a.q===ag.q;});
+  var grp=_admX?_rkPop:ags.filter(function(a){return a.q===ag.q;});   // ADM: compara com a media geral do ranking
   var avgVd=grp.reduce(function(s,a){return s+a.vd;},0)/grp.length;
   var avgCvG=grp.reduce(function(s,a){return s+(a.lt>0?a.vd/a.lt*100:0);},0)/grp.length;
   var avgCvV=grp.reduce(function(s,a){return s+_donoCv(a);},0)/grp.length;
@@ -1898,7 +1936,7 @@ function renderExtrato(){
     labels:['Vidas','Conv.Geral %','Conv.Vinculada %'],
     datasets:[
       {label:firstName,data:[ag.vd,+convGlobal.toFixed(2),+convVV.toFixed(2)],backgroundColor:cor},
-      {label:'Média '+ag.q,data:[+avgVd.toFixed(1),+avgCvG.toFixed(2),+avgCvV.toFixed(2)],backgroundColor:'#94a3b8'}
+      {label:'Média '+(_admX?'geral':ag.q),data:[+avgVd.toFixed(1),+avgCvG.toFixed(2),+avgCvV.toFixed(2)],backgroundColor:'#94a3b8'}
     ]
   },options:{responsive:true,plugins:{legend:{display:true,position:'top'}}}});
 
@@ -2179,7 +2217,7 @@ function quartilMap(){
   return map;
 }
 function qBadge(q){
-  if(!q)return '<span style="display:inline-block;min-width:22px;text-align:center;background:#e2e8f0;color:#94a3b8;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Sem quartil (bucket não-vendedor)">—</span>';
+  if(!q)return '<span style="display:inline-block;min-width:22px;text-align:center;background:#e2e8f0;color:#94a3b8;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Sem quartil (bucket não-vendedor ou vendedora administrativa)">—</span>';
   var c=QCOL[q]||'#94a3b8';
   return '<span style="display:inline-block;min-width:22px;text-align:center;background:'+c+';color:#fff;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Quartil '+q+'">'+q+'</span>';
 }
@@ -2383,6 +2421,7 @@ function renderQuartilV(){
   // Exclui buckets não-vendedores do ranking (ADMINISTRATIVO / NÃO MAPEADO / N/D)
   var rows=filtered().filter(function(r){
     if(r[C.GESTAO]==='ADMINISTRATIVO')return false;
+    if(qvAdmExcl(r[C.NOME]))return false;   // vendedoras ADM (cálculo próprio): fora do ranking em qualquer visão
     var k=r[gcol];
     if(k==='NÃO MAPEADO'||k==='N/D'||k==='ADMINISTRATIVO')return false;
     return true;
