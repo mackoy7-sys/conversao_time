@@ -1159,7 +1159,7 @@ function _orifilaFill(tableId,rows){
 // "Leads por Origem". Classes/atributos PROPRIOS (ovo-row/ovv-row, data-ovo) p/ nao colidir.
 var ORIVEND_COLS=[{t:'Origem / Vendedor',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIVEND_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
-function _orivendSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
+function _orivendSortVal(x,key){if(key==='og')return x.og!=null?x.og:(x.vend||'');if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
 function sortOrivend(key){if(ORIVEND_SORT.key===key)ORIVEND_SORT.dir=ORIVEND_SORT.dir==='asc'?'desc':'asc';else{ORIVEND_SORT.key=key;ORIVEND_SORT.dir=key==='og'?'asc':'desc';}_orivendFill('tbl_orivend_tab',filtered());}
 // Agrega ORIGEMFILA_STATS por ORIGEM (soma as filas) expondo, por origem, o detalhe por vendedor (_vends).
 function orivendAgg(rows){
@@ -1194,7 +1194,7 @@ function orivendBody(rows){
   var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
   var body='',idx=0;
   a.forEach(function(x){
-    var vends=Object.keys(x._vends).map(function(k){return x._vends[k];}).sort(function(p,r){return r.t-p.t;});
+    var vends=Object.keys(x._vends).map(function(k){return x._vends[k];}).sort(function(p,r){var av=_orivendSortVal(p,ORIVEND_SORT.key),bv=_orivendSortVal(r,ORIVEND_SORT.key),rr;if(typeof av==='string'||typeof bv==='string')rr=String(av).localeCompare(String(bv),'pt-BR');else rr=av-bv;return ORIVEND_SORT.dir==='asc'?rr:-rr;});
     var i=idx++,hasV=vends.length>0;
     _ogAdd(tot,x);
     body+='<tr class="ovo-row" data-ovo="'+i+'"'+(hasV?' style="cursor:pointer" onclick="tgOVOrig('+i+',this)"':'')+'><td>'+crt(hasV,false)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(x)+'</tr>';
