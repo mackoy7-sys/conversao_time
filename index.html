@@ -261,6 +261,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha como cada origem se abre">
 <button id="oriview_sit_btn" type="button" onclick="oriView('sit')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Por Situação</button>
 <button id="oriview_fila_btn" type="button" onclick="oriView('fila')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Por Fila</button>
+<button id="oriview_vend_btn" type="button" onclick="oriView('vend')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Por Vendedor</button>
 </div>
 </div>
 <div id="oriview_sit">
@@ -272,9 +273,15 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div id="oriview_fila" style="display:none">
 <input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',filtered())" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
 <table id="tbl_orifila_tab"><thead><tr>
-<th>Origem / Fila</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+<th>Origem / Fila / Vendedor</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
-<div class="note" style="margin-top:8px">Mostra <b>quais filas (Session Team)</b> compõem cada origem de lead. Cada origem abre nas suas filas; as métricas de cada fila somam de volta ao total da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem/fila — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
+<div class="note" style="margin-top:8px">Mostra <b>quais filas (Session Team)</b> compõem cada origem de lead e, dentro de cada fila, <b>quais vendedores</b> a atendem. Cada origem abre nas suas filas e cada fila abre nos seus vendedores; as métricas somam de volta ao total da fila e da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem/fila — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
+</div>
+<div id="oriview_vend" style="display:none">
+<table id="tbl_orivend_tab"><thead><tr>
+<th>Origem / Vendedor</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
+</tr></thead><tbody></tbody></table>
+<div class="note" style="margin-top:8px">Mostra <b>quais vendedores</b> atendem cada origem de lead (todas as filas da origem somadas). Cada origem abre nos seus vendedores; as métricas de cada vendedor somam de volta ao total da origem, então o <b>TOTAL GERAL</b> bate com o de "Leads por Origem". As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL) e <b>Vidas</b> é o total vinculado (atribuído por telefone ao lead daquela origem — cobertura parcial em PME/ADESÃO). Com <b>Tipo (lead)</b> / <b>Produto (venda)</b> / <b>Origem</b> ativos, a tabela reage igual à "Leads por Origem".</div>
 </div>
 </div>
 <div class="tablecard" style="margin-top:16px">
@@ -1062,7 +1069,7 @@ function _origemTabFill(tableId,rows){
 // expansivel em 2 niveis (Origem -> Fila). Respeita TODOS os filtros do topo, inclusive os cross-filtros
 // Tipo(lead)/Produto/Origem (via _ogCells, reaproveitado). Classes/atributos de linha PROPRIOS
 // (ofo-row/off-row, data-ofo) + toggle tgOFOrig p/ NAO colidir com a tabela de origem (og-row/data-o/tgOrig).
-var ORIGEMFILA_COLS=[{t:'Origem / Fila',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
+var ORIGEMFILA_COLS=[{t:'Origem / Fila / Vendedor',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIGEMFILA_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
 function _orifilaSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
 function sortOrifila(key){if(ORIGEMFILA_SORT.key===key)ORIGEMFILA_SORT.dir=ORIGEMFILA_SORT.dir==='asc'?'desc':'asc';else{ORIGEMFILA_SORT.key=key;ORIGEMFILA_SORT.dir=key==='og'?'asc':'desc';}_orifilaFill('tbl_orifila_tab',filtered());}
@@ -1082,8 +1089,11 @@ function orifilaAgg(rows){
       for(var fl in filas){
         var m=_ogCells(filas[fl],leadSel,prodSel);
         _ogAdd(A,m);
-        var F=A._filas[fl]; if(!F)F=A._filas[fl]={fila:fl,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+        var F=A._filas[fl]; if(!F)F=A._filas[fl]={fila:fl,t:0,c:0,v:0,vpf:0,vpme:0,vade:0,_vends:{}};
         _ogAdd(F,m);
+        var nm=r[C.NOME];   // 3o nivel: vendedores dentro da fila (Session Team)
+        var V=F._vends[nm]; if(!V)V=F._vends[nm]={vend:nm,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+        _ogAdd(V,m);
       }
     }
   });
@@ -1092,6 +1102,7 @@ function orifilaAgg(rows){
 function _ofNorm(s){return (''+s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function orifilaBody(rows){
   var a=orifilaAgg(rows);
+  var qmap=quartilMap();   // quartil (Q1–Q4) por vendedor no período — badge à esquerda do nome (3o nivel)
   var q=_ofNorm((document.getElementById('orifila_q')||{value:''}).value.trim());   // busca por fila
   if(!a.length)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
   a.sort(function(x,y){var av=_orifilaSortVal(x,ORIGEMFILA_SORT.key),bv=_orifilaSortVal(y,ORIGEMFILA_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return ORIGEMFILA_SORT.dir==='asc'?r:-r;});
@@ -1107,23 +1118,102 @@ function orifilaBody(rows){
     var i=idx++,hasF=filas.length>0,open=!!q;   // busca ativa -> ja mostra as filas encontradas
     _ogAdd(tot,xr);
     body+='<tr class="ofo-row'+(open?' open':'')+'" data-ofo="'+i+'"'+(hasF?' style="cursor:pointer" onclick="tgOFOrig('+i+',this)"':'')+'><td>'+crt(hasF,open)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(xr)+'</tr>';
-    filas.forEach(function(f){
-      body+='<tr class="off-row" data-ofo="'+i+'" style="display:'+(open?'':'none')+';background:var(--soft,#f8fafc)"><td style="padding-left:24px;color:var(--muted)">'+_esc(f.fila)+'</td>'+_otCells(f)+'</tr>';
+    filas.forEach(function(f,j){
+      var vends=Object.keys(f._vends||{}).map(function(k){return f._vends[k];}).sort(function(p,r){return r.t-p.t;});
+      var hasV=vends.length>0;
+      body+='<tr class="off-row'+(hasV?' hasv':'')+'" data-ofo="'+i+'" data-off="'+i+'_'+j+'" style="display:'+(open?'':'none')+';background:var(--soft,#f8fafc)'+(hasV?';cursor:pointer':'')+'"'+(hasV?' onclick="tgOFFila('+i+','+j+',this)"':'')+'><td style="padding-left:24px;color:var(--muted)">'+crt(hasV,false)+' '+_esc(f.fila)+'</td>'+_otCells(f)+'</tr>';
+      vends.forEach(function(v){
+        body+='<tr class="ofv-row" data-ofo="'+i+'" data-off="'+i+'_'+j+'" style="display:none;background:var(--soft,#f8fafc)"><td style="padding-left:52px;color:var(--muted)">'+qBadge((qmap[v.vend]||{}).q)+_esc(v.vend)+'</td>'+_otCells(v)+'</tr>';
+      });
     });
   });
   if(!body)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Nenhuma fila encontrada na busca.</td></tr></tbody>';
   body+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL GERAL'+(q?' (filtrado)':'')+'</td>'+_otCells(tot)+'</tr>';
   return '<tbody>'+body+'</tbody>';
 }
-// nivel 1: ORIGEM -> mostra/esconde as filas (Session Team)
+// nivel 1: ORIGEM -> mostra/esconde as filas (Session Team); ao recolher, esconde tambem os vendedores
 function tgOFOrig(i,tr){
   var open=tr.classList.toggle('open');
   var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
-  document.querySelectorAll('tr.off-row[data-ofo="'+i+'"]').forEach(function(x){x.style.display=open?'':'none';});
+  if(open){
+    // mostra as filas, mas mantem cada fila recolhida (vendedores escondidos)
+    document.querySelectorAll('tr.off-row[data-ofo="'+i+'"]').forEach(function(x){x.style.display='';x.classList.remove('open');var c=x.querySelector('.crt');if(c&&c.textContent)c.textContent='▶';});
+    document.querySelectorAll('tr.ofv-row[data-ofo="'+i+'"]').forEach(function(x){x.style.display='none';});
+  }else{
+    document.querySelectorAll('tr.off-row[data-ofo="'+i+'"],tr.ofv-row[data-ofo="'+i+'"]').forEach(function(x){x.style.display='none';});
+  }
+}
+// nivel 2: FILA (Session Team) -> mostra/esconde os vendedores dentro dela
+function tgOFFila(i,j,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.ofv-row[data-off="'+i+'_'+j+'"]').forEach(function(x){x.style.display=open?'':'none';});
 }
 function _orifilaFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
   t.innerHTML=_sortableHead(ORIGEMFILA_COLS,ORIGEMFILA_SORT,'sortOrifila')+orifilaBody(rows);
+}
+// ===== Tabela "Leads por Origem × Vendedor" (view "Por Vendedor") — ORIGEM -> Vendedor =============
+// Reaproveita o cubo ORIGEMFILA_STATS[nome][mes][ORIGEM][fila]: agrega SOMANDO todas as filas por
+// (origem, vendedor). Arvore de 2 niveis (Origem -> Vendedor). Mesmas metricas/cross-filtros da
+// "Leads por Origem". Classes/atributos PROPRIOS (ovo-row/ovv-row, data-ovo) p/ nao colidir.
+var ORIVEND_COLS=[{t:'Origem / Vendedor',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
+let ORIVEND_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
+function _orivendSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
+function sortOrivend(key){if(ORIVEND_SORT.key===key)ORIVEND_SORT.dir=ORIVEND_SORT.dir==='asc'?'desc':'asc';else{ORIVEND_SORT.key=key;ORIVEND_SORT.dir=key==='og'?'asc':'desc';}_orivendFill('tbl_orivend_tab',filtered());}
+// Agrega ORIGEMFILA_STATS por ORIGEM (soma as filas) expondo, por origem, o detalhe por vendedor (_vends).
+function orivendAgg(rows){
+  var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t
+  var prodSel=(document.getElementById('f_tipo_cross')||{value:''}).value;       // Produto(venda) -> v/c
+  var origSel=(document.getElementById('f_orig_cross')||{value:''}).value;       // Origem -> so' a origem escolhida
+  var acc={};
+  rows.forEach(function(r){
+    var by=ORIGEMFILA_STATS[r[C.NOME]]; if(!by)return;
+    var d=by[r[C.MES]]; if(!d)return;
+    var nm=r[C.NOME];
+    for(var og in d){
+      if(origSel&&og!==origSel)continue;
+      var filas=d[og];
+      var A=acc[og]; if(!A)A=acc[og]={og:og,t:0,c:0,v:0,vpf:0,vpme:0,vade:0,_vends:{}};
+      for(var fl in filas){
+        var m=_ogCells(filas[fl],leadSel,prodSel);
+        _ogAdd(A,m);
+        var V=A._vends[nm]; if(!V)V=A._vends[nm]={vend:nm,t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+        _ogAdd(V,m);
+      }
+    }
+  });
+  return Object.values(acc).sort(function(x,y){return y.t-x.t;});
+}
+function orivendBody(rows){
+  var a=orivendAgg(rows);
+  if(!a.length)return '<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px">Sem leads no recorte selecionado.</td></tr></tbody>';
+  var qmap=quartilMap();   // quartil (Q1–Q4) por vendedor no período — badge à esquerda do nome
+  a.sort(function(x,y){var av=_orivendSortVal(x,ORIVEND_SORT.key),bv=_orivendSortVal(y,ORIVEND_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return ORIVEND_SORT.dir==='asc'?r:-r;});
+  function crt(has,open){return '<span class="crt" style="display:inline-block;width:14px;color:var(--muted)">'+(has?(open?'▼':'▶'):'')+'</span>';}
+  var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};
+  var body='',idx=0;
+  a.forEach(function(x){
+    var vends=Object.keys(x._vends).map(function(k){return x._vends[k];}).sort(function(p,r){return r.t-p.t;});
+    var i=idx++,hasV=vends.length>0;
+    _ogAdd(tot,x);
+    body+='<tr class="ovo-row" data-ovo="'+i+'"'+(hasV?' style="cursor:pointer" onclick="tgOVOrig('+i+',this)"':'')+'><td>'+crt(hasV,false)+' <b>'+_esc(x.og)+'</b></td>'+_otCells(x)+'</tr>';
+    vends.forEach(function(v){
+      body+='<tr class="ovv-row" data-ovo="'+i+'" style="display:none;background:var(--soft,#f8fafc)"><td style="padding-left:24px;color:var(--muted)">'+qBadge((qmap[v.vend]||{}).q)+_esc(v.vend)+'</td>'+_otCells(v)+'</tr>';
+    });
+  });
+  body+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL GERAL</td>'+_otCells(tot)+'</tr>';
+  return '<tbody>'+body+'</tbody>';
+}
+// nivel 1: ORIGEM -> mostra/esconde os vendedores dentro dela
+function tgOVOrig(i,tr){
+  var open=tr.classList.toggle('open');
+  var car=tr.querySelector('.crt'); if(car)car.textContent=open?'▼':'▶';
+  document.querySelectorAll('tr.ovv-row[data-ovo="'+i+'"]').forEach(function(x){x.style.display=open?'':'none';});
+}
+function _orivendFill(tableId,rows){
+  var t=document.getElementById(tableId);if(!t)return;
+  t.innerHTML=_sortableHead(ORIVEND_COLS,ORIVEND_SORT,'sortOrivend')+orivendBody(rows);
 }
 // ===== Tabela "Leads por Situação" (aba propria) — SITUAÇÃO (Produtivo/Improdutivo) -> Tag ==========
 // Mesma base do cubo ORIGEM_TAG_STATS e MESMAS metricas da "Leads por Origem", porem agregando por
@@ -1304,23 +1394,27 @@ function renderOrigemTab(rows){
   _tipoFill('tbl_tipo_tab', filteredWho());
   _sitTabFill('tbl_sit_tab', rows || filtered());
   _orifilaFill('tbl_orifila_tab', rows || filtered());
+  _orivendFill('tbl_orivend_tab', rows || filtered());
 }
 // Toggle da visualizacao unificada "Leads por Origem": 'sit' (Origem -> Produtivo/Improdutivo/Sem tag ->
 // Tag) ou 'fila' (Origem -> Fila/Session Team). So' mostra/esconde os dois <div> — as duas tabelas ja'
 // sao preenchidas por renderOrigemTab (respeitam todos os filtros do topo); nao re-renderiza aqui, entao
 // a escolha do toggle PERSISTE quando os filtros mudam.
 function oriView(m){
-  var sit=m!=='fila';
-  var ds=document.getElementById('oriview_sit'),df=document.getElementById('oriview_fila');
-  if(ds)ds.style.display=sit?'':'none';
-  if(df)df.style.display=sit?'none':'';
-  var bs=document.getElementById('oriview_sit_btn'),bf=document.getElementById('oriview_fila_btn');
-  if(bs){bs.style.background=sit?'#0072ce':'#fff';bs.style.color=sit?'#fff':'#334155';}
-  if(bf){bf.style.background=sit?'#fff':'#0072ce';bf.style.color=sit?'#334155':'#fff';}
+  var views={sit:'oriview_sit',fila:'oriview_fila',vend:'oriview_vend'};
+  var btns={sit:'oriview_sit_btn',fila:'oriview_fila_btn',vend:'oriview_vend_btn'};
+  if(!views[m])m='sit';
+  for(var k in views){
+    var d=document.getElementById(views[k]); if(d)d.style.display=(k===m)?'':'none';
+    var b=document.getElementById(btns[k]); if(b){b.style.background=(k===m)?'#0072ce':'#fff';b.style.color=(k===m)?'#fff':'#334155';}
+  }
+  var subs={
+    sit:'· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)',
+    fila:'· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> → clique numa fila para ver os <b>vendedores</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)',
+    vend:'· agregado por <b>Origem</b> → clique para expandir os <b>vendedores</b> que atuam em cada origem (todas as filas somadas). Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)'
+  };
   var sub=document.getElementById('oriview_sub');
-  if(sub)sub.innerHTML=sit
-    ?'· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)'
-    :'· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> dentro de cada origem. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)';
+  if(sub)sub.innerHTML=subs[m];
 }
 
 // ---------- aba Vinculado x Total ----------
