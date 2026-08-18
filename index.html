@@ -103,18 +103,15 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 .ms-pop label:hover{background:#f1f5f9}
 .ms-pop label.ms-all{font-weight:600;border-bottom:1px solid #e2e8f0;margin-bottom:4px;border-radius:0;padding-bottom:7px}
 .ms-pop input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex:none}
-.ms-month{border-radius:6px}
-.ms-month:hover{background:#f8fafc}
-.ms-month-head{display:flex;align-items:center;gap:4px}
-.ms-month-head>label{flex:1}
-.ms-day-toggle{border:0;background:transparent;color:#64748b;cursor:pointer;width:26px;height:26px;border-radius:5px;font-size:11px}
-.ms-day-toggle:hover{background:#e2e8f0;color:#0072ce}
-.ms-day{display:none;grid-template-columns:1fr 1fr;gap:8px;padding:2px 8px 8px 28px}
-.ms-month.day-open .ms-day{display:grid}
-.ms-day label{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:0;font-size:10px;color:#64748b;text-transform:uppercase}
-.ms-day select{border:1px solid #cbd5e1;border-radius:6px;background:#fff;padding:5px 6px;font-size:12px;color:#1e293b}
-.ms-month.day-custom{background:#eff6ff}
-.ms-day-loading{opacity:.65;pointer-events:none}
+.lead-period{display:flex;align-items:end;gap:10px;flex-wrap:wrap;background:#f8fafc;border:1px solid #dbe4ee;border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.lead-period-title{min-width:240px;flex:1}
+.lead-period-title b{display:block;font-size:13px;color:var(--text)}
+.lead-period-title span{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
+.lead-period label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em}
+.lead-period input{padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:var(--text);font-size:13px}
+.lead-period button{padding:8px 13px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
+.lead-period button.primary{border-color:var(--accent);background:var(--accent);color:#fff}
+.lead-period.loading{opacity:.65;pointer-events:none}
 .sel{padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#f8fafc}
 .q-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap);margin-bottom:var(--gap)}
 @media(max-width:1100px){.q-grid{grid-template-columns:repeat(3,1fr)}}
@@ -267,9 +264,16 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 
 <div id="tab-origem" class="tab-panel">
+<div id="lead_period" class="lead-period">
+  <div class="lead-period-title"><b>Período das tabelas de leads</b><span id="lead_period_status">Mês inteiro conforme o filtro do topo.</span></div>
+  <label>De<input id="lead_day_from" type="date"></label>
+  <label>Até<input id="lead_day_to" type="date"></label>
+  <button type="button" class="primary" onclick="applyLeadPeriod()">Aplicar</button>
+  <button type="button" onclick="clearLeadPeriod()">Mês inteiro</button>
+</div>
 <div class="tablecard">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Origem <span id="oriview_sub" style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<h3 style="font-size:14px;font-weight:700">Leads por Origem <span id="oriview_sub" style="color:var(--muted);font-weight:400">· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita os filtros do topo e o período desta aba</span></h3>
 <div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha como cada origem se abre">
 <button id="oriview_sit_btn" type="button" onclick="oriView('sit')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Por Situação</button>
 <button id="oriview_fila_btn" type="button" onclick="oriView('fila')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Por Fila</button>
@@ -283,7 +287,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div class="note" style="margin-top:8px">Cada origem abre em <b>Produtivos</b>, <b>Improdutivos</b> e <b>Sem tag</b> (regra Hapvida da <i>Tag de encerramento</i>: tags 10/10.B/13/14/16/17/18/24/29/33 = produtivo; demais = improdutivo; leads <b>sem tag</b> ficam num bucket próprio), e cada uma dessas abre nas <b>tags</b> — todas as métricas seguem essa agregação e somam de volta à origem. As colunas <b>Vidas PF / PME / ADESÃO</b> separam as vidas vinculadas pelo <b>produto da venda</b> (CANAL: PF=01-INDIVIDUAL, PME=PIM/MIDDLE I, ADESÃO=07-ADMINISTRADORA); <b>Vidas</b> é o total de vidas vinculadas (≥ soma dos produtos, pois há vidas sem CANAL identificado). <b>Contratos</b> (≈ telefones distintos casados) e <b>Vidas</b> são atribuídos por telefone (vidas vinculadas) da base EFETIVA — cobertura parcial em PME/ADESÃO, então podem divergir do relatório diário GUP. Com o filtro <b>Produto (venda)</b> ativo, só a coluna do produto escolhido fica preenchida; com <b>Tipo (lead)</b> ativo, as vidas passam a ser as ligadas àquele tipo de lead (prevalece sobre o Produto).</div>
 </div>
 <div id="oriview_fila" style="display:none">
-<input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',filtered())" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
+<input id="orifila_q" type="search" placeholder="🔎 Buscar fila (Session Team)… — mostra em quais origens ela aparece" oninput="_orifilaFill('tbl_orifila_tab',_leadRows(true))" style="margin-bottom:12px;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:min(460px,100%);box-sizing:border-box">
 <table id="tbl_orifila_tab"><thead><tr>
 <th>Origem / Fila / Vendedor</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
 </tr></thead><tbody></tbody></table>
@@ -298,7 +302,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Tipo <span style="color:var(--muted);font-weight:400">· agregado por TIPO → clique para expandir as filas (Session Team) → clique numa fila para ver os vendedores. Respeita Gestão / Supervisor / Vendedor / Mês do topo</span></h3>
+<h3 style="font-size:14px;font-weight:700">Leads por Tipo <span style="color:var(--muted);font-weight:400">· agregado por TIPO → clique para expandir as filas (Session Team) → clique numa fila para ver os vendedores. Respeita os filtros do topo e o período desta aba</span></h3>
 </div>
 <table id="tbl_tipo_tab"><thead><tr>
 <th>Tipo / Fila / Vendedor</th><th class="num">Leads Totais</th><th class="num">Leads Produtivos</th><th class="num">% Produtivos</th><th class="num">Contratos</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas PME</th><th class="num">Vidas PF</th><th class="num">Vidas TOTAL</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
@@ -307,7 +311,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 <div class="tablecard" style="margin-top:16px">
 <div style="margin-bottom:14px">
-<h3 style="font-size:14px;font-weight:700">Leads por Situação <span style="color:var(--muted);font-weight:400">· agregado por <b>Produtivos / Improdutivos / Sem tag</b> (todas as origens juntas) → clique para expandir as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)</span></h3>
+<h3 style="font-size:14px;font-weight:700">Leads por Situação <span style="color:var(--muted);font-weight:400">· agregado por <b>Produtivos / Improdutivos / Sem tag</b> (todas as origens juntas) → clique para expandir as <b>tags</b>. Respeita os filtros do topo e o período desta aba</span></h3>
 </div>
 <table id="tbl_sit_tab"><thead><tr>
 <th>Situação / Tag</th><th class="num">Leads Totais</th><th class="num">Contratos</th><th class="num">Vidas PF</th><th class="num">Vidas PME</th><th class="num">Vidas ADESÃO</th><th class="num">Vidas</th><th class="num">% Conv. Contratos</th><th class="num">% Conv. Vidas</th>
@@ -516,46 +520,26 @@ function distinct(col,isMes){
   return a;
 }
 function lbl(v,isMes){return isMes?(MESNOME[v]||v):String(v);}
-var DAY_RANGES={};      // {mes:{from,to}}; ausencia = mes inteiro (payload mensal, sem custo extra)
-var DAY_LIMITS={};
-function _daysInMonth(mm){return new Date(2026,+mm,0).getDate();}
-function _dayOptions(max,sel){var h='';for(var d=1;d<=max;d++)h+='<option value="'+d+'"'+(d===sel?' selected':'')+'>'+d+'</option>';return h;}
 function buildMS(f){
   var el=document.getElementById(f.id);var vals=distinct(f.col,f.isMes);
   var pop='<input class="ms-search" placeholder="buscar..." oninput="msFilter(this)">';
   pop+='<label class="ms-all"><input type="checkbox" checked onchange="msAll(\''+f.id+'\',this)"> Todos</label>';
   vals.forEach(function(v){
-    if(f.isMes){var mx=(DAY_LIMITS[v]||{}).max||_daysInMonth(v),rg=DAY_RANGES[v]||{from:1,to:mx};
-      pop+='<div class="ms-month'+(DAY_RANGES[v]?' day-custom':'')+'" data-t="'+String(lbl(v,true)).toLowerCase()+'" data-month="'+v+'">'+
-        '<div class="ms-month-head"><label><input type="checkbox" value="'+v+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,true)+'</label>'+
-        '<button type="button" class="ms-day-toggle" onclick="dayExpand(event,'+v+')" title="Ajustar dias de '+lbl(v,true)+'">▸</button></div>'+
-        '<div class="ms-day"><label>De<select class="day-from" onchange="dayRangeChanged('+v+')">'+_dayOptions(mx,rg.from)+'</select></label>'+
-        '<label>Até<select class="day-to" onchange="dayRangeChanged('+v+')">'+_dayOptions(mx,rg.to)+'</select></label></div></div>';
-    }else pop+='<label data-t="'+String(lbl(v,false)).toLowerCase()+'"><input type="checkbox" value="'+String(v).replace(/"/g,'&quot;')+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,false)+'</label>';
+    pop+='<label data-t="'+String(lbl(v,f.isMes)).toLowerCase()+'"><input type="checkbox" value="'+String(v).replace(/"/g,'&quot;')+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,f.isMes)+'</label>';
   });
   el.innerHTML='<button class="ms-btn" onclick="msToggle(event,\''+f.id+'\')">Todos</button><div class="ms-pop">'+pop+'</div>';
 }
-function dayExpand(e,mm){e.preventDefault();e.stopPropagation();var r=document.querySelector('#f_mes .ms-month[data-month="'+mm+'"]');if(!r)return;r.classList.toggle('day-open');var b=r.querySelector('.ms-day-toggle');if(b)b.textContent=r.classList.contains('day-open')?'▾':'▸';if(r.classList.contains('day-open'))setTimeout(function(){r.scrollIntoView({block:'nearest'});},0);}
-function dayRangeChanged(mm){
-  var row=document.querySelector('#f_mes .ms-month[data-month="'+mm+'"]'),a=+row.querySelector('.day-from').value,b=+row.querySelector('.day-to').value;
-  if(a>b){b=a;row.querySelector('.day-to').value=b;}
-  var mx=(DAY_LIMITS[mm]||{}).max||_daysInMonth(mm);
-  if(a===1&&b===mx){delete DAY_RANGES[mm];row.classList.remove('day-custom');}
-  else{DAY_RANGES[mm]={from:a,to:b};row.classList.add('day-custom');}
-  var cb=row.querySelector('input[type=checkbox]');if(cb)cb.checked=true;
-  syncSel('f_mes');_dayApplyMode();
-}
 function msToggle(e,id){e.stopPropagation();var el=document.getElementById(id);var was=el.classList.contains('open');document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});if(!was)el.classList.add('open');}
 function msFilter(inp){var pop=inp.parentNode;pop.querySelectorAll('[data-t]').forEach(function(l){l.style.display=l.getAttribute('data-t').indexOf(inp.value.toLowerCase())>=0?'':'none';});}
-function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;if(id==='f_mes'){DAY_RANGES={};el.querySelectorAll('.ms-month').forEach(function(r){r.classList.remove('day-custom');});}syncSel(id);if(id==='f_mes')_dayApplyMode();else renderD();}
-function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;if(id==='f_mes')el.querySelectorAll('.ms-month').forEach(function(r){var cb=r.querySelector('input[value]');if(cb&&!cb.checked){delete DAY_RANGES[+cb.value];r.classList.remove('day-custom');}});syncSel(id);if(id==='f_mes')_dayApplyMode();else renderD();}
+function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;syncSel(id);renderD();}
+function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;syncSel(id);renderD();}
 function syncSel(id){
   var f=FILTERS.find(function(x){return x.id===id;});f.sel.clear();
   var el=document.getElementById(id);
   el.querySelectorAll('.ms-pop input[value]').forEach(function(c){if(c.checked)f.sel.add(f.isMes?parseInt(c.value):c.value);});
   var btn=el.querySelector('.ms-btn');
   if(f.sel.size===0){btn.textContent='Todos';btn.classList.remove('act');}
-  else{var arr=Array.from(f.sel).map(function(v){var s=lbl(v,f.isMes),r=f.isMes?DAY_RANGES[v]:null;return r?s+' '+r.from+'–'+r.to:s;});btn.textContent=f.sel.size<=2?arr.join(', '):f.sel.size+' selecionados';btn.classList.add('act');}
+  else{var arr=Array.from(f.sel).map(function(v){return lbl(v,f.isMes);});btn.textContent=f.sel.size<=2?arr.join(', '):f.sel.size+' selecionados';btn.classList.add('act');}
 }
 function _applyDefaultMonth(){
   var f=FILTERS.find(function(x){return x.id==='f_mes';}),el=document.getElementById('f_mes');if(!f||!el)return;
@@ -565,7 +549,7 @@ function _applyDefaultMonth(){
   var all=el.querySelector('.ms-all input');if(all)all.checked=false;
   syncSel('f_mes');
 }
-function resetF(){DAY_RANGES={};FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});el.querySelectorAll('.ms-month').forEach(function(r){r.classList.remove('day-custom');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});_applyDefaultMonth();var sb=document.getElementById('tbl_busca');if(sb)sb.value='';_dayApplyMode();}
+function resetF(){FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});_applyDefaultMonth();var sb=document.getElementById('tbl_busca');if(sb)sb.value='';render();}
 document.addEventListener('click',function(e){if(e.target.closest('.ms'))return;document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});});   // fecha so em clique FORA do filtro; clicar numa opcao/busca mantem aberto (marcar varias)
 
 // ===== Filtro "Projetos" (SINTRO) — pedido David 02/08/2026 =====
@@ -743,9 +727,7 @@ function volTarget(){
   if(!rp)return VOL_TARGET_MES*months.length;
   var dim=new Date(rp.y,rp.mo,0).getDate();var fac=dim>0?Math.min(1,rp.d/dim):1;
   var t=0;months.forEach(function(mm){
-    var dr=DAY_RANGES[+mm];
-    if(dr){var md=_daysInMonth(+mm);t+=VOL_TARGET_MES*Math.max(0,dr.to-dr.from+1)/md;}
-    else if(mm<rp.mo)t+=VOL_TARGET_MES;
+    if(mm<rp.mo)t+=VOL_TARGET_MES;
     else if(mm===rp.mo)t+=VOL_TARGET_MES*fac;
   });
   if(t<=0)t=VOL_TARGET_MES;   // guarda p/ seleção só de mês futuro (evita divisão por zero)
@@ -822,7 +804,7 @@ function assignQuartis(a,noAdm){
 var WHO_FILTER_IDS=['f_nome','f_sup','f_unidade','f_gestao','f_org','f_faixa','f_status'];
 var _QV_POP_CACHE={};
 function withWhoNeutralized(fn){var saved=FILTERS.map(function(f){return f.sel;});FILTERS.forEach(function(f){if(WHO_FILTER_IDS.indexOf(f.id)>=0)f.sel=new Set();});try{return fn();}finally{FILTERS.forEach(function(f,i){f.sel=saved[i];});}}
-function _qvPopSig(gcol){var mf=FILTERS.find(function(f){return f.id==='f_mes';}),m=mf?Array.from(mf.sel).sort():[];return [gcol,m.join(','),JSON.stringify(DAY_RANGES),projMode(),(document.getElementById('f_vinc')||{}).value||'',(document.getElementById('f_orig_cross')||{}).value||'',(document.getElementById('f_tipo_cross')||{}).value||'',(document.getElementById('f_tipolead_cross')||{}).value||'',_dayActive()?'D':'M'].join('|');}
+function _qvPopSig(gcol){var mf=FILTERS.find(function(f){return f.id==='f_mes';}),m=mf?Array.from(mf.sel).sort():[];return [gcol,m.join(','),projMode(),(document.getElementById('f_vinc')||{}).value||'',(document.getElementById('f_orig_cross')||{}).value||'',(document.getElementById('f_tipo_cross')||{}).value||'',(document.getElementById('f_tipolead_cross')||{}).value||''].join('|');}
 function quartilePopulation(gcol,noAdm){
   var sig=_qvPopSig(gcol);if(_QV_POP_CACHE[sig])return _QV_POP_CACHE[sig];
   var rows=withWhoNeutralized(function(){return filtered().filter(function(r){var k=r[gcol];return r[C.GESTAO]!=='ADMINISTRATIVO'&&!qvAdmExcl(r[C.NOME])&&k&&k!=='NÃO MAPEADO'&&k!=='N/D'&&k!=='ADMINISTRATIVO';});});
@@ -921,16 +903,16 @@ function render(){
   else if(at==='quartil')renderQuartilV();
   else if(at==='geo')renderGeo();                    // aba "Estados & Cidades" (le tabelas _uf ao vivo, lazy)
   else if(at==='origem'){                            // "Analise dos Leads" — abas Tempo de Atend./Vinculado x Total removidas (David 06/07/2026)
-    if(_LEADS_LOADED){renderOrigemTab(rows);}
+    if(_LEADS_LOADED){renderOrigemTab();}
     else{                                            // lazy: baixa os 3 cubos pesados na 1a abertura (espelha renderGeo)
-      ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab'].forEach(function(id){
+      ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab','tbl_orivend_tab'].forEach(function(id){
         var t=document.getElementById(id);if(t)t.innerHTML='<tbody><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:22px">Carregando análise dos leads…</td></tr></tbody>';
       });
       if(!_LEADS_LOADING){
         _LEADS_LOADING=true;
-        _loadLeads().then(function(){_LEADS_LOADED=true;_LEADS_LOADING=false;if(activeTab()==='origem')renderOrigemTab(filtered());})
+        _loadLeads().then(function(){_LEADS_LOADED=true;_LEADS_LOADING=false;if(activeTab()==='origem')renderOrigemTab();})
           .catch(function(e){_LEADS_LOADING=false;console.error('leads load',e);
-            ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab'].forEach(function(id){
+            ['tbl_origem_tab','tbl_tipo_tab','tbl_sit_tab','tbl_orifila_tab','tbl_orivend_tab'].forEach(function(id){
               var t=document.getElementById(id);if(t)t.innerHTML='<tbody><tr><td colspan="9" style="text-align:center;color:#991b1b;padding:22px">Erro ao carregar a análise dos leads: '+((e&&e.message)||e)+'</td></tr></tbody>';
             });
           });
@@ -958,7 +940,7 @@ function _sortableHead(cols,st,fn){
 var ORIGEM_COLS=[{t:'Origem',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Leads Produtivos',k:'p',n:1},{t:'% Produtivos',k:'pp',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIGEM_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (igual ao comportamento anterior)
 function _origemSortVal(x,key){if(key==='og')return x.og;if(key==='pp')return x.t>0?x.p/x.t:-1;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
-function sortOrigem(key){if(ORIGEM_SORT.key===key)ORIGEM_SORT.dir=ORIGEM_SORT.dir==='asc'?'desc':'asc';else{ORIGEM_SORT.key=key;ORIGEM_SORT.dir=key==='og'?'asc':'desc';}_origemFill('tbl_origem_tab',filtered());}
+function sortOrigem(key){if(ORIGEM_SORT.key===key)ORIGEM_SORT.dir=ORIGEM_SORT.dir==='asc'?'desc':'asc';else{ORIGEM_SORT.key=key;ORIGEM_SORT.dir=key==='og'?'asc':'desc';}_origemFill('tbl_origem_tab',_leadRows(true));}
 // PRODUTIVO/IMPRODUTIVO derivado da TAG (mesma regra do build: flag_produtivo/PROD_OK; 'SEM TAG'=vazio->produtivo).
 var PROD_OK_TAGS={'10':1,'10.B':1,'13':1,'14':1,'16':1,'17':1,'18':1,'24':1,'29':1,'33':1};
 function _tagIsProd(tag){if(!tag||tag==='SEM TAG')return true;return !!PROD_OK_TAGS[String(tag).split('-')[0].trim().toUpperCase()];}
@@ -1036,7 +1018,7 @@ function _origemFill(tableId,rows){
 var ORIGEMTAB_COLS=[{t:'Origem / Situação / Tag',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIGEMTAB_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
 function _origemTabSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
-function sortOrigemTab(key){if(ORIGEMTAB_SORT.key===key)ORIGEMTAB_SORT.dir=ORIGEMTAB_SORT.dir==='asc'?'desc':'asc';else{ORIGEMTAB_SORT.key=key;ORIGEMTAB_SORT.dir=key==='og'?'asc':'desc';}_origemTabFill('tbl_origem_tab',filtered());}
+function sortOrigemTab(key){if(ORIGEMTAB_SORT.key===key)ORIGEMTAB_SORT.dir=ORIGEMTAB_SORT.dir==='asc'?'desc':'asc';else{ORIGEMTAB_SORT.key=key;ORIGEMTAB_SORT.dir=key==='og'?'asc':'desc';}_origemTabFill('tbl_origem_tab',_leadRows(true));}
 function _otCells(x){return '<td class="num">'+nf(x.t)+'</td><td class="num">'+nf(x.c)+'</td><td class="num">'+nf(x.vpf)+'</td><td class="num">'+nf(x.vpme)+'</td><td class="num">'+nf(x.vade)+'</td><td class="num" style="font-weight:600">'+nf(x.v)+'</td><td class="num">'+_opct(x.c,x.t)+'</td><td class="num">'+_opct(x.v,x.t)+'</td>';}
 function origemTabBody(rows){
   var a=origemAgg(rows);
@@ -1134,7 +1116,7 @@ function _origemTabFill(tableId,rows){
 var ORIGEMFILA_COLS=[{t:'Origem / Fila / Vendedor',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIGEMFILA_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
 function _orifilaSortVal(x,key){if(key==='og')return x.og;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
-function sortOrifila(key){if(ORIGEMFILA_SORT.key===key)ORIGEMFILA_SORT.dir=ORIGEMFILA_SORT.dir==='asc'?'desc':'asc';else{ORIGEMFILA_SORT.key=key;ORIGEMFILA_SORT.dir=key==='og'?'asc':'desc';}_orifilaFill('tbl_orifila_tab',filtered());}
+function sortOrifila(key){if(ORIGEMFILA_SORT.key===key)ORIGEMFILA_SORT.dir=ORIGEMFILA_SORT.dir==='asc'?'desc':'asc';else{ORIGEMFILA_SORT.key=key;ORIGEMFILA_SORT.dir=key==='og'?'asc':'desc';}_orifilaFill('tbl_orifila_tab',_leadRows(true));}
 // Agrega ORIGEMFILA_STATS por ORIGEM (soma as filas) expondo, por origem, o detalhe por fila (_filas).
 function orifilaAgg(rows){
   var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t
@@ -1222,7 +1204,7 @@ function _orifilaFill(tableId,rows){
 var ORIVEND_COLS=[{t:'Origem / Vendedor',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let ORIVEND_SORT={key:'t',dir:'desc'};   // default = Leads Totais desc (ordena o nivel ORIGEM)
 function _orivendSortVal(x,key){if(key==='og')return x.og!=null?x.og:(x.vend||'');if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
-function sortOrivend(key){if(ORIVEND_SORT.key===key)ORIVEND_SORT.dir=ORIVEND_SORT.dir==='asc'?'desc':'asc';else{ORIVEND_SORT.key=key;ORIVEND_SORT.dir=key==='og'?'asc':'desc';}_orivendFill('tbl_orivend_tab',filtered());}
+function sortOrivend(key){if(ORIVEND_SORT.key===key)ORIVEND_SORT.dir=ORIVEND_SORT.dir==='asc'?'desc':'asc';else{ORIVEND_SORT.key=key;ORIVEND_SORT.dir=key==='og'?'asc':'desc';}_orivendFill('tbl_orivend_tab',_leadRows(true));}
 // Agrega ORIGEMFILA_STATS por ORIGEM (soma as filas) expondo, por origem, o detalhe por vendedor (_vends).
 function orivendAgg(rows){
   var leadSel=(document.getElementById('f_tipolead_cross')||{value:''}).value;   // Tipo(lead) -> t
@@ -1309,7 +1291,7 @@ function situacaoAgg(rows){
 var SITTAB_COLS=[{t:'Situação / Tag',k:'og'},{t:'Leads Totais',k:'t',n:1},{t:'Contratos',k:'c',n:1},{t:'Vidas PF',k:'vpf',n:1},{t:'Vidas PME',k:'vpme',n:1},{t:'Vidas ADESÃO',k:'vade',n:1},{t:'Vidas',k:'v',n:1},{t:'% Conv. Contratos',k:'cc',n:1},{t:'% Conv. Vidas',k:'cv',n:1}];
 let SITTAB_SORT={key:'t',dir:'desc'};   // ordena as TAGS dentro de cada situação (o nivel situação fica fixo)
 function _sitSortVal(x,key){if(key==='og')return x.tag||'';if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;return x[key]||0;}
-function sortSit(key){if(SITTAB_SORT.key===key)SITTAB_SORT.dir=SITTAB_SORT.dir==='asc'?'desc':'asc';else{SITTAB_SORT.key=key;SITTAB_SORT.dir=key==='og'?'asc':'desc';}_sitTabFill('tbl_sit_tab',filtered());}
+function sortSit(key){if(SITTAB_SORT.key===key)SITTAB_SORT.dir=SITTAB_SORT.dir==='asc'?'desc':'asc';else{SITTAB_SORT.key=key;SITTAB_SORT.dir=key==='og'?'asc':'desc';}_sitTabFill('tbl_sit_tab',_leadRows(true));}
 function sitTabBody(rows){
   var a=situacaoAgg(rows);
   var tot={t:0,c:0,v:0,vpf:0,vpme:0,vade:0};_ogAdd(tot,a.P);_ogAdd(tot,a.I);_ogAdd(tot,a.S);
@@ -1365,7 +1347,7 @@ var TIPO_COLS=[{t:'Tipo / Fila / Vendedor',k:'name'},{t:'Leads Totais',k:'t',n:1
 let TIPO_SORT={key:null,dir:'desc'};   // null = ordem semantica padrao (TIPO_ORD_TAB nos tipos + Leads desc)
 function _tipoSortVal(x,key){if(key==='name')return x.tipo||x.fila||x.nome||'';if(key==='pp')return x.t>0?x.p/x.t:-1;if(key==='cc')return x.t>0?x.c/x.t:-1;if(key==='cv')return x.t>0?x.v/x.t:-1;var vp=x.vp||{};if(key==='vpf')return vp.PF||0;if(key==='vpme')return vp.PME||0;if(key==='vade')return vp.ADESAO||0;return x[key]||0;}
 function _tipoCmp(a,b){var av=_tipoSortVal(a,TIPO_SORT.key),bv=_tipoSortVal(b,TIPO_SORT.key),r;if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');else r=av-bv;return TIPO_SORT.dir==='asc'?r:-r;}
-function sortTipo(key){if(TIPO_SORT.key===key)TIPO_SORT.dir=TIPO_SORT.dir==='asc'?'desc':'asc';else{TIPO_SORT.key=key;TIPO_SORT.dir=key==='name'?'asc':'desc';}_tipoFill('tbl_tipo_tab',filteredWho());}
+function sortTipo(key){if(TIPO_SORT.key===key)TIPO_SORT.dir=TIPO_SORT.dir==='asc'?'desc':'asc';else{TIPO_SORT.key=key;TIPO_SORT.dir=key==='name'?'asc':'desc';}_tipoFill('tbl_tipo_tab',_leadRows(false));}
 // Agrega em 3 niveis: TIPO -> FILA (Session Team) -> VENDEDOR (NOME). O vendedor ja' e' a chave de topo
 // do cubo TIPOFILA_STATS[nome][mes][tipo][fila], entao basta acumular por r[C.NOME].
 function tipoFilaAgg(rows){
@@ -1440,32 +1422,72 @@ function _tipoFill(tableId,rows){
   var t=document.getElementById(tableId);if(!t)return;
   t.innerHTML=_sortableHead(TIPO_COLS,TIPO_SORT,'sortTipo')+tipoTableBody(rows);
 }
-// Aba propria "Leads por Origem" + "Leads por Tipo". Origem usa filtered() (respeita TODOS os filtros
-// do topo, inclusive cross); Tipo usa filteredWho() (WHO + Mes). Sem seletor de mes local (06/07/2026).
-// Lazy-load dos 3 cubos pesados (ORIGEM_TAG_STATS/ORIGEMFILA_STATS/TIPOFILA_STATS ~17,5 MB) — so'
-// baixados na 1a abertura da aba "Analise dos Leads". Espelha _loadGeo(); tira ~17,5 MB do boot.
+// Filtro diario EXCLUSIVO da aba Analise dos Leads. Quando ativo, o intervalo substitui o filtro Mes
+// somente nestas tabelas; as demais abas continuam mensais e nunca trocam o RAW/cubos centrais.
+var LEAD_PERIOD=null,_LEADS_MONTHLY_CACHE=null,_LEADS_DAILY_PAYLOAD=null,_LEADS_DAILY_PROMISE=null;
+function _leadDateKey(s){var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(+m[1]*10000 + +m[2]*100 + +m[3]):null;}
+function _leadDayActive(){return !!(LEAD_PERIOD&&LEAD_PERIOD.from&&LEAD_PERIOD.to);}
+function _leadDayOk(mm,dd){if(!_leadDayActive())return true;var y=(refParts()||{y:2026}).y,k=y*10000+(+mm)*100+(+dd);return k>=LEAD_PERIOD.from&&k<=LEAD_PERIOD.to;}
+function _leadMonthOk(mm){if(!_leadDayActive())return true;var y=(refParts()||{y:2026}).y,a=y*10000+(+mm)*100+1,b=y*10000+(+mm)*100+31;return b>=LEAD_PERIOD.from&&a<=LEAD_PERIOD.to;}
+function _leadRows(cross){
+  if(!_leadDayActive())return cross?filtered():filteredWho();
+  var mf=FILTERS.find(function(f){return f.id==='f_mes';}),saved=mf?mf.sel:null,rows;
+  if(mf)mf.sel=new Set();
+  try{rows=cross?filtered():filteredWho();}finally{if(mf)mf.sel=saved;}
+  return rows.filter(function(r){return _leadMonthOk(r[C.MES]);});
+}
+function _leadFmt(k){var s=String(k);return s.slice(6,8)+'/'+s.slice(4,6)+'/'+s.slice(0,4);}
+function _leadSetLoading(on){var el=document.getElementById('lead_period');if(el)el.classList.toggle('loading',!!on);}
+function _leadStatus(){var s=document.getElementById('lead_period_status');if(!s)return;s.textContent=_leadDayActive()?(_leadFmt(LEAD_PERIOD.from)+' a '+_leadFmt(LEAD_PERIOD.to)+' · substitui o filtro Mês somente nesta aba.'):'Mês inteiro conforme o filtro do topo.';}
+function _replaceObj(dst,src){Object.keys(dst).forEach(function(k){delete dst[k];});if(src)Object.assign(dst,src);}
+function _jsLeaf(root,keys){var d=root;keys.forEach(function(k){k=String(k);if(!d[k])d[k]={};d=d[k];});return d;}
+function _inc(o,k,n){o[k]=(o[k]||0)+(+n||0);}
+function _fetchLeadDaily(){
+  if(_LEADS_DAILY_PAYLOAD)return Promise.resolve(_LEADS_DAILY_PAYLOAD);
+  if(!_LEADS_DAILY_PROMISE)_LEADS_DAILY_PROMISE=fetch('./data/daily/leads.json.gz').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' em daily/leads');return r.arrayBuffer();}).then(function(buf){
+    var u=new Uint8Array(buf),p;if(!(u[0]===0x1f&&u[1]===0x8b))p=Promise.resolve(JSON.parse(new TextDecoder().decode(u)));else{if(typeof DecompressionStream==='undefined')throw new Error('navegador sem suporte a gzip');p=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).json();}return p;
+  }).then(function(p){_LEADS_DAILY_PAYLOAD=p;return p;});
+  return _LEADS_DAILY_PROMISE;
+}
+function _applyLeadDaily(p){
+  var tag={},fila={},tf={};
+  (p.leads||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],t=+r[7]||0,pr=+r[8]||0;if(!_leadDayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]);_inc(a,'t',t);_inc(_jsLeaf(a,['tT']),tl,t);var b=_jsLeaf(fila,[nm,mm,og,fl]);_inc(b,'t',t);_inc(_jsLeaf(b,['tT']),tl,t);var c=_jsLeaf(tf,[nm,mm,tl,fl]);_inc(c,'t',t);_inc(c,'p',pr);});
+  (p.vinc||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],pr=r[7],v=+r[8]||0;if(!_leadDayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]),b=_jsLeaf(fila,[nm,mm,og,fl]),c=_jsLeaf(tf,[nm,mm,tl,fl]);[a,b,c].forEach(function(x){_inc(x,'v',v);});if(pr){_inc(_jsLeaf(a,['vP']),pr,v);_inc(_jsLeaf(b,['vP']),pr,v);_inc(_jsLeaf(c,['vp']),pr,v);} _inc(_jsLeaf(a,['vT']),tl,v);_inc(_jsLeaf(b,['vT']),tl,v);if(pr){_inc(_jsLeaf(a,['vTP',tl]),pr,v);_inc(_jsLeaf(b,['vTP',tl]),pr,v);} _inc(a,'c',r[10]);if(pr)_inc(_jsLeaf(a,['cP']),pr,r[11]);_inc(_jsLeaf(a,['cT']),tl,r[12]);_inc(b,'c',r[13]);if(pr)_inc(_jsLeaf(b,['cP']),pr,r[14]);_inc(_jsLeaf(b,['cT']),tl,r[15]);_inc(c,'c',r[16]);});
+  _replaceObj(ORIGEM_TAG_STATS,tag);_replaceObj(ORIGEMFILA_STATS,fila);_replaceObj(TIPOFILA_STATS,tf);
+}
+async function _refreshLeadPeriod(){
+  _leadSetLoading(true);_LEADS_LOADED=false;
+  try{await _loadLeads();_LEADS_LOADED=true;_leadStatus();if(activeTab()==='origem')renderOrigemTab();}
+  catch(e){console.error('lead period',e);alert('Não foi possível aplicar o período das tabelas de leads: '+(e.message||e));}
+  finally{_leadSetLoading(false);}
+}
+function applyLeadPeriod(){
+  var a=document.getElementById('lead_day_from').value,b=document.getElementById('lead_day_to').value,ka=_leadDateKey(a),kb=_leadDateKey(b),y=(refParts()||{y:2026}).y;
+  if(!ka||!kb){alert('Preencha as datas De e Até.');return;}if(ka>kb){alert('A data De não pode ser maior que Até.');return;}if(Math.floor(ka/10000)!==y||Math.floor(kb/10000)!==y){alert('Selecione datas de '+y+'.');return;}
+  LEAD_PERIOD={from:ka,to:kb};_refreshLeadPeriod();
+}
+function clearLeadPeriod(){document.getElementById('lead_day_from').value='';document.getElementById('lead_day_to').value='';LEAD_PERIOD=null;_refreshLeadPeriod();}
+// Lazy-load mensal na primeira abertura; daily/leads so' e' baixado depois de clicar Aplicar.
 async function _loadLeads(){
-  if(_dayActive()){
-    var p=await _fetchGzipJson('leads'),tag={},fila={},tf={};
-    (p.leads||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],t=+r[7]||0,pr=+r[8]||0;if(!_dayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]);_inc(a,'t',t);_inc(_jsLeaf(a,['tT']),tl,t);var b=_jsLeaf(fila,[nm,mm,og,fl]);_inc(b,'t',t);_inc(_jsLeaf(b,['tT']),tl,t);var c=_jsLeaf(tf,[nm,mm,tl,fl]);_inc(c,'t',t);_inc(c,'p',pr);});
-    (p.vinc||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],pr=r[7],v=+r[8]||0;if(!_dayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]),b=_jsLeaf(fila,[nm,mm,og,fl]),c=_jsLeaf(tf,[nm,mm,tl,fl]);[a,b,c].forEach(function(x){_inc(x,'v',v);});if(pr){_inc(_jsLeaf(a,['vP']),pr,v);_inc(_jsLeaf(b,['vP']),pr,v);_inc(_jsLeaf(c,['vp']),pr,v);} _inc(_jsLeaf(a,['vT']),tl,v);_inc(_jsLeaf(b,['vT']),tl,v);if(pr){_inc(_jsLeaf(a,['vTP',tl]),pr,v);_inc(_jsLeaf(b,['vTP',tl]),pr,v);} _inc(a,'c',r[10]);if(pr)_inc(_jsLeaf(a,['cP']),pr,r[11]);_inc(_jsLeaf(a,['cT']),tl,r[12]);_inc(b,'c',r[13]);if(pr)_inc(_jsLeaf(b,['cP']),pr,r[14]);_inc(_jsLeaf(b,['cT']),tl,r[15]);_inc(c,'c',r[16]);});
-    _replaceObj(ORIGEM_TAG_STATS,tag);_replaceObj(ORIGEMFILA_STATS,fila);_replaceObj(TIPOFILA_STATS,tf);
-    return;
-  }
+  if(_leadDayActive()){_applyLeadDaily(await _fetchLeadDaily());return;}
+  if(_LEADS_MONTHLY_CACHE){_replaceObj(ORIGEM_TAG_STATS,_LEADS_MONTHLY_CACHE.tag);_replaceObj(ORIGEMFILA_STATS,_LEADS_MONTHLY_CACHE.fila);_replaceObj(TIPOFILA_STATS,_LEADS_MONTHLY_CACHE.tf);return;}
   var mv=await SB.from('conversao_vendedor_meta').select('chave,payload').in('chave',['ORIGEM_TAG_STATS','ORIGEMFILA_STATS','TIPOFILA_STATS']);
   if(mv.error)throw mv.error;
+  var mc={tag:{},fila:{},tf:{}};
   (mv.data||[]).forEach(function(r){
-    if(r.chave==='ORIGEM_TAG_STATS')Object.assign(ORIGEM_TAG_STATS,r.payload);
-    else if(r.chave==='ORIGEMFILA_STATS')Object.assign(ORIGEMFILA_STATS,r.payload);
-    else if(r.chave==='TIPOFILA_STATS')Object.assign(TIPOFILA_STATS,r.payload);
+    if(r.chave==='ORIGEM_TAG_STATS')mc.tag=r.payload;
+    else if(r.chave==='ORIGEMFILA_STATS')mc.fila=r.payload;
+    else if(r.chave==='TIPOFILA_STATS')mc.tf=r.payload;
   });
+  _LEADS_MONTHLY_CACHE=mc;_replaceObj(ORIGEM_TAG_STATS,mc.tag);_replaceObj(ORIGEMFILA_STATS,mc.fila);_replaceObj(TIPOFILA_STATS,mc.tf);
 }
-function renderOrigemTab(rows){
-  _origemTabFill('tbl_origem_tab', rows || filtered());
-  _tipoFill('tbl_tipo_tab', filteredWho());
-  _sitTabFill('tbl_sit_tab', rows || filtered());
-  _orifilaFill('tbl_orifila_tab', rows || filtered());
-  _orivendFill('tbl_orivend_tab', rows || filtered());
+function renderOrigemTab(){
+  var rows=_leadRows(true),who=_leadRows(false);
+  _origemTabFill('tbl_origem_tab',rows);
+  _tipoFill('tbl_tipo_tab',who);
+  _sitTabFill('tbl_sit_tab',rows);
+  _orifilaFill('tbl_orifila_tab',rows);
+  _orivendFill('tbl_orivend_tab',rows);
 }
 // Toggle da visualizacao unificada "Leads por Origem": 'sit' (Origem -> Produtivo/Improdutivo/Sem tag ->
 // Tag) ou 'fila' (Origem -> Fila/Session Team). So' mostra/esconde os dois <div> — as duas tabelas ja'
@@ -1480,9 +1502,9 @@ function oriView(m){
     var b=document.getElementById(btns[k]); if(b){b.style.background=(k===m)?'#0072ce':'#fff';b.style.color=(k===m)?'#fff':'#334155';}
   }
   var subs={
-    sit:'· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)',
-    fila:'· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> → clique numa fila para ver os <b>vendedores</b>. Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)',
-    vend:'· agregado por <b>Origem</b> → clique para expandir os <b>vendedores</b> que atuam em cada origem (todas as filas somadas). Respeita todos os filtros do topo (Gestão / Supervisor / Vendedor / Mês + Tipo (lead) / Produto (venda) / Origem)'
+    sit:'· clique numa origem para expandir <b>Produtivos / Improdutivos / Sem tag</b> → clique numa dessas para ver as <b>tags</b>. Respeita os filtros do topo e o período desta aba',
+    fila:'· agregado por <b>Origem</b> → clique para expandir as <b>filas (Session Team)</b> → clique numa fila para ver os <b>vendedores</b>. Respeita os filtros do topo e o período desta aba',
+    vend:'· agregado por <b>Origem</b> → clique para expandir os <b>vendedores</b> que atuam em cada origem (todas as filas somadas). Respeita os filtros do topo e o período desta aba'
   };
   var sub=document.getElementById('oriview_sub');
   if(sub)sub.innerHTML=subs[m];
@@ -2167,13 +2189,6 @@ var _GEO_ROWS=[], _GEOV_ROWS=[];
 var GEO_SORT={key:'vd',dir:'desc'}, GEO_OPEN={}, GEO_SHOWALL={}, GEO_MODE='cid';
 var GEOV_SORT={key:'vd',dir:'desc'}, GEOV_OPEN={}, GEOV_SHOWALL={};
 async function _loadGeo(){
-  if(_dayActive()){
-    var p=await _fetchGzipJson('geo'),by={};
-    (p.raw||[]).forEach(function(r){var nm=r[0],ms=+r[1],dd=+r[2],uf=r[3]||'N/D';if(!_dayOk(ms,dd))return;var k=nm+'\u0001'+ms+'\u0001'+uf,a=by[k];if(!a)a=by[k]={nm:nm,ms:ms,uf:uf,lt:0,vd:0,vs:0};a.lt+=+r[4]||0;a.vd+=+r[5]||0;a.vs+=+r[6]||0;});
-    RAW_UF=Object.keys(by).map(function(k){return by[k];});
-    _replaceObj(VIDAS_BY_CIDADE,{});(p.city||[]).forEach(function(r){var nm=r[0],ms=+r[1],dd=+r[2],uf=r[3]||'N/D',cid=r[4]||'N/D';if(!_dayOk(ms,dd))return;var c=_jsLeaf(VIDAS_BY_CIDADE,[nm,ms,uf,cid]);_inc(c,'v',r[5]);_inc(c,'vs',r[6]);});
-    return;
-  }
   var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas,vidas_sint');
   // vs = SUBCONJUNTO SINTRO de vd (filtro "Projetos"); mesma convencao do RAW de producao.
   RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0,vs:+r.vidas_sint||0};});
@@ -2743,66 +2758,6 @@ const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
 
-// ===== RECORTE DIARIO SOB DEMANDA ================================================================
-// O boot continua mensal. Ao personalizar De/Ate, baixa somente daily/core.json.gz e colapsa o
-// nivel DIA de volta ao mesmo contrato mensal que todo o dashboard ja consome. Leads pesados e
-// geografia tem sidecars separados, carregados apenas ao abrir suas abas.
-var _MONTH_CORE=null,_DAY_CACHE={},_DAY_CORE_LOADING=null;
-function _dayActive(){return Object.keys(DAY_RANGES).length>0;}
-function _dayOk(mm,dd){var r=DAY_RANGES[+mm];return !r||(dd>=r.from&&dd<=r.to);}
-function _clone(o){return JSON.parse(JSON.stringify(o));}
-function _replaceObj(dst,src){Object.keys(dst).forEach(function(k){delete dst[k];});if(src)Object.assign(dst,src);}
-function _sumTree(a,b){
-  if(a==null)return _clone(b);if(b==null)return a;
-  if(typeof a==='number'&&typeof b==='number')return a+b;
-  if(typeof a==='object'&&typeof b==='object'){
-    Object.keys(b).forEach(function(k){a[k]=a[k]==null?_clone(b[k]):_sumTree(a[k],b[k]);});return a;
-  }
-  return b;
-}
-function _collapseDayCube(cube){
-  var out={};Object.keys(cube||{}).forEach(function(nm){var bym=cube[nm],om=out[nm]={};
-    Object.keys(bym||{}).forEach(function(mm){var acc={};Object.keys(bym[mm]||{}).forEach(function(dd){if(_dayOk(+mm,+dd))acc=_sumTree(acc,bym[mm][dd]);});if(Object.keys(acc).length)om[mm]=acc;});
-    if(!Object.keys(om).length)delete out[nm];
-  });return out;
-}
-function _collapseDayRaw(rows){
-  var by={};(rows||[]).forEach(function(r){if(!_dayOk(+r[10],+r[18]))return;var k=r.slice(0,11).join('\u0001'),a=by[k];
-    if(!a){a=r.slice(0,18);for(var i=0;i<10;i++)if(String(a[i]).toUpperCase()==='NAN')a[i]='';a[11]=a[12]=a[13]=a[15]=a[16]=a[17]=0;by[k]=a;}
-    a[11]+=+r[11]||0;a[12]+=+r[12]||0;a[13]+=+r[13]||0;a[15]+=+r[15]||0;a[16]+=+r[16]||0;a[17]+=+r[17]||0;
-  });return Object.keys(by).map(function(k){return by[k];});
-}
-function _fetchGzipJson(rel){
-  if(_DAY_CACHE[rel])return _DAY_CACHE[rel];
-  _DAY_CACHE[rel]=fetch('./data/daily/'+rel+'.json.gz').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' em daily/'+rel);return r.arrayBuffer();}).then(function(buf){
-    var u=new Uint8Array(buf);if(!(u[0]===0x1f&&u[1]===0x8b))return JSON.parse(new TextDecoder().decode(u));
-    if(typeof DecompressionStream==='undefined')throw new Error('navegador sem suporte a gzip');
-    return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).json();
-  });return _DAY_CACHE[rel];
-}
-function _captureMonthlyCore(){if(_MONTH_CORE)return;_MONTH_CORE={raw:RAW.slice(),orig:_clone(ORIG_BY_NOME_MES),tipo:_clone(TIPO_BY_NOME_MES),leadTipo:_clone(LEADTIPO_BY_NOME_MES),leadProd:_clone(LEADTIPO_PROD)};}
-function _restoreMonthlyCore(){if(!_MONTH_CORE)return;RAW.length=0;_MONTH_CORE.raw.forEach(function(r){RAW.push(r.slice());});_replaceObj(ORIG_BY_NOME_MES,_MONTH_CORE.orig);_replaceObj(TIPO_BY_NOME_MES,_MONTH_CORE.tipo);_replaceObj(LEADTIPO_BY_NOME_MES,_MONTH_CORE.leadTipo);_replaceObj(LEADTIPO_PROD,_MONTH_CORE.leadProd);}
-function _jsLeaf(root,keys){var d=root;keys.forEach(function(k){k=String(k);if(!d[k])d[k]={};d=d[k];});return d;}
-function _inc(o,k,n){o[k]=(o[k]||0)+(+n||0);}
-function _applyDailyCore(p){
-  RAW.length=0;_collapseDayRaw(p.raw).forEach(function(r){RAW.push(r);});
-  var orig={},tipo={},leadTipo={},leadProd={},leadTot={};
-  (p.leads||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tl=r[5],t=+r[7]||0;if(!_dayOk(mm,dd))return;var lk=nm+'\u0001'+mm;leadTot[lk]=(leadTot[lk]||0)+t;var oi=KEY_ORIG_FULL.indexOf(og);if(oi>=0)_inc(_jsLeaf(orig,[nm,mm,KEY_ORIG_LBL[oi]]),'lt',t);_inc(_jsLeaf(leadTipo,[nm,mm,tl]),'lt',t);});
-  (p.sales||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],pr=r[3];if(!_dayOk(mm,dd)||!pr)return;var c=_jsLeaf(tipo,[nm,mm,pr]);_inc(c,'vd',r[4]);_inc(c,'vs',r[5]);});
-  Object.keys(tipo).forEach(function(nm){Object.keys(tipo[nm]).forEach(function(mm){Object.keys(tipo[nm][mm]).forEach(function(pr){tipo[nm][mm][pr].lt=leadTot[nm+'\u0001'+mm]||0;});});});
-  (p.vinc||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tl=r[5],pr=r[7],v=+r[8]||0,vs=+r[9]||0;if(!_dayOk(mm,dd))return;var oi=KEY_ORIG_FULL.indexOf(og);if(oi>=0){var co=_jsLeaf(orig,[nm,mm,KEY_ORIG_LBL[oi]]);_inc(co,'vd',v);_inc(co,'vs',vs);}var cl=_jsLeaf(leadTipo,[nm,mm,tl]);_inc(cl,'vd',v);_inc(cl,'vs',vs);if(pr){var cp=_jsLeaf(leadProd,[nm,mm,tl]);_inc(cp,pr,v);_inc(cp,pr+'#S',vs);}});
-  _replaceObj(ORIG_BY_NOME_MES,orig);_replaceObj(TIPO_BY_NOME_MES,tipo);_replaceObj(LEADTIPO_BY_NOME_MES,leadTipo);_replaceObj(LEADTIPO_PROD,leadProd);if(p.limits)DAY_LIMITS=p.limits;
-}
-function _invalidateLazy(){_LEADS_LOADED=false;_LEADS_LOADING=false;_replaceObj(ORIGEM_TAG_STATS,{});_replaceObj(ORIGEMFILA_STATS,{});_replaceObj(TIPOFILA_STATS,{});_GEO_LOADED=false;_GEO_LOADING=false;RAW_UF=[];_replaceObj(VIDAS_BY_CIDADE,{});}
-function _dayApplyMode(){
-  if(!_MONTH_CORE)return;
-  var el=document.getElementById('f_mes');if(el)el.classList.toggle('ms-day-loading',_dayActive());
-  if(!_dayActive()){_restoreMonthlyCore();_invalidateLazy();if(el)el.classList.remove('ms-day-loading');renderD();return;}
-  if(!_DAY_CORE_LOADING)_DAY_CORE_LOADING=_fetchGzipJson('core');
-  _DAY_CORE_LOADING.then(function(p){_applyDailyCore(p);_invalidateLazy();if(el)el.classList.remove('ms-day-loading');syncSel('f_mes');render();})
-    .catch(function(e){if(el)el.classList.remove('ms-day-loading');console.error('daily core',e);alert('Não foi possível carregar o recorte diário: '+(e.message||e));});
-}
-
 // ===== DADOS ESTATICOS (29/07/2026) -- esta pagina nao usa mais Supabase =======================
 // Comecou como contingencia (o banco caiu inteiro e esta casca, que nao tem dado embutido, abria
 // so' no banner de erro) e o David decidiu manter: as tabelas conversao_vendedor_* eram lidas SO'
@@ -2956,7 +2911,6 @@ function _initUI(){
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
-    _captureMonthlyCore();
     // ORIGEM_TAG_STATS / TIPOFILA_STATS / ORIGEMFILA_STATS -> lazy em _loadLeads() (aba "Analise dos Leads")
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}

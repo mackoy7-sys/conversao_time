@@ -59,9 +59,8 @@ O `index.html` tem um shim de ~50 linhas chamado **`_staticClient('./data')`** (
 | `data/conversao_vendedor_meta/_index.json.gz` | Lista das 18 chaves de cubo. O shim lê **este primeiro** para saber quais arquivos baixar |
 | `data/conversao_vendedor_meta/<CHAVE>.json.gz` | **1 arquivo por cubo** (`ORIGEM_TAG_STATS`, `ORIGEMFILA_STATS`, `TIPOFILA_STATS`, `SLA_BY_NOME`, `ORIG_BY_NOME_MES`, …) |
 | `data/conversao_vendedor_raw_uf.json.gz` · `data/conversao_vendedor_meta_uf/` | Recorte geográfico (aba *Estados & Cidades*; cubo `VIDAS_BY_CIDADE`) |
-| `data/daily/core.json.gz` | Eventos diários compactos usados pela Visão Geral, filtros, score e quartil. Só é baixado quando existe algum intervalo `De/Até` personalizado |
-| `data/daily/leads.json.gz` | Eventos diários dos cubos pesados de origem/tag/fila. Lazy-load adicional ao abrir *Análise dos Leads* com recorte diário ativo |
-| `data/daily/geo.json.gz` | Eventos diários de UF/cidade. Lazy-load adicional ao abrir *Estados & Cidades* com recorte diário ativo |
+| `data/daily/leads.json.gz` | Eventos diários de leads e vidas vinculadas. Só é baixado depois de aplicar o filtro `De/Até` dentro da aba *Análise dos Leads* |
+| `data/daily/core.json.gz` · `data/daily/geo.json.gz` | Sidecars gerados pelo pipeline e mantidos como reserva; a casca atual não os requisita |
 
 Três decisões que **não devem ser desfeitas sem entender o porquê**:
 
@@ -75,19 +74,20 @@ Três decisões que **não devem ser desfeitas sem entender o porquê**:
    a aba correspondente. Juntar tudo num arquivo faz o boot voltar de ~2s para ~9s.
 3. **`dt_carga` é a data do dado, não a data de hoje.** A casca usa `max(dt_carga)` para proratear a
    meta de volume do mês. Carimbar "hoje" num dado de ontem infla a projeção.
-4. **O boot continua mensal.** Os sidecars diários somam cerca de 9 MB gzip, mas nenhum deles entra no
-   carregamento inicial. `core` só desce ao personalizar dias; `leads` e `geo` continuam lazy por aba.
+4. **O boot e as abas gerais continuam mensais.** Nenhum sidecar diário entra no carregamento inicial.
+   A casca só requisita `daily/leads` quando o usuário aplica datas na aba *Análise dos Leads*.
 
-### Filtro diário e população do quartil
+### Filtro diário exclusivo da Análise dos Leads
 
-- O filtro **Mês** tem uma seta por competência. Ao expandir, o usuário escolhe `De` e `Até`
-  inclusivos; cada mês selecionado pode ter seu próprio intervalo. Mês sem intervalo personalizado
-  continua usando o payload mensal existente.
-- O mesmo intervalo corta cada fato por sua própria data: **lead pela data do atendimento** e
-  **vida pela data de cadastro da venda**. A meta de volume do período vira
-  `60 × dias selecionados ÷ dias do mês`.
-- Alterar mês/dias, origem, produto, tipo de lead, projeto ou modo de vidas **recalcula** score e
-  quartil, pois muda o período/métrica analisado.
+- O filtro global **Mês** voltou a ser o multisseletor simples, sem dropdown de dias.
+- A aba *Análise dos Leads* tem seu próprio `De/Até`. Quando aplicado, ele substitui o filtro Mês
+  apenas nas tabelas de Origem, Tipo, Situação, Fila e Vendedor; as demais abas continuam no mês.
+- O intervalo corta **leads pela data do atendimento** e **vidas/contratos vinculados pela data de
+  cadastro da venda**. Por isso Leads, Contratos, Vidas PF/PME/ADESÃO e conversões mudam juntos.
+- `Mês inteiro` limpa o recorte local e devolve essas tabelas ao filtro Mês do topo.
+
+### População do quartil
+
 - Os filtros organizacionais — **Vendedor, Supervisor, Unidade, Gestão, Times, Tempo de Casa e
   Status** — são apenas um **holofote**: escondem/mostram linhas, mas o quartil exibido permanece o
   calculado sobre toda a população válida daquele período. Administrativos e `NÃO MAPEADO`
