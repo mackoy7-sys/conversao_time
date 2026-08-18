@@ -103,6 +103,18 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 .ms-pop label:hover{background:#f1f5f9}
 .ms-pop label.ms-all{font-weight:600;border-bottom:1px solid #e2e8f0;margin-bottom:4px;border-radius:0;padding-bottom:7px}
 .ms-pop input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex:none}
+.ms-month{border-radius:6px}
+.ms-month:hover{background:#f8fafc}
+.ms-month-head{display:flex;align-items:center;gap:4px}
+.ms-month-head>label{flex:1}
+.ms-day-toggle{border:0;background:transparent;color:#64748b;cursor:pointer;width:26px;height:26px;border-radius:5px;font-size:11px}
+.ms-day-toggle:hover{background:#e2e8f0;color:#0072ce}
+.ms-day{display:none;grid-template-columns:1fr 1fr;gap:8px;padding:2px 8px 8px 28px}
+.ms-month.day-open .ms-day{display:grid}
+.ms-day label{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:0;font-size:10px;color:#64748b;text-transform:uppercase}
+.ms-day select{border:1px solid #cbd5e1;border-radius:6px;background:#fff;padding:5px 6px;font-size:12px;color:#1e293b}
+.ms-month.day-custom{background:#eff6ff}
+.ms-day-loading{opacity:.65;pointer-events:none}
 .sel{padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#f8fafc}
 .q-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap);margin-bottom:var(--gap)}
 @media(max-width:1100px){.q-grid{grid-template-columns:repeat(3,1fr)}}
@@ -504,28 +516,56 @@ function distinct(col,isMes){
   return a;
 }
 function lbl(v,isMes){return isMes?(MESNOME[v]||v):String(v);}
+var DAY_RANGES={};      // {mes:{from,to}}; ausencia = mes inteiro (payload mensal, sem custo extra)
+var DAY_LIMITS={};
+function _daysInMonth(mm){return new Date(2026,+mm,0).getDate();}
+function _dayOptions(max,sel){var h='';for(var d=1;d<=max;d++)h+='<option value="'+d+'"'+(d===sel?' selected':'')+'>'+d+'</option>';return h;}
 function buildMS(f){
   var el=document.getElementById(f.id);var vals=distinct(f.col,f.isMes);
   var pop='<input class="ms-search" placeholder="buscar..." oninput="msFilter(this)">';
   pop+='<label class="ms-all"><input type="checkbox" checked onchange="msAll(\''+f.id+'\',this)"> Todos</label>';
   vals.forEach(function(v){
-    pop+='<label data-t="'+String(lbl(v,f.isMes)).toLowerCase()+'"><input type="checkbox" value="'+String(v).replace(/"/g,'&quot;')+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,f.isMes)+'</label>';
+    if(f.isMes){var mx=(DAY_LIMITS[v]||{}).max||_daysInMonth(v),rg=DAY_RANGES[v]||{from:1,to:mx};
+      pop+='<div class="ms-month'+(DAY_RANGES[v]?' day-custom':'')+'" data-t="'+String(lbl(v,true)).toLowerCase()+'" data-month="'+v+'">'+
+        '<div class="ms-month-head"><label><input type="checkbox" value="'+v+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,true)+'</label>'+
+        '<button type="button" class="ms-day-toggle" onclick="dayExpand(event,'+v+')" title="Ajustar dias de '+lbl(v,true)+'">▸</button></div>'+
+        '<div class="ms-day"><label>De<select class="day-from" onchange="dayRangeChanged('+v+')">'+_dayOptions(mx,rg.from)+'</select></label>'+
+        '<label>Até<select class="day-to" onchange="dayRangeChanged('+v+')">'+_dayOptions(mx,rg.to)+'</select></label></div></div>';
+    }else pop+='<label data-t="'+String(lbl(v,false)).toLowerCase()+'"><input type="checkbox" value="'+String(v).replace(/"/g,'&quot;')+'" onchange="msChange(\''+f.id+'\')"> '+lbl(v,false)+'</label>';
   });
   el.innerHTML='<button class="ms-btn" onclick="msToggle(event,\''+f.id+'\')">Todos</button><div class="ms-pop">'+pop+'</div>';
 }
+function dayExpand(e,mm){e.preventDefault();e.stopPropagation();var r=document.querySelector('#f_mes .ms-month[data-month="'+mm+'"]');if(!r)return;r.classList.toggle('day-open');var b=r.querySelector('.ms-day-toggle');if(b)b.textContent=r.classList.contains('day-open')?'▾':'▸';if(r.classList.contains('day-open'))setTimeout(function(){r.scrollIntoView({block:'nearest'});},0);}
+function dayRangeChanged(mm){
+  var row=document.querySelector('#f_mes .ms-month[data-month="'+mm+'"]'),a=+row.querySelector('.day-from').value,b=+row.querySelector('.day-to').value;
+  if(a>b){b=a;row.querySelector('.day-to').value=b;}
+  var mx=(DAY_LIMITS[mm]||{}).max||_daysInMonth(mm);
+  if(a===1&&b===mx){delete DAY_RANGES[mm];row.classList.remove('day-custom');}
+  else{DAY_RANGES[mm]={from:a,to:b};row.classList.add('day-custom');}
+  var cb=row.querySelector('input[type=checkbox]');if(cb)cb.checked=true;
+  syncSel('f_mes');_dayApplyMode();
+}
 function msToggle(e,id){e.stopPropagation();var el=document.getElementById(id);var was=el.classList.contains('open');document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});if(!was)el.classList.add('open');}
-function msFilter(inp){var pop=inp.parentNode;pop.querySelectorAll('label[data-t]').forEach(function(l){l.style.display=l.getAttribute('data-t').indexOf(inp.value.toLowerCase())>=0?'':'none';});}
-function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;syncSel(id);renderD();}
-function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;syncSel(id);renderD();}
+function msFilter(inp){var pop=inp.parentNode;pop.querySelectorAll('[data-t]').forEach(function(l){l.style.display=l.getAttribute('data-t').indexOf(inp.value.toLowerCase())>=0?'':'none';});}
+function msAll(id,cb){var el=document.getElementById(id);el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){if(c!==cb)c.checked=false;});cb.checked=true;if(id==='f_mes'){DAY_RANGES={};el.querySelectorAll('.ms-month').forEach(function(r){r.classList.remove('day-custom');});}syncSel(id);if(id==='f_mes')_dayApplyMode();else renderD();}
+function msChange(id){var el=document.getElementById(id);var all=el.querySelector('.ms-all input');var any=Array.from(el.querySelectorAll('.ms-pop input[value]')).some(function(c){return c.checked;});if(all)all.checked=!any;if(id==='f_mes')el.querySelectorAll('.ms-month').forEach(function(r){var cb=r.querySelector('input[value]');if(cb&&!cb.checked){delete DAY_RANGES[+cb.value];r.classList.remove('day-custom');}});syncSel(id);if(id==='f_mes')_dayApplyMode();else renderD();}
 function syncSel(id){
   var f=FILTERS.find(function(x){return x.id===id;});f.sel.clear();
   var el=document.getElementById(id);
   el.querySelectorAll('.ms-pop input[value]').forEach(function(c){if(c.checked)f.sel.add(f.isMes?parseInt(c.value):c.value);});
   var btn=el.querySelector('.ms-btn');
   if(f.sel.size===0){btn.textContent='Todos';btn.classList.remove('act');}
-  else{var arr=Array.from(f.sel).map(function(v){return lbl(v,f.isMes);});btn.textContent=f.sel.size<=2?arr.join(', '):f.sel.size+' selecionados';btn.classList.add('act');}
+  else{var arr=Array.from(f.sel).map(function(v){var s=lbl(v,f.isMes),r=f.isMes?DAY_RANGES[v]:null;return r?s+' '+r.from+'–'+r.to:s;});btn.textContent=f.sel.size<=2?arr.join(', '):f.sel.size+' selecionados';btn.classList.add('act');}
 }
-function resetF(){FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});var sb=document.getElementById('tbl_busca');if(sb)sb.value='';render();}
+function _applyDefaultMonth(){
+  var f=FILTERS.find(function(x){return x.id==='f_mes';}),el=document.getElementById('f_mes');if(!f||!el)return;
+  var vals=Array.from(el.querySelectorAll('.ms-pop input[value]')).map(function(c){return +c.value;}).sort(function(a,b){return a-b;}),p=String(REF_DATE||'').match(/^(\d{1,2})\/(\d{1,2})\/\d{4}$/),mm=p?+p[2]:+MES_FIM;
+  if(vals.indexOf(mm)<0)mm=vals.length?vals[vals.length-1]:null;
+  el.querySelectorAll('.ms-pop input[type=checkbox]').forEach(function(c){c.checked=mm!=null&&c.value===String(mm);});
+  var all=el.querySelector('.ms-all input');if(all)all.checked=false;
+  syncSel('f_mes');
+}
+function resetF(){DAY_RANGES={};FILTERS.forEach(function(f){f.sel.clear();var el=document.getElementById(f.id);el.querySelectorAll('.ms-pop input').forEach(function(c){c.checked=c.classList.contains('ms-all')||c.parentNode.classList.contains('ms-all');});el.querySelectorAll('.ms-month').forEach(function(r){r.classList.remove('day-custom');});var all=el.querySelector('.ms-all input');if(all)all.checked=true;var btn=el.querySelector('.ms-btn');btn.textContent='Todos';btn.classList.remove('act');});_applyDefaultMonth();var sb=document.getElementById('tbl_busca');if(sb)sb.value='';_dayApplyMode();}
 document.addEventListener('click',function(e){if(e.target.closest('.ms'))return;document.querySelectorAll('.ms.open').forEach(function(x){x.classList.remove('open');});});   // fecha so em clique FORA do filtro; clicar numa opcao/busca mantem aberto (marcar varias)
 
 // ===== Filtro "Projetos" (SINTRO) — pedido David 02/08/2026 =====
@@ -702,7 +742,12 @@ function volTarget(){
   var rp=refParts(),months=selectedMonths();
   if(!rp)return VOL_TARGET_MES*months.length;
   var dim=new Date(rp.y,rp.mo,0).getDate();var fac=dim>0?Math.min(1,rp.d/dim):1;
-  var t=0;months.forEach(function(mm){ if(mm<rp.mo)t+=VOL_TARGET_MES; else if(mm===rp.mo)t+=VOL_TARGET_MES*fac; });
+  var t=0;months.forEach(function(mm){
+    var dr=DAY_RANGES[+mm];
+    if(dr){var md=_daysInMonth(+mm);t+=VOL_TARGET_MES*Math.max(0,dr.to-dr.from+1)/md;}
+    else if(mm<rp.mo)t+=VOL_TARGET_MES;
+    else if(mm===rp.mo)t+=VOL_TARGET_MES*fac;
+  });
   if(t<=0)t=VOL_TARGET_MES;   // guarda p/ seleção só de mês futuro (evita divisão por zero)
   return t;
 }
@@ -771,6 +816,21 @@ function assignQuartis(a,noAdm){
   var mr=rest.length;
   rest.forEach(function(g,j){g.q=j<mr/3?'Q2':j<2*mr/3?'Q3':'Q4';});
 }
+// Populacao do quartil = periodo/metricas; filtros organizacionais sao apenas "holofote".
+// Isto vale para Vendedor, Supervisor, Unidade, Gestao, Times, Tempo de Casa e Status e alimenta
+// todas as badges/tabelas a partir da mesma referencia.
+var WHO_FILTER_IDS=['f_nome','f_sup','f_unidade','f_gestao','f_org','f_faixa','f_status'];
+var _QV_POP_CACHE={};
+function withWhoNeutralized(fn){var saved=FILTERS.map(function(f){return f.sel;});FILTERS.forEach(function(f){if(WHO_FILTER_IDS.indexOf(f.id)>=0)f.sel=new Set();});try{return fn();}finally{FILTERS.forEach(function(f,i){f.sel=saved[i];});}}
+function _qvPopSig(gcol){var mf=FILTERS.find(function(f){return f.id==='f_mes';}),m=mf?Array.from(mf.sel).sort():[];return [gcol,m.join(','),JSON.stringify(DAY_RANGES),projMode(),(document.getElementById('f_vinc')||{}).value||'',(document.getElementById('f_orig_cross')||{}).value||'',(document.getElementById('f_tipo_cross')||{}).value||'',(document.getElementById('f_tipolead_cross')||{}).value||'',_dayActive()?'D':'M'].join('|');}
+function quartilePopulation(gcol,noAdm){
+  var sig=_qvPopSig(gcol);if(_QV_POP_CACHE[sig])return _QV_POP_CACHE[sig];
+  var rows=withWhoNeutralized(function(){return filtered().filter(function(r){var k=r[gcol];return r[C.GESTAO]!=='ADMINISTRATIVO'&&!qvAdmExcl(r[C.NOME])&&k&&k!=='NÃO MAPEADO'&&k!=='N/D'&&k!=='ADMINISTRATIVO';});});
+  var m={};rows.forEach(function(r){var k=r[gcol];if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};var g=m[k];g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._names.add(r[C.NOME]);g._rows.push(r);});
+  var a=Object.values(m);crossScope(a);assignQuartis(a,noAdm);_QV_POP_CACHE={};_QV_POP_CACHE[sig]=a;return a;
+}
+function _copyQuartile(dst,src){['_qvAdm','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
+function applyQuartileReference(groups,gcol,noAdm){var map={};quartilePopulation(gcol,noAdm).forEach(function(g){map[g.k]=g;});groups.forEach(function(g){_copyQuartile(g,map[g.k]);});return groups;}
 // score 0-100 (o mesmo que define o quartil) colorido pela cor do quartil
 var QCOL={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
 function scoreHTML(g){var v=(g&&g._score!=null)?(g._score*100).toFixed(1):'—';return '<b style="color:'+((g&&QCOL[g.q])||'#334155')+'">'+v+'</b>';}
@@ -834,7 +894,7 @@ function render(){
     if(VIEWBY==='sup')return g.k&&g.k!=='N/D'&&g.k!=='NÃO MAPEADO';
     return g.k!=='NÃO MAPEADO';
   });
-  assignQuartis(bypTbl,VIEWBY!=='nome');   // exclusão das vendedoras ADM só faz sentido na visão por pessoa
+  applyQuartileReference(bypTbl,gcol,VIEWBY!=='nome');
   var fqSort=(document.getElementById('tbl_quartil')||{}).value||'';
   if(fqSort){
     bypTbl.sort(function(x,y){return (y._score||0)-(x._score||0);});   // por quartil: ordena por score (desc)
@@ -910,9 +970,11 @@ function _tagClass(tag){if(!tag||tag==='SEM TAG')return 'S';return _tagIsProd(ta
 // precedencia do funil antigo). Retorna {t,c,v,vpf,vpme,vade} — usado tanto no nivel origem quanto nos
 // niveis Produtivo/Improdutivo e Tag (somando as celulas), garantindo pai = soma dos filhos sob qq filtro.
 function _ogCells(s,leadSel,prodSel){
-  var t=leadSel?((s.tT&&s.tT[leadSel])||0):s.t;
-  var v=leadSel?((s.vT&&s.vT[leadSel])||0):prodSel?((s.vP&&s.vP[prodSel])||0):s.v;
-  var c=leadSel?((s.cT&&s.cT[leadSel])||0):prodSel?((s.cP&&s.cP[prodSel])||0):s.c;
+  // No sidecar diario a celula e' esparsa: pode existir so' o evento de lead ou so' a venda
+  // vinculada dentro do intervalo. Normalizar ausencias evita contaminar a agregacao com NaN.
+  var t=leadSel?((s.tT&&s.tT[leadSel])||0):(s.t||0);
+  var v=leadSel?((s.vT&&s.vT[leadSel])||0):prodSel?((s.vP&&s.vP[prodSel])||0):(s.v||0);
+  var c=leadSel?((s.cT&&s.cT[leadSel])||0):prodSel?((s.cP&&s.cP[prodSel])||0):(s.c||0);
   var vpf,vpme,vade;
   if(leadSel){var m=(s.vTP&&s.vTP[leadSel])||{};vpf=m.PF||0;vpme=m.PME||0;vade=m.ADESAO||0;}
   else{var P=s.vP||{};
@@ -1317,11 +1379,13 @@ function tipoFilaAgg(rows){
       var byf=d[tp];
       for(var fl in byf){
         var s=byf[fl];
-        T.t+=s.t;T.p+=s.p;T.c+=s.c;T.v+=s.v;_addVp(T,s.vp);
+        // Assim como o cubo por origem, o payload diario por tipo/fila e' esparso.
+        var st=s.t||0,sp=s.p||0,sc=s.c||0,sv=s.v||0;
+        T.t+=st;T.p+=sp;T.c+=sc;T.v+=sv;_addVp(T,s.vp);
         var F=T.filas[fl]; if(!F)F=T.filas[fl]={fila:fl,t:0,p:0,c:0,v:0,vend:{}};
-        F.t+=s.t;F.p+=s.p;F.c+=s.c;F.v+=s.v;_addVp(F,s.vp);
+        F.t+=st;F.p+=sp;F.c+=sc;F.v+=sv;_addVp(F,s.vp);
         var V=F.vend[nome]; if(!V)V=F.vend[nome]={nome:nome,t:0,p:0,c:0,v:0};
-        V.t+=s.t;V.p+=s.p;V.c+=s.c;V.v+=s.v;_addVp(V,s.vp);
+        V.t+=st;V.p+=sp;V.c+=sc;V.v+=sv;_addVp(V,s.vp);
       }
     }
   });
@@ -1381,6 +1445,13 @@ function _tipoFill(tableId,rows){
 // Lazy-load dos 3 cubos pesados (ORIGEM_TAG_STATS/ORIGEMFILA_STATS/TIPOFILA_STATS ~17,5 MB) — so'
 // baixados na 1a abertura da aba "Analise dos Leads". Espelha _loadGeo(); tira ~17,5 MB do boot.
 async function _loadLeads(){
+  if(_dayActive()){
+    var p=await _fetchGzipJson('leads'),tag={},fila={},tf={};
+    (p.leads||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],t=+r[7]||0,pr=+r[8]||0;if(!_dayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]);_inc(a,'t',t);_inc(_jsLeaf(a,['tT']),tl,t);var b=_jsLeaf(fila,[nm,mm,og,fl]);_inc(b,'t',t);_inc(_jsLeaf(b,['tT']),tl,t);var c=_jsLeaf(tf,[nm,mm,tl,fl]);_inc(c,'t',t);_inc(c,'p',pr);});
+    (p.vinc||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tg=r[4],tl=r[5],fl=r[6],pr=r[7],v=+r[8]||0;if(!_dayOk(mm,dd))return;var a=_jsLeaf(tag,[nm,mm,og,tg]),b=_jsLeaf(fila,[nm,mm,og,fl]),c=_jsLeaf(tf,[nm,mm,tl,fl]);[a,b,c].forEach(function(x){_inc(x,'v',v);});if(pr){_inc(_jsLeaf(a,['vP']),pr,v);_inc(_jsLeaf(b,['vP']),pr,v);_inc(_jsLeaf(c,['vp']),pr,v);} _inc(_jsLeaf(a,['vT']),tl,v);_inc(_jsLeaf(b,['vT']),tl,v);if(pr){_inc(_jsLeaf(a,['vTP',tl]),pr,v);_inc(_jsLeaf(b,['vTP',tl]),pr,v);} _inc(a,'c',r[10]);if(pr)_inc(_jsLeaf(a,['cP']),pr,r[11]);_inc(_jsLeaf(a,['cT']),tl,r[12]);_inc(b,'c',r[13]);if(pr)_inc(_jsLeaf(b,['cP']),pr,r[14]);_inc(_jsLeaf(b,['cT']),tl,r[15]);_inc(c,'c',r[16]);});
+    _replaceObj(ORIGEM_TAG_STATS,tag);_replaceObj(ORIGEMFILA_STATS,fila);_replaceObj(TIPOFILA_STATS,tf);
+    return;
+  }
   var mv=await SB.from('conversao_vendedor_meta').select('chave,payload').in('chave',['ORIGEM_TAG_STATS','ORIGEMFILA_STATS','TIPOFILA_STATS']);
   if(mv.error)throw mv.error;
   (mv.data||[]).forEach(function(r){
@@ -1433,7 +1504,7 @@ function renderComp(rows){
   });
   a.sort(function(x,y){return y.vd-x.vd;});
   a.forEach(function(g,i){g.rank=i+1;});   // rank fixo (antes da busca)
-  assignQuartis(a,COMP_VIEWBY!=='nome');
+  applyQuartileReference(a,gcol,COMP_VIEWBY!=='nome');
   var fq=(document.getElementById('comp_quartil')||{}).value||'';
   if(fq)a=a.filter(function(g){return g.q===fq;});
   var showScore=!!fq;
@@ -1895,7 +1966,7 @@ function renderExtrato(){
   });
   var ags=Object.values(m);
   crossScope(ags);   // reescopa por Tipo CT/Origem — mantem o rank/quartil/KPIs consistentes com o Detalhe (respeita Mes tambem)
-  assignQuartis(ags);
+  applyQuartileReference(ags,C.NOME,false);
   ags.sort(function(a,b){return (b._score||0)-(a._score||0);});   // ADM (score null) vao pro fim
   var ag=ags.find(function(a){return a.nome===nome;});
   if(!ag){
@@ -2096,6 +2167,13 @@ var _GEO_ROWS=[], _GEOV_ROWS=[];
 var GEO_SORT={key:'vd',dir:'desc'}, GEO_OPEN={}, GEO_SHOWALL={}, GEO_MODE='cid';
 var GEOV_SORT={key:'vd',dir:'desc'}, GEOV_OPEN={}, GEOV_SHOWALL={};
 async function _loadGeo(){
+  if(_dayActive()){
+    var p=await _fetchGzipJson('geo'),by={};
+    (p.raw||[]).forEach(function(r){var nm=r[0],ms=+r[1],dd=+r[2],uf=r[3]||'N/D';if(!_dayOk(ms,dd))return;var k=nm+'\u0001'+ms+'\u0001'+uf,a=by[k];if(!a)a=by[k]={nm:nm,ms:ms,uf:uf,lt:0,vd:0,vs:0};a.lt+=+r[4]||0;a.vd+=+r[5]||0;a.vs+=+r[6]||0;});
+    RAW_UF=Object.keys(by).map(function(k){return by[k];});
+    _replaceObj(VIDAS_BY_CIDADE,{});(p.city||[]).forEach(function(r){var nm=r[0],ms=+r[1],dd=+r[2],uf=r[3]||'N/D',cid=r[4]||'N/D';if(!_dayOk(ms,dd))return;var c=_jsLeaf(VIDAS_BY_CIDADE,[nm,ms,uf,cid]);_inc(c,'v',r[5]);_inc(c,'vs',r[6]);});
+    return;
+  }
   var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas,vidas_sint');
   // vs = SUBCONJUNTO SINTRO de vd (filtro "Projetos"); mesma convencao do RAW de producao.
   RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0,vs:+r.vidas_sint||0};});
@@ -2309,26 +2387,7 @@ function renderUFTable(rows){
   });
 }
 function quartilMap(){
-  var _nameF=null;for(var _i=0;_i<FILTERS.length;_i++){if(FILTERS[_i].id==='f_nome'){_nameF=FILTERS[_i];break;}}
-  var _saved=_nameF?_nameF.sel:null;
-  if(_nameF)_nameF.sel=new Set();
-  var rows=filtered().filter(function(r){
-    if(r[C.GESTAO]==='ADMINISTRATIVO')return false;
-    var k=r[C.NOME];
-    if(k==='NÃO MAPEADO'||k==='N/D'||k==='ADMINISTRATIVO')return false;
-    return true;
-  });
-  if(_nameF)_nameF.sel=_saved;
-  var m={};
-  rows.forEach(function(r){
-    var k=r[C.NOME];
-    if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,_names:new Set(),_rows:[]};
-    m[k].lt+=r[C.LT];m[k].vd+=r[C.VD];m[k].vv+=r[C.VV];m[k]._names.add(r[C.NOME]);m[k]._rows.push(r);
-  });
-  var ags=Object.values(m);
-  crossScope(ags);
-  assignQuartis(ags);
-  var map={};ags.forEach(function(g){map[g.k]={q:g.q,score:g._score};});
+  var map={};quartilePopulation(C.NOME,false).forEach(function(g){map[g.k]={q:g.q,score:g._score};});
   return map;
 }
 function qBadge(q){
@@ -2525,36 +2584,12 @@ function qvSortVal(ag,key){
 function renderQuartilV(){
   var vbSel=document.getElementById('qv_viewby').value;
   var gcol=vbSel==='sup'?C.SUP:vbSel==='gestao'?C.GESTAO:C.NOME;
-  // O filtro de Vendedor (f_nome) é "holofote": NÃO altera a população usada para score/quartil/cards,
-  // apenas filtra as linhas exibidas na tabela. Caso contrário, ao selecionar 1 nome o ranking teria
-  // só 1 pessoa e o percentil/score iria a 100 (divergente da visão geral). Calculamos a população
-  // ignorando f_nome e filtramos a tabela no final.
-  var _nameF=null;for(var _i=0;_i<FILTERS.length;_i++){if(FILTERS[_i].id==='f_nome'){_nameF=FILTERS[_i];break;}}
-  var nameSel=_nameF?new Set(_nameF.sel):new Set();
-  var _savedNameSel=_nameF?_nameF.sel:null;
-  if(_nameF)_nameF.sel=new Set();              // neutraliza f_nome para a população
-  // Exclui buckets não-vendedores do ranking (ADMINISTRATIVO / NÃO MAPEADO / N/D)
-  var rows=filtered().filter(function(r){
-    if(r[C.GESTAO]==='ADMINISTRATIVO')return false;
-    if(qvAdmExcl(r[C.NOME]))return false;   // vendedoras ADM (cálculo próprio): fora do ranking em qualquer visão
-    var k=r[gcol];
-    if(k==='NÃO MAPEADO'||k==='N/D'||k==='ADMINISTRATIVO')return false;
-    return true;
-  });
-  if(_nameF)_nameF.sel=_savedNameSel;          // restaura a seleção do usuário
-  var m={};
-  rows.forEach(function(r){
-    var k=r[gcol];
-    if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};
-    m[k].lt+=r[C.LT]; m[k].vd+=r[C.VD]; m[k].vv+=r[C.VV]; m[k]._names.add(r[C.NOME]); m[k]._rows.push(r);
-  });
-  var ags=Object.values(m);
-  // Origem/Tipo CT (Ano Todo): reescopa lt/vd/vv linha a linha (nome+mes) dentro de cada grupo —
-  // respeita o filtro de Mes tambem (fix 03/07/2026). Centralizado em crossScope() (mesma função
-  // usada no Detalhe/KPIs/Extrato) — antes essa logica vivia so aqui, duplicada.
-  crossScope(ags);
+  // Populacao/score/quartil vem do periodo inteiro. Todos os filtros organizacionais apenas definem
+  // quais chaves ficam visiveis; nunca alteram percentis, portas ou score.
+  var popAgs=quartilePopulation(gcol,vbSel!=='nome'),visKeys=new Set();
+  filtered().forEach(function(r){var k=r[gcol];if(r[C.GESTAO]!=='ADMINISTRATIVO'&&!qvAdmExcl(r[C.NOME])&&k&&k!=='NÃO MAPEADO'&&k!=='N/D'&&k!=='ADMINISTRATIVO')visKeys.add(k);});
+  var ags=popAgs.filter(function(g){return visKeys.has(g.k);});
   var vincSel=(document.getElementById('f_vinc')||{value:'vd'}).value;
-  assignQuartis(ags);   // assignQuartis já define ag._effVd conforme o filtro VIDAS (vd/vv)
   // Leads/Vidas/Conv exibidos seguem os filtros do topo (inclusive Mês), base mesmo-mês.
   // O Score/Atingimento usa a base de origens POR MÊS (ORIG_BY_NOME_MES) — acompanha o filtro de Mês, igual ao volume.
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
@@ -2659,8 +2694,6 @@ function renderQuartilV(){
 
   var filterQ=document.getElementById('qv_filter_q').value;
   var tableRows=ags.filter(function(ag){return !filterQ||ag.q===filterQ;});
-  // filtro holofote por nome: só afeta as linhas exibidas (score/posição já calculados sobre a população)
-  if(nameSel.size>0 && vbSel==='nome')tableRows=tableRows.filter(function(ag){return nameSel.has(ag.k);});
   tableRows.sort(function(a,b){
     var av=qvSortVal(a,QV_SORT.key),bv=qvSortVal(b,QV_SORT.key),r;
     if(typeof av==='string'||typeof bv==='string')r=String(av).localeCompare(String(bv),'pt-BR');
@@ -2709,6 +2742,66 @@ var _LEADS_LOADED=false, _LEADS_LOADING=false;   // lazy-load dos 3 cubos pesado
 const TIPO_BY_NOME_MES={};
 const KEY_ORIG_LBL=["Espon.","C.Abnd.","C.Abnd.Con.","Eugen.","Conecta"];
 const KEY_ORIG_FULL=["ESPONTÂNEO","CARRINHO ABANDONADO","CARRINHO ABANDONADO CONECTA","EUGENIA","CONECTA"];
+
+// ===== RECORTE DIARIO SOB DEMANDA ================================================================
+// O boot continua mensal. Ao personalizar De/Ate, baixa somente daily/core.json.gz e colapsa o
+// nivel DIA de volta ao mesmo contrato mensal que todo o dashboard ja consome. Leads pesados e
+// geografia tem sidecars separados, carregados apenas ao abrir suas abas.
+var _MONTH_CORE=null,_DAY_CACHE={},_DAY_CORE_LOADING=null;
+function _dayActive(){return Object.keys(DAY_RANGES).length>0;}
+function _dayOk(mm,dd){var r=DAY_RANGES[+mm];return !r||(dd>=r.from&&dd<=r.to);}
+function _clone(o){return JSON.parse(JSON.stringify(o));}
+function _replaceObj(dst,src){Object.keys(dst).forEach(function(k){delete dst[k];});if(src)Object.assign(dst,src);}
+function _sumTree(a,b){
+  if(a==null)return _clone(b);if(b==null)return a;
+  if(typeof a==='number'&&typeof b==='number')return a+b;
+  if(typeof a==='object'&&typeof b==='object'){
+    Object.keys(b).forEach(function(k){a[k]=a[k]==null?_clone(b[k]):_sumTree(a[k],b[k]);});return a;
+  }
+  return b;
+}
+function _collapseDayCube(cube){
+  var out={};Object.keys(cube||{}).forEach(function(nm){var bym=cube[nm],om=out[nm]={};
+    Object.keys(bym||{}).forEach(function(mm){var acc={};Object.keys(bym[mm]||{}).forEach(function(dd){if(_dayOk(+mm,+dd))acc=_sumTree(acc,bym[mm][dd]);});if(Object.keys(acc).length)om[mm]=acc;});
+    if(!Object.keys(om).length)delete out[nm];
+  });return out;
+}
+function _collapseDayRaw(rows){
+  var by={};(rows||[]).forEach(function(r){if(!_dayOk(+r[10],+r[18]))return;var k=r.slice(0,11).join('\u0001'),a=by[k];
+    if(!a){a=r.slice(0,18);for(var i=0;i<10;i++)if(String(a[i]).toUpperCase()==='NAN')a[i]='';a[11]=a[12]=a[13]=a[15]=a[16]=a[17]=0;by[k]=a;}
+    a[11]+=+r[11]||0;a[12]+=+r[12]||0;a[13]+=+r[13]||0;a[15]+=+r[15]||0;a[16]+=+r[16]||0;a[17]+=+r[17]||0;
+  });return Object.keys(by).map(function(k){return by[k];});
+}
+function _fetchGzipJson(rel){
+  if(_DAY_CACHE[rel])return _DAY_CACHE[rel];
+  _DAY_CACHE[rel]=fetch('./data/daily/'+rel+'.json.gz').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' em daily/'+rel);return r.arrayBuffer();}).then(function(buf){
+    var u=new Uint8Array(buf);if(!(u[0]===0x1f&&u[1]===0x8b))return JSON.parse(new TextDecoder().decode(u));
+    if(typeof DecompressionStream==='undefined')throw new Error('navegador sem suporte a gzip');
+    return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).json();
+  });return _DAY_CACHE[rel];
+}
+function _captureMonthlyCore(){if(_MONTH_CORE)return;_MONTH_CORE={raw:RAW.slice(),orig:_clone(ORIG_BY_NOME_MES),tipo:_clone(TIPO_BY_NOME_MES),leadTipo:_clone(LEADTIPO_BY_NOME_MES),leadProd:_clone(LEADTIPO_PROD)};}
+function _restoreMonthlyCore(){if(!_MONTH_CORE)return;RAW.length=0;_MONTH_CORE.raw.forEach(function(r){RAW.push(r.slice());});_replaceObj(ORIG_BY_NOME_MES,_MONTH_CORE.orig);_replaceObj(TIPO_BY_NOME_MES,_MONTH_CORE.tipo);_replaceObj(LEADTIPO_BY_NOME_MES,_MONTH_CORE.leadTipo);_replaceObj(LEADTIPO_PROD,_MONTH_CORE.leadProd);}
+function _jsLeaf(root,keys){var d=root;keys.forEach(function(k){k=String(k);if(!d[k])d[k]={};d=d[k];});return d;}
+function _inc(o,k,n){o[k]=(o[k]||0)+(+n||0);}
+function _applyDailyCore(p){
+  RAW.length=0;_collapseDayRaw(p.raw).forEach(function(r){RAW.push(r);});
+  var orig={},tipo={},leadTipo={},leadProd={},leadTot={};
+  (p.leads||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tl=r[5],t=+r[7]||0;if(!_dayOk(mm,dd))return;var lk=nm+'\u0001'+mm;leadTot[lk]=(leadTot[lk]||0)+t;var oi=KEY_ORIG_FULL.indexOf(og);if(oi>=0)_inc(_jsLeaf(orig,[nm,mm,KEY_ORIG_LBL[oi]]),'lt',t);_inc(_jsLeaf(leadTipo,[nm,mm,tl]),'lt',t);});
+  (p.sales||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],pr=r[3];if(!_dayOk(mm,dd)||!pr)return;var c=_jsLeaf(tipo,[nm,mm,pr]);_inc(c,'vd',r[4]);_inc(c,'vs',r[5]);});
+  Object.keys(tipo).forEach(function(nm){Object.keys(tipo[nm]).forEach(function(mm){Object.keys(tipo[nm][mm]).forEach(function(pr){tipo[nm][mm][pr].lt=leadTot[nm+'\u0001'+mm]||0;});});});
+  (p.vinc||[]).forEach(function(r){var nm=r[0],mm=+r[1],dd=+r[2],og=r[3],tl=r[5],pr=r[7],v=+r[8]||0,vs=+r[9]||0;if(!_dayOk(mm,dd))return;var oi=KEY_ORIG_FULL.indexOf(og);if(oi>=0){var co=_jsLeaf(orig,[nm,mm,KEY_ORIG_LBL[oi]]);_inc(co,'vd',v);_inc(co,'vs',vs);}var cl=_jsLeaf(leadTipo,[nm,mm,tl]);_inc(cl,'vd',v);_inc(cl,'vs',vs);if(pr){var cp=_jsLeaf(leadProd,[nm,mm,tl]);_inc(cp,pr,v);_inc(cp,pr+'#S',vs);}});
+  _replaceObj(ORIG_BY_NOME_MES,orig);_replaceObj(TIPO_BY_NOME_MES,tipo);_replaceObj(LEADTIPO_BY_NOME_MES,leadTipo);_replaceObj(LEADTIPO_PROD,leadProd);if(p.limits)DAY_LIMITS=p.limits;
+}
+function _invalidateLazy(){_LEADS_LOADED=false;_LEADS_LOADING=false;_replaceObj(ORIGEM_TAG_STATS,{});_replaceObj(ORIGEMFILA_STATS,{});_replaceObj(TIPOFILA_STATS,{});_GEO_LOADED=false;_GEO_LOADING=false;RAW_UF=[];_replaceObj(VIDAS_BY_CIDADE,{});}
+function _dayApplyMode(){
+  if(!_MONTH_CORE)return;
+  var el=document.getElementById('f_mes');if(el)el.classList.toggle('ms-day-loading',_dayActive());
+  if(!_dayActive()){_restoreMonthlyCore();_invalidateLazy();if(el)el.classList.remove('ms-day-loading');renderD();return;}
+  if(!_DAY_CORE_LOADING)_DAY_CORE_LOADING=_fetchGzipJson('core');
+  _DAY_CORE_LOADING.then(function(p){_applyDailyCore(p);_invalidateLazy();if(el)el.classList.remove('ms-day-loading');syncSel('f_mes');render();})
+    .catch(function(e){if(el)el.classList.remove('ms-day-loading');console.error('daily core',e);alert('Não foi possível carregar o recorte diário: '+(e.message||e));});
+}
 
 // ===== DADOS ESTATICOS (29/07/2026) -- esta pagina nao usa mais Supabase =======================
 // Comecou como contingencia (o banco caiu inteiro e esta casca, que nao tem dado embutido, abria
@@ -2826,6 +2919,8 @@ async function _fetchAll(t,c,applyFn){
 }
 function _initUI(){
   FILTERS.forEach(buildMS);
+  // Entrada padrao enxuta: mes da data de referencia dos dados (fallback = ultimo mes disponivel).
+  _applyDefaultMonth();
   (function(){var dl=document.getElementById('ext_list');var s=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')s.add(r[C.NOME]);});dl.innerHTML=Array.from(s).sort(function(a,b){return a.localeCompare(b,'pt-BR');}).map(function(n){return '<option value="'+n.replace(/"/g,'&quot;')+'">';}).join('');})();
   buildGestaoChips();
   render();
@@ -2861,6 +2956,7 @@ function _initUI(){
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
+    _captureMonthlyCore();
     // ORIGEM_TAG_STATS / TIPOFILA_STATS / ORIGEMFILA_STATS -> lazy em _loadLeads() (aba "Analise dos Leads")
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
