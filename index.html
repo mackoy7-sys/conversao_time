@@ -175,7 +175,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <div class="fg"><label>Status</label><div class="ms" id="f_status"></div></div>
 <div class="fg"><label>Mês</label><div class="ms" id="f_mes"></div></div>
 <button class="reset" onclick="resetF()">Limpar</button>
-<button id="btn_vendas_mes" onclick="downloadVendasMesCSV()" title="Baixa a base de vendas do mês corrente (1 linha por vida, sem telefone/CPF) com o Session ID do lead quando a vida está vinculada a uma conversa do GUP" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Baixar base de vendas do mês (CSV)</button>
+<button id="btn_vendas_mes" onclick="downloadVendasMesCSV()" title="Baixa a base de vendas do mês corrente (1 linha por vida, sem telefone/CPF) com o Session ID do lead quando a vida está vinculada a uma conversa do GUP" style="align-self:end;grid-column:span 2;white-space:nowrap;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;height:37px">⬇ Base de vendas.csv</button>
 </div>
 
 <div id="tab-geral" class="tab-panel active">
@@ -2610,7 +2610,7 @@ async function downloadVendasMesCSV(){
     console.error('vendas_mes',e);
     alert('Não foi possível baixar a base de vendas do mês: '+(e.message||e));
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='⬇ Baixar base de vendas do mês (CSV)';}
+    if(btn){btn.disabled=false;btn.textContent='⬇ Base de vendas.csv';}
   }
 }
 // ---- ordenacao da tabela "Ranking por Quartil" (clique no header, mesma UX do Detalhe por Vendedor) ----
