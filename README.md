@@ -7,6 +7,11 @@ Dashboard de conversão de leads → vidas por vendedor (leads da GUP × vendas 
 Abas: *Visão Geral*, *Análise dos Leads*, *Estados & Cidades*, *Análise de Quartil*, *Próprio × Terceiros*,
 *Tempo de Casa*, *Extrato do Vendedor*.
 
+Na barra de filtros do topo (visível em qualquer aba) tem o botão **"⬇ Baixar base de vendas do mês
+(CSV)"** (24/08/2026) — baixa 1 linha por vida do **mês corrente**, sem telefone/CPF/nome de cliente,
+com o **Session ID** do lead do GUP quando a venda está vinculada por telefone (`vinculo_via ==
+'Telefone'`). Vínculo por datalake (PME/ADESÃO) não tem sessão de chat, fica vazio — é esperado.
+
 ---
 
 ## ⛔ Regra de ouro
@@ -61,6 +66,7 @@ O `index.html` tem um shim de ~50 linhas chamado **`_staticClient('./data')`** (
 | `data/conversao_vendedor_raw_uf.json.gz` · `data/conversao_vendedor_meta_uf/` | Recorte geográfico (aba *Estados & Cidades*; cubo `VIDAS_BY_CIDADE`) |
 | `data/daily/leads.json.gz` | Eventos diários de leads e vidas vinculadas. Só é baixado depois de aplicar o filtro `De/Até` dentro da aba *Análise dos Leads* |
 | `data/daily/core.json.gz` · `data/daily/geo.json.gz` | Sidecars gerados pelo pipeline e mantidos como reserva; a casca atual não os requisita |
+| `data/vendas_mes.json.gz` | **(24/08/2026)** 1 linha por vida do **mês corrente**, SEM PII de cliente (sem telefone/CPF/nome) — alimenta o botão "⬇ Baixar base de vendas do mês". Buscado por `fetch` direto (fora do shim `_staticClient`, mesmo padrão de `daily/leads.json.gz`), não por `SB.from(...)`. Gerado a partir de `base_vendas_detalhe_mes_pub.csv` (`build_conversao_vendedor.py`, logo após `vinculo_alvo()`) |
 
 Três decisões que **não devem ser desfeitas sem entender o porquê**:
 

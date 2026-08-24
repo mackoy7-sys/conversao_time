@@ -175,6 +175,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <div class="fg"><label>Status</label><div class="ms" id="f_status"></div></div>
 <div class="fg"><label>Mês</label><div class="ms" id="f_mes"></div></div>
 <button class="reset" onclick="resetF()">Limpar</button>
+<button id="btn_vendas_mes" onclick="downloadVendasMesCSV()" title="Baixa a base de vendas do mês corrente (1 linha por vida, sem telefone/CPF) com o Session ID do lead quando a vida está vinculada a uma conversa do GUP" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Baixar base de vendas do mês (CSV)</button>
 </div>
 
 <div id="tab-geral" class="tab-panel active">
@@ -2570,6 +2571,47 @@ function downloadResumoCSV(){
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='resumo_vendedor_auditoria_'+vb+'_'+mesLbl.replace(/[^a-z0-9]+/gi,'')+'.csv';
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+}
+// ---- "Baixar base de vendas do mês (CSV)" — data/vendas_mes.json.gz (1 linha por vida, SEM
+// telefone/CPF; Session ID do lead só quando o vínculo é por telefone). Fetch bruto fora do shim
+// _staticClient, mesmo padrão de _fetchLeadDaily (arquivo único, sem filtro/paginação server-side).
+var _VENDAS_MES_PAYLOAD=null,_VENDAS_MES_PROMISE=null;
+function _fetchVendasMes(){
+  if(_VENDAS_MES_PAYLOAD)return Promise.resolve(_VENDAS_MES_PAYLOAD);
+  if(!_VENDAS_MES_PROMISE)_VENDAS_MES_PROMISE=fetch('./data/vendas_mes.json.gz').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status+' em vendas_mes');return r.arrayBuffer();}).then(function(buf){
+    var u=new Uint8Array(buf),p;if(!(u[0]===0x1f&&u[1]===0x8b))p=Promise.resolve(JSON.parse(new TextDecoder().decode(u)));else{if(typeof DecompressionStream==='undefined')throw new Error('navegador sem suporte a gzip (DecompressionStream)');p=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).json();}return p;
+  }).then(function(p){_VENDAS_MES_PAYLOAD=p;return p;});
+  return _VENDAS_MES_PROMISE;
+}
+async function downloadVendasMesCSV(){
+  var btn=document.getElementById('btn_vendas_mes');
+  if(btn){btn.disabled=true;btn.textContent='Carregando...';}
+  try{
+    var rows=await _fetchVendasMes();
+    if(!rows||!rows.length){alert('Nenhuma venda encontrada para o mês corrente.');return;}
+    var sep=';';
+    function esc(v){v=(v==null?'':''+v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+    var head=['Mês','Data da Venda','Canal','Segmento','Vendedor','Gestão','Supervisor','Área','Unidade',
+              'Organização','Status','Plano','Área de Venda','Valor Mensalidade','UF','Cidade',
+              'Vínculo com Lead','Vínculo via','Session ID do Lead'];
+    var L=[head.map(esc).join(sep)];
+    var mesLbl='';
+    rows.forEach(function(r){
+      if(!mesLbl&&r.mes)mesLbl=MESNOME[r.mes]||r.mes;
+      L.push([r.mes,r.data_venda,r.canal,r.segmento,r.vendedor,r.gestao,r.supervisor,r.area,r.unidade,
+              r.organizacao,r.status,r.plano,r.area_venda,r.valor_mensalidade,r.uf,r.cidade,
+              r.vinculo,r.vinculo_via,r.lead_session_id].map(esc).join(sep));
+    });
+    var blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='vendas_mes'+(mesLbl?('_'+String(mesLbl).replace(/[^a-z0-9]+/gi,'')):'')+'.csv';
+    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+  }catch(e){
+    console.error('vendas_mes',e);
+    alert('Não foi possível baixar a base de vendas do mês: '+(e.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='⬇ Baixar base de vendas do mês (CSV)';}
+  }
 }
 // ---- ordenacao da tabela "Ranking por Quartil" (clique no header, mesma UX do Detalhe por Vendedor) ----
 var QV_SORT={key:'sc',dir:'desc'};
