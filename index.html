@@ -218,7 +218,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 • <b style="color:#0072ce">Como a vida é ligada a uma origem (regra híbrida — 19/08/2026):</b> a vida fica com <b>quem vendeu</b>, e a <b>origem</b> vem do <b>primeiro lead daquele telefone no mês da venda</b> (com data ≤ a data da venda); se não houver, vem do <b>primeiro lead do mês imediatamente anterior</b>. Não procura mais atrás do que isso. Antes a vida era creditada ao <b>dono do lead</b>, e a origem vinha do <b>primeiro lead do ano</b> — o que jogava contra os leads do mês uma venda originada meses antes, e dava o crédito de conversão a quem não fechou.<br>
 • <b style="color:#0072ce">O eixo vale para TODO o dashboard (19/08/2026):</b> a mesma regra passou a valer para as abas <b>Leads por Origem</b>, <b>Leads por Tipo</b> e para os KPIs <b>Conv. Vinculada</b> / <b>Vidas Vinculadas com Lead</b> do Extrato. Antes essas tabelas creditavam a vida a <b>quem recebeu o lead</b>, e o Quartil a <b>quem vendeu</b> — os dois números não fechavam entre si. Agora fecham. Consequência: quem recebe muito lead e não fecha (pré-atendimento) deixa de acumular vidas nessas tabelas, e quem vende sem receber lead passa a aparecer com vidas e <b>zero leads</b> (conversão indefinida, exibida como “—”).<br>• <b style="color:#b45309">Leia como "vidas vendidas por origem do lead", não como taxa de conversão.</b> O numerador é <b>vidas que a pessoa vendeu</b> (a origem pode vir de lead de outra carteira) e o denominador continua sendo <b>os leads próprios dela</b>. São populações diferentes de propósito — logo, uma célula vendedor × origem <b>pode passar de 100%</b>. Medir conversão de verdade exigiria conhecer todas as oportunidades atribuídas à pessoa, com e sem venda (histórico de atribuição, ainda não disponível).<br>
 • <b style="color:#b45309">Trava anti-ruído (mín. de leads):</b> um vendedor só tem a conversão contada se tiver ao menos <b>50 leads das origens-chave no período</b>. Abaixo disso a amostra é pequena demais (1-2 vidas viram atingimentos de centenas de %); nesse caso a pessoa fica <b>inelegível ao Q1</b> e <b>perde os 40% de conversão</b> no score (fica só com o volume, teto de 60 pts).<br>
-Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>Q3 — Mediano</b>, <b>Q4 — Baixo</b> (25% piores). <b style="color:#16a34a">Porta do Q1 (tripla, obrigatória):</b> só é elegível ao Q1 quem <b>atingir a meta de volume</b> (60 vidas/mês × nº de meses = Ating. volume ≥ 100%) <b>E</b> alcançar <b>≥ 95% da meta de conversão do período</b> (atingimento das origens-chave ≥ 95%) <b>E</b> ter <b>≥ 50 leads-chave no período</b>. Quem falha em qualquer uma fica no máximo no Q2, mesmo com score alto. O Q1 é preenchido pelos de maior score que passam nas portas (pode ficar com menos de 25% — ou vazio — se não houver elegíveis). <b>Obs.:</b> a base por vendedor só contém 5 origens — as demais filas do plano de metas (Mídia, Televendas, Leads Frios, VPC, Campanhas, Repique, Outros, Flamengo) não estão disponíveis por vendedor, então DEMAIS FILA reflete apenas Espontâneo. Recalculado conforme o <b>"Ver por"</b> (Promotor / Supervisor / Gestor) e respeita os filtros do topo.</div>
+Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>Q3 — Mediano</b>, <b>Q4 — Baixo</b> (25% piores). <b style="color:#16a34a">Porta do Q1 (tripla, obrigatória):</b> só é elegível ao Q1 quem <b>atingir a meta de volume</b> (60 vidas/mês × nº de meses = Ating. volume ≥ 100%) <b>E</b> ter <b>≥ 9% de conversão nas origens-chave</b> (vidas ÷ leads das 5 origens-chave, sem meta por fila) <b>E</b> ter <b>≥ 50 leads-chave no período</b>. Quem falha em qualquer uma fica no máximo no Q2, mesmo com score alto. O Q1 é preenchido pelos de maior score que passam nas portas (pode ficar com menos de 25% — ou vazio — se não houver elegíveis). <b>Obs.:</b> a base por vendedor só contém 5 origens — as demais filas do plano de metas (Mídia, Televendas, Leads Frios, VPC, Campanhas, Repique, Outros, Flamengo) não estão disponíveis por vendedor, então DEMAIS FILA reflete apenas Espontâneo. Recalculado conforme o <b>"Ver por"</b> (Promotor / Supervisor / Gestor) e respeita os filtros do topo.</div>
 <table id="tbl"><thead><tr>
 <th class="num">#</th>
 <th>Nome abreviado</th><th>Gestor</th><th>Área</th><th>Unidade</th><th>Supervisor</th><th>Times</th><th>Tempo de casa</th>
@@ -769,7 +769,7 @@ function assignQuartis(a,noAdm){
   _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
     g._qvAdm=1;g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
     g._accFila=origAccOf(g);g._effVd=effVd(g);
-    g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._q1elig=false;g._kLeads=null;g._below=false;
+    g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._convMedia=null;g._q1elig=false;g._kLeads=null;g._below=false;
   });
   a=_pop;
   var n=a.length;if(!n)return;
@@ -779,8 +779,9 @@ function assignQuartis(a,noAdm){
     var acc=origAccOf(g);g._accFila=acc;
     var V=g._effVd=effVd(g);               // vidas efetivas conforme filtro VIDAS (Total/Vinculado)
     g._attVol=tgt>0?V/tgt:null;            // VENDA: atingimento de volume (vidas do período ÷ 60×meses)
-    g._attConv=attainOf(acc,null);         // atingimento de conversão GERAL das origens-chave vs meta (do período)
-    var kl=0;KEY_ORIG_LBL.forEach(function(l){kl+=(acc[l]?acc[l].lt:0);});g._kLeads=kl;  // leads-chave do período
+    g._attConv=attainOf(acc,null);         // atingimento de conversão GERAL das origens-chave vs meta (do período) — legado, não gateia mais
+    var kl=0,kv=0;KEY_ORIG_LBL.forEach(function(l){kl+=(acc[l]?acc[l].lt:0);kv+=(acc[l]?acc[l].vd:0);});g._kLeads=kl;  // leads-chave do período
+    g._convMedia=kl>0?(kv/kl):null;        // PORTA 2: conversão cega das origens-chave (vidas ÷ leads, sem meta por fila) — mesma conta do KPI "Conv. orig.-chave (período)"
     g._below=kl<QV_LEAD_FLOOR;             // TRAVA: abaixo do piso a conversão não é confiável (amostra pequena)
     g._attP=g._below?null:attainOf(acc,'P');   // PRINCIPAL: conversão vs meta (do período); nula se abaixo do piso
     g._attD=g._below?null:attainOf(acc,'D');   // DEMAIS FILA: conversão vs meta (do período); nula se abaixo do piso
@@ -792,10 +793,11 @@ function assignQuartis(a,noAdm){
     if(g._below){g._score=0.60*(g._rv!=null?g._rv:0);return;}
     var s=0,w=0;if(g._rv!=null){s+=0.60*g._rv;w+=0.60;}if(g._rk!=null){s+=0.30*g._rk;w+=0.30;}if(g._rc!=null){s+=0.10*g._rc;w+=0.10;}g._score=w>0?s/w:0;
   });
-  // PORTA DUPLA do Q1: só entra no Q1 quem ATINGE a meta de VOLUME (≥100% = 60×meses) E ≥95% da meta de CONVERSÃO,
-  // E tem base mínima de leads-chave no período (≥QV_LEAD_FLOOR) — este 3º portão barra o ruído de amostra pequena.
+  // PORTA TRIPLA do Q1: só entra no Q1 quem ATINGE a meta de VOLUME (≥100% = 60×meses) E ≥9% de conversão
+  // cega nas origens-chave (vidas ÷ leads, sem meta por fila), E tem base mínima de leads-chave no período
+  // (≥QV_LEAD_FLOOR) — este 3º portão barra o ruído de amostra pequena.
   // Q1 = os de maior score que passam nas portas, até ~25% do grupo (recompleta com os próximos elegíveis). Demais por score.
-  function q1Eligivel(g){return g._attVol!=null && g._attVol>=1 && g._attConv!=null && g._attConv>=0.95 && g._kLeads>=QV_LEAD_FLOOR;}
+  function q1Eligivel(g){return g._attVol!=null && g._attVol>=1 && g._convMedia!=null && g._convMedia>=0.09 && g._kLeads>=QV_LEAD_FLOOR;}
   var ordered=a.slice().sort(function(x,y){return y._score-x._score;});
   var q1cap=0; for(var qi=0;qi<n;qi++){if(qi<n*0.25)q1cap++;}
   var q1set=[],rest=[];
@@ -821,7 +823,7 @@ function quartilePopulation(gcol,noAdm){
   var m={};rows.forEach(function(r){var k=r[gcol];if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};var g=m[k];g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._names.add(r[C.NOME]);g._rows.push(r);});
   var a=Object.values(m);crossScope(a);assignQuartis(a,noAdm);_QV_POP_CACHE={};_QV_POP_CACHE[sig]=a;return a;
 }
-function _copyQuartile(dst,src){['_qvAdm','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
+function _copyQuartile(dst,src){['_qvAdm','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
 function applyQuartileReference(groups,gcol,noAdm){var map={};quartilePopulation(gcol,noAdm).forEach(function(g){map[g.k]=g;});groups.forEach(function(g){_copyQuartile(g,map[g.k]);});return groups;}
 // score 0-100 (o mesmo que define o quartil) colorido pela cor do quartil
 var QCOL={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
@@ -2060,17 +2062,16 @@ function renderExtrato(){
   // ---- Painel: Qualificação do Quartil (portas + veredito) ----
   var volPct=ag._attVol==null?null:Math.round(ag._attVol*100);
   var volOK=ag._attVol!=null&&ag._attVol>=1;
-  var convPctv=ag._attConv==null?null:Math.round(ag._attConv*100);
-  var convOK=ag._attConv!=null&&ag._attConv>=0.95;
-  var chL2=0,chV2=0;var _accB=ag._accFila||{};KEY_ORIG_LBL.forEach(function(l){var o=_accB[l];if(o){chL2+=o.lt;chV2+=o.vd;}});   // conv. chave DO PERÍODO (mesma base do quartil)
-  var convChv=chL2?(chV2/chL2*100):null;
+  var convPctv=ag._convMedia==null?null:Math.round(ag._convMedia*1000)/10;
+  var convOK=ag._convMedia!=null&&ag._convMedia>=0.09;
+  var chL2=0,chV2=0;var _accB=ag._accFila||{};KEY_ORIG_LBL.forEach(function(l){var o=_accB[l];if(o){chL2+=o.lt;chV2+=o.vd;}});   // vidas/leads-chave DO PERÍODO (mesma base da Porta 2)
   var leadsOK=!ag._below;   // 3ª porta: base mínima de leads-chave no período (trava anti-ruído)
   var inQ1=ag.q==='Q1', elig=ag._q1elig;
   var verdict, vCor;
   if(_admX){verdict='● <b>Vendedora administrativa</b> — cálculo próprio, portanto <b>fora do quartil</b> e fora da população que define os quartis dos demais.';vCor='#64748b';}
   else if(inQ1){verdict='✓ <b>Está no Q1 (Elite)</b> — passou nas portas e ficou entre os de maior score do grupo.';vCor='#16a34a';}
   else if(elig){verdict='◐ <b>Elegível ao Q1</b> (passou nas portas), mas ficou fora por <b>score</b> — há mais elegíveis que vagas no Q1. Classificado em <b>'+ag.q+'</b>.';vCor='#d97706';}
-  else{var rs=[];if(!volOK)rs.push('volume abaixo da meta ('+(volPct==null?'—':volPct+'%')+' &lt; 100%)');if(!leadsOK)rs.push('base de leads-chave insuficiente no período ('+(ag._kLeads==null?'—':ag._kLeads)+' &lt; '+QV_LEAD_FLOOR+')');else if(!convOK)rs.push('conversão abaixo de 95% da meta ('+(convPctv==null?'sem dados':convPctv+'%')+')');verdict='✗ <b>Fora do Q1</b> — '+rs.join(' e ')+'. Classificado em <b>'+ag.q+'</b>.';vCor='#dc2626';}
+  else{var rs=[];if(!volOK)rs.push('volume abaixo da meta ('+(volPct==null?'—':volPct+'%')+' &lt; 100%)');if(!leadsOK)rs.push('base de leads-chave insuficiente no período ('+(ag._kLeads==null?'—':ag._kLeads)+' &lt; '+QV_LEAD_FLOOR+')');else if(!convOK)rs.push('conversão abaixo de 9% nas origens-chave ('+(convPctv==null?'sem dados':convPctv+'%')+')');verdict='✗ <b>Fora do Q1</b> — '+rs.join(' e ')+'. Classificado em <b>'+ag.q+'</b>.';vCor='#dc2626';}
   function gateBox(titulo,sub,ok,valor,req){var c=ok?'#16a34a':'#dc2626';var ic=ok?'✓':'✗';
     return '<div style="flex:1;min-width:230px;border:2px solid '+c+'33;background:'+c+'0d;border-radius:10px;padding:12px 14px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:#334155">'+titulo+'</span><span style="font-size:18px;font-weight:800;color:'+c+'">'+ic+'</span></div>'+
@@ -2090,7 +2091,7 @@ function renderExtrato(){
     '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Portas do Q1 (todas obrigatórias)</div>'+
     '<div style="display:flex;gap:12px;flex-wrap:wrap">'+
       gateBox('Porta 1 · Volume','Vidas do período ÷ meta '+nf(_curVolTgt)+' (60/mês × '+_pm+')',volOK,(volPct==null?'—':volPct+'%'),nf(effV)+' vidas · exige ≥ 100%')+
-      gateBox('Porta 2 · Conversão','Vidas que a pessoa VENDEU por origem do lead (vínculo híbrido: mês da venda → mês anterior) ÷ meta das origens-chave, no período',convOK,(convPctv==null?'—':convPctv+'%'),(convChv==null?'sem dados de origem':'conv. chave '+convChv.toFixed(1)+'%')+' · exige ≥ 95%')+
+      gateBox('Porta 2 · Conversão','Vidas ÷ leads das 5 origens-chave (Espontâneo, Carrinho Abandonado, C.Abnd.Conecta, Eugenia, Conecta), no período',convOK,(convPctv==null?'—':convPctv+'%'),(chL2?nf(chV2)+' vidas-chave de '+nf(chL2)+' leads-chave':'sem dados de origem')+' · exige ≥ 9%')+
       gateBox('Porta 3 · Base de leads','Leads das origens-chave no período (trava anti-ruído)',leadsOK,(ag._kLeads==null?'—':nf(ag._kLeads)),'exige ≥ '+QV_LEAD_FLOOR+' leads-chave')+
     '</div>')+
   '</div>';
@@ -2564,7 +2565,7 @@ function downloadResumoCSV(){
       ag.lt, lp, V, (ag.vv||0),
       pcv(ag.vv||0,V), pcv(V,ag.lt),
       (sla==null?'':sla.toFixed(1).replace('.',',')),
-      p1(ag._attVol), p1(ag._attConv), p1(ag._attP), p1(ag._attD)
+      p1(ag._attVol), p1(ag._convMedia), p1(ag._attP), p1(ag._attD)
     ].map(esc).join(sep));
   });
   var blob=new Blob(['﻿'+L.join('\r\n')],{type:'text/csv;charset=utf-8;'});
@@ -2682,7 +2683,7 @@ function renderQuartilV(){
     var pm=periodMonths();
     var facPct=Math.round(refProration()*100);
     var base=pm>1?('meta 60/mês prorrateada pelos dias — média de '+pm+' meses'):('meta 60/mês prorrateada pelos dias decorridos ('+facPct+'% do mês)');
-    el.innerHTML='Score: <b style="color:#0072ce">VENDA 60%</b> = atingimento de volume (<b>'+base+'</b>) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> = conversão vs meta por origem (<b>do período</b>).<br><b style="color:#16a34a">Porta do Q1 (tripla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(Math.round(volTgt))+' vidas prorrateadas = Ating. volume ≥ 100%) <b>E</b> ≥ <b>95% da meta de conversão do período</b> <b>E</b> ter <b>≥ '+QV_LEAD_FLOOR+' leads-chave no período</b> (trava anti-ruído); senão, no máximo Q2.<br><b style="color:#0072ce">Vínculo híbrido (19/08/2026):</b> a vida fica com <b>quem vendeu</b> e a origem vem do <b>1º lead do telefone no mês da venda</b> (data ≤ venda); se não houver, do <b>mês imediatamente anterior</b>. Denominador segue sendo os <b>leads próprios</b> da pessoa — por isso a célula pode passar de 100% e a leitura correta é <b>"vidas vendidas por origem do lead"</b>, não taxa de conversão.';
+    el.innerHTML='Score: <b style="color:#0072ce">VENDA 60%</b> = atingimento de volume (<b>'+base+'</b>) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> = conversão vs meta por origem (<b>do período</b>).<br><b style="color:#16a34a">Porta do Q1 (tripla):</b> só entra no Q1 quem atingir a meta de <b>volume</b> ('+nf(Math.round(volTgt))+' vidas prorrateadas = Ating. volume ≥ 100%) <b>E</b> ter <b>≥ 9% de conversão nas origens-chave</b> (vidas ÷ leads das 5 origens-chave, sem meta por fila) <b>E</b> ter <b>≥ '+QV_LEAD_FLOOR+' leads-chave no período</b> (trava anti-ruído); senão, no máximo Q2.<br><b style="color:#0072ce">Vínculo híbrido (19/08/2026):</b> a vida fica com <b>quem vendeu</b> e a origem vem do <b>1º lead do telefone no mês da venda</b> (data ≤ venda); se não houver, do <b>mês imediatamente anterior</b>. Denominador segue sendo os <b>leads próprios</b> da pessoa — por isso a célula pode passar de 100% e a leitura correta é <b>"vidas vendidas por origem do lead"</b>, não taxa de conversão.';
   })();
 
   function origAgg(items){
