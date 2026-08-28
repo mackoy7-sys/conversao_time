@@ -230,39 +230,59 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 
 <div id="tab-geo" class="tab-panel">
-<div class="note" style="margin-bottom:var(--gap)">📍 <b>Visão geográfica.</b> O <b>Estado (UF)</b> tem conversão completa (leads + vidas + taxa) — a UF do beneficiário vem da venda; quando o lead não converteu, usa-se o DDD do telefone. A <b>Cidade</b> mostra apenas <b>volume de vendas</b> e a fatia dentro do estado — leads não têm cidade (só DDD→estado), então <b>não há taxa de conversão por cidade</b>. Respeita todos os filtros do topo (vendedor, gestão, mês, etc.).</div>
-<div class="kpis">
-<div class="kpi"><div class="lbl">Estados atendidos</div><div class="val" id="g_uf_n">0</div><div class="sub">com venda ou lead</div></div>
-<div class="kpi"><div class="lbl">Estado líder (vidas)</div><div class="val" id="g_uf_top" style="font-size:24px">—</div><div class="sub" id="g_uf_top_sub">&nbsp;</div></div>
-<div class="kpi"><div class="lbl">Cidades atendidas</div><div class="val" id="g_cid_n">0</div><div class="sub">com vendas no recorte</div></div>
-<div class="kpi"><div class="lbl">Cidade líder</div><div class="val" id="g_cid_top" style="font-size:24px">—</div><div class="sub" id="g_cid_top_sub">&nbsp;</div></div>
+<div class="note" style="margin-bottom:var(--gap)">📍 <b>Visão geográfica.</b> A hierarquia é <b>Estado → DDD (praça) → Cidade</b>. <b>Estado e DDD têm conversão de verdade</b>; a <b>Cidade</b> mostra só <b>volume de vendas</b> e a fatia dentro da praça — o lead não tem endereço, só telefone, então não existe taxa de conversão por cidade. Por isso o <b>DDD é a menor unidade comparável</b>. <b>Respeita</b> os filtros de pessoas (Vendedor, Supervisor, Unidade, Gestão, Times, Tempo de Casa, Status), o filtro de <b>Mês</b> e o de <b>Projetos</b>. <b>Não</b> reage aos cross-filtros de Origem, Produto (venda), Tipo (lead), Quartil e Vinculadas.</div>
+
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:var(--gap)">
+<span style="font-size:12px;font-weight:700;color:var(--muted)">Base geográfica:</span>
+<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Como o estado de cada lead e de cada vida é decidido">
+<button id="geo_base_ddd" type="button" onclick="geoBase('ddd')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">DDD (telefone)</button>
+<button id="geo_base_end" type="button" onclick="geoBase('end')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Endereço (venda)</button>
 </div>
-<div class="card" style="margin-bottom:var(--gap)"><h3>Top 10 Estados (vidas) <span style="color:var(--muted);font-weight:400" title="UF do beneficiário na venda; leads sem venda usam o DDD do telefone (não há endereço do lead)">· vidas (barra) · conversão (linha tracejada)</span></h3><canvas id="ch_uf"></canvas></div>
+</div>
+<div class="note" id="geo_note_base_ddd" style="margin-bottom:var(--gap)">📞 <b>Base DDD — leads e vidas medidos pela mesma régua.</b> O estado sai do <b>DDD do telefone</b> nos dois lados do cálculo, e por isso a conversão é comparável entre praças. A vida sem telefone (parte de PME/ADESÃO) recebe o DDD da <b>cidade do endereço</b>, aprendido da própria base. Cobertura atual: <b>100% dos leads</b> e <b>98,6% das vidas</b>.</div>
+<div class="note" id="geo_note_base_end" style="margin-bottom:var(--gap);display:none">🏠 <b>Base Endereço — a régua antiga desta aba, mantida para conferência.</b> A vida usa o <b>endereço da venda</b>; o lead que converteu <b>herda o estado da venda</b> e o que não converteu usa o DDD. São <b>duas réguas diferentes no mesmo cálculo</b>: quem tem telefone de um estado e endereço de outro sai do denominador de um e entra no numerador do outro. <b>9,6% das vidas mudam de estado entre as duas bases</b>, e o bucket sem estado é maior aqui (3,5% contra 1,4%). Serve para reconciliar com números antigos — para comparar praças, use a base DDD.</div>
+
+<div class="kpis">
+<div class="kpi"><div class="lbl">Conversão média</div><div class="val" id="g_conv">—</div><div class="sub" id="g_conv_sub">&nbsp;</div></div>
+<div class="kpi"><div class="lbl">Praças acima da média</div><div class="val" id="g_acima">—</div><div class="sub" id="g_acima_sub">&nbsp;</div></div>
+<div class="kpi"><div class="lbl">Vidas na mesa</div><div class="val" id="g_mesa">—</div><div class="sub" id="g_mesa_sub">&nbsp;</div></div>
+<div class="kpi"><div class="lbl">Concentração</div><div class="val" id="g_conc">—</div><div class="sub" id="g_conc_sub">&nbsp;</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(320px,1.06fr) minmax(340px,1fr);gap:var(--gap);margin-bottom:var(--gap)" id="geo_grid">
+<div class="card"><h3>Mapa de conversão por estado <span style="color:var(--muted);font-weight:400">· cor = distância da média · estados pequenos rotulados à direita</span></h3><div id="geo_mapa"></div></div>
+<div class="card"><h3>Onde agir: volume × conversão <span style="color:var(--muted);font-weight:400">· cada bolha é uma praça · tamanho = vidas</span></h3><canvas id="ch_quad" style="height:520px;max-height:520px"></canvas>
+<div class="note" style="margin-top:8px">As linhas tracejadas são as <b>médias</b> do recorte. O canto <b>inferior direito</b> é onde há mais dinheiro na mesa: muito lead entrando e conversão abaixo da média. O <b>superior esquerdo</b> converte bem mas recebe pouco lead — é candidato a receber mais volume. Bolhas cinzas têm menos de 300 leads: a taxa delas oscila demais para servir de conclusão.</div></div>
+</div>
+
 <div class="tablecard">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-<h3 style="font-size:14px;font-weight:700">Conversão por Estado <span id="geo_sub" style="color:var(--muted);font-weight:400"></span></h3>
+<h3 style="font-size:14px;font-weight:700">Conversão por praça <span id="geo_sub" style="color:var(--muted);font-weight:400"></span></h3>
 <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha o que aparece ao expandir cada estado">
-<button id="geo_mode_cid" type="button" onclick="geoMode('cid')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Cidades</button>
+<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700" title="Escolha o que aparece ao expandir">
+<button id="geo_mode_cid" type="button" onclick="geoMode('cid')" style="border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff">Praças e cidades</button>
 <button id="geo_mode_vend" type="button" onclick="geoMode('vend')" style="border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Vendedores</button>
 </div>
-<span style="font-size:12px;color:var(--muted)">🖱️ clique num estado p/ expandir · cabeçalho p/ ordenar</span>
+<span style="font-size:12px;color:var(--muted)">🖱️ clique numa linha p/ expandir · cabeçalho p/ ordenar</span>
 </div>
 </div>
-<div style="overflow:auto;max-height:560px">
+<div style="overflow:auto;max-height:620px">
 <table style="width:100%;border-collapse:collapse;font-size:13px">
 <thead><tr style="text-align:left;border-bottom:2px solid #e5e7eb;color:var(--muted)">
-<th class="geo-sortable" data-k="uf" style="padding:6px 8px;cursor:pointer">Estado / Cidade</th>
+<th class="geo-sortable" data-k="uf" style="padding:6px 8px;cursor:pointer">Estado / DDD / Cidade</th>
 <th class="geo-sortable" data-k="lt" style="padding:6px 8px;text-align:right;cursor:pointer">Leads</th>
 <th class="geo-sortable" data-k="vd" style="padding:6px 8px;text-align:right;cursor:pointer">Vidas</th>
 <th class="geo-sortable" data-k="cv" style="padding:6px 8px;text-align:right;cursor:pointer">Conversão</th>
-<th class="geo-sortable" data-k="share" style="padding:6px 8px;text-align:right;cursor:pointer" title="Estado / N/D: fatia nas vidas totais do recorte (mês). Cidade/Vendedor: fatia dentro do seu estado.">% vidas</th></tr></thead>
+<th class="geo-sortable" data-k="dmed" style="padding:6px 8px;text-align:right;cursor:pointer" title="Diferença, em pontos percentuais, entre a conversão desta linha e a média do recorte inteiro.">vs média</th>
+<th class="geo-sortable" data-k="dmes" style="padding:6px 8px;text-align:right;cursor:pointer" title="Variação da conversão contra o mês anterior, em pontos percentuais. Só aparece quando UM único mês está selecionado no filtro do topo — com vários meses não existe 'mês anterior' definido.">Δ mês ant.</th>
+<th style="padding:6px 8px;text-align:center" title="Conversão mês a mês desta linha, ao longo de todo o período disponível. Passe o mouse para ver os valores. Não muda com o filtro de Mês (é a tendência, não o recorte).">Tend.</th>
+<th class="geo-sortable" data-k="share" style="padding:6px 8px;text-align:right;cursor:pointer" title="Estado: fatia nas vidas totais do recorte. DDD: fatia dentro do estado. Cidade: fatia dentro da praça.">% vidas</th></tr></thead>
 <tbody id="tbl_geo_b"></tbody>
 <tfoot id="tbl_geo_foot"></tfoot>
 </table>
 </div>
-<div class="note" id="geo_note_cid" style="margin-top:8px">Ao expandir um estado aparecem as <b>cidades</b> (recorte de <b>volume de vendas</b> dentro do estado). Não há taxa de conversão por cidade — leads não têm cidade (só DDD→estado), então a conversão fica só no nível do estado; a <b>% vidas</b> da cidade é a fatia dela nas vidas do estado. Use o toggle <b>Vendedores</b> para ver, no lugar das cidades, os vendedores de cada estado.</div>
-<div class="note" id="geo_note_vend" style="margin-top:8px;display:none">Ao expandir um estado aparecem os <b>vendedores</b> com a badge <b>Q1–Q4</b> ao lado do nome — o <b>quartil do vendedor no período</b> (mesma classificação da aba <b>Análise de Quartil</b>: VENDA 60% + PRINCIPAL 30% + DEMAIS FILA 10%, com a porta dupla do Q1). É propriedade do vendedor, então <b>não muda de um estado para outro</b>. Leads / Vidas / Conversão são <b>dentro do estado</b>; a <b>% vidas</b> do vendedor é a fatia dele nas vidas do estado. O bucket <b>ADMINISTRATIVO</b> é <b>removido</b> deste modo (foco só em vendedores), então o TOTAL fica abaixo do total do mês do modo Cidades. NÃO MAPEADO aparece sem badge.</div>
+<div class="note" id="geo_note_cid" style="margin-top:8px">Cada <b>estado</b> abre nas suas <b>praças (DDD)</b>, e cada praça abre nas <b>cidades</b> das vidas dela. Leads e Conversão existem até o nível do DDD; na cidade ficam <b>—</b>, porque o lead não tem endereço. A coluna <b>vs média</b> compara com a média do recorte inteiro e a <b>Δ mês ant.</b> com o mês anterior. Linhas com menos de <b>300 leads</b> aparecem em cinza com a marca <b>◦ volume baixo</b>: a taxa delas oscila demais para embasar decisão. A marca <b>mix SINTRO</b> avisa quando metade ou mais das vidas da linha vêm do projeto SINTRO — venda em lote, sem lead — e a conversão ali <b>não</b> é comparável com a de uma praça de venda avulsa (use o filtro <b>Projetos</b> para isolar).</div>
+<div class="note" id="geo_note_vend" style="margin-top:8px;display:none">Cada estado abre nos <b>vendedores</b> com a badge <b>Q1–Q4</b> ao lado do nome — o <b>quartil do vendedor no período</b> (mesma classificação da aba <b>Análise de Quartil</b>). É propriedade do vendedor, então <b>não muda de um estado para outro</b>. Leads / Vidas / Conversão são <b>dentro do estado</b>; a <b>% vidas</b> é a fatia dele nas vidas do estado. Este modo <b>remove</b> o bucket ADMINISTRATIVO (foco só em vendedores), então o TOTAL fica abaixo do total do modo Praças. Δ mês ant. e Tendência ficam <b>—</b> neste modo: a série mensal é mantida só por praça.</div>
 </div>
 </div>
 
@@ -913,7 +933,7 @@ function render(){
   else if(at==='tempo')renderTempo(rows);
   else if(at==='extrato')renderExtrato();
   else if(at==='quartil')renderQuartilV();
-  else if(at==='geo')renderGeo();                    // aba "Estados & Cidades" (le tabelas _uf ao vivo, lazy)
+  else if(at==='geo')renderGeo();                    // aba "Estados & Cidades" (cubo geo_praca, lazy)
   else if(at==='origem'){                            // "Analise dos Leads" — abas Tempo de Atend./Vinculado x Total removidas (David 06/07/2026)
     if(_LEADS_LOADED){renderOrigemTab();}
     else{                                            // lazy: baixa os 3 cubos pesados na 1a abertura (espelha renderGeo)
@@ -2192,227 +2212,564 @@ function renderExtrato(){
   ]},options:{plugins:{legend:{position:'bottom'}},scales:{y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:function(v){return v+'%';}}}}}});
 }
 
-/* ============ Estados & Cidades (versao LEVE) ==================================================
-   Le as tabelas _uf ao vivo (conversao_vendedor_raw_uf + VIDAS_BY_CIDADE do meta_uf), LAZY na 1a
-   abertura da aba. NAO baixa o cubo ORIGEM_TAG_STATS (36MB) — a aba geografica nao precisa dele.
-   Producao (raw/meta pre-UF) intocada; reusa quartilMap/crossScope/assignQuartis/QCOL/mkChart. */
-var RAW_UF=[], VIDAS_BY_CIDADE={}, _GEO_LOADED=false, _GEO_LOADING=false, _GESTAO_BY_NOME=null;
-var _GEO_ROWS=[], _GEOV_ROWS=[];
-var GEO_SORT={key:'vd',dir:'desc'}, GEO_OPEN={}, GEO_SHOWALL={}, GEO_MODE='cid';
-var GEOV_SORT={key:'vd',dir:'desc'}, GEOV_OPEN={}, GEOV_SHOWALL={};
-async function _loadGeo(){
-  var rws=await _fetchAll('conversao_vendedor_raw_uf','nome,mes,uf,leads_tot,vidas,vidas_sint');
-  // vs = SUBCONJUNTO SINTRO de vd (filtro "Projetos"); mesma convencao do RAW de producao.
-  RAW_UF=rws.map(function(r){return {nm:r.nome,ms:+r.mes,uf:(r.uf||'N/D'),lt:+r.leads_tot||0,vd:+r.vidas||0,vs:+r.vidas_sint||0};});
-  var mv=await SB.from('conversao_vendedor_meta_uf').select('chave,payload').like('chave','VIDAS_BY_CIDADE%');
-  if(mv.error)throw mv.error;
-  var single=null,chunks=[];
-  (mv.data||[]).forEach(function(r){if(r.chave==='VIDAS_BY_CIDADE')single=r.payload;else if(/^VIDAS_BY_CIDADE#\d+$/.test(r.chave))chunks.push(r);});
-  if(single){Object.assign(VIDAS_BY_CIDADE,single);}
-  else if(chunks.length){chunks.sort(function(a,b){return a.chave.localeCompare(b.chave);});Object.assign(VIDAS_BY_CIDADE,JSON.parse(chunks.map(function(c){return c.payload;}).join('')));}
+/* ============================================================================================
+   ABA "ESTADOS & CIDADES" — reescrita 28/08/2026 (pedido David: conversão por DDD + comparação)
+   ------------------------------------------------------------------------------------------
+   Fonte: data/geo_praca.json.gz (cubo do build_conversao_vendedor.py, ETAPA 6.5). Substitui o par
+   conversao_vendedor_raw_uf + VIDAS_BY_CIDADE, que continua publicado só como rollback.
+
+   POR QUE O DDD. A UF de antes era de BASE MISTA: o lead que converteu herdava a UF do ENDEREÇO da
+   venda, o que não converteu recebia a UF do DDD do telefone. Um telefone 11 com endereço na BA
+   saía do denominador de SP e entrava no numerador da BA — 9,6% das vidas mudam de estado entre as
+   duas bases (medido no build). Na base DDD os dois lados usam a MESMA régua (o telefone), e ainda
+   se ganha um nível abaixo da UF: SP tem 9 DDDs, que convertem de forma bem diferente.
+
+   HIERARQUIA. base 'ddd': UF -> DDD -> Cidade. base 'end': UF -> Cidade (reproduz a aba antiga).
+   Cidade nunca tem conversão (o lead não tem endereço, só telefone) — é recorte de VOLUME. Por
+   isso o DDD é a menor unidade com taxa de conversão real.
+   ============================================================================================ */
+var GEO=null,_GEO_LOADED=false,_GEO_LOADING=false,_GEO_PROMISE=null,_GESTAO_BY_NOME=null;
+var GEO_BASE='ddd';            // 'ddd' = telefone (padrão) | 'end' = endereço da venda
+var GEO_MODE='cid';            // o que aparece ao expandir: 'cid' (cidades) | 'vend' (vendedores)
+var GEO_SORT={key:'vd',dir:'desc'},GEO_OPEN={},GEO_OPEN2={},GEO_SHOWALL={};
+var GEOV_SORT={key:'vd',dir:'desc'},GEOV_OPEN={},GEOV_SHOWALL={};
+var GEO_MIN_LEADS=300;         // abaixo disto a taxa é instável -> linha marcada, não escondida
+var _GEO_AGG=null;
+
+/* ---- carga (arquivo único, fora do shim _staticClient: o payload é objeto, não tabela) ------ */
+function _fetchGeoPraca(){
+  if(GEO)return Promise.resolve(GEO);
+  if(!_GEO_PROMISE)_GEO_PROMISE=fetch('./data/geo_praca.json.gz').then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status+' em geo_praca');return r.arrayBuffer();
+  }).then(function(buf){
+    var u=new Uint8Array(buf),p;
+    if(!(u[0]===0x1f&&u[1]===0x8b))p=Promise.resolve(JSON.parse(new TextDecoder().decode(u)));
+    else{if(typeof DecompressionStream==='undefined')throw new Error('navegador sem suporte a gzip (DecompressionStream)');
+      p=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).json();}
+    return p;
+  }).then(function(p){GEO=p;return p;});
+  return _GEO_PROMISE;
 }
+
+function _geoEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _gestaoOf(nm){if(!_GESTAO_BY_NOME){_GESTAO_BY_NOME={};RAW.forEach(function(r){_GESTAO_BY_NOME[r[C.NOME]]=r[C.GESTAO];});}return _GESTAO_BY_NOME[nm];}
+function _geoMesSel(){var s=null;FILTERS.forEach(function(f){if(f.col===C.MES)s=f.sel;});return s||new Set();}
+function _geoWhoNomes(){var s=new Set();RAW.forEach(function(r){var ok=FILTERS.every(function(f){return f.col===C.MES?true:(f.sel.size===0||f.sel.has(r[f.col]));});if(ok)s.add(r[C.NOME]);});return s;}
+function geoPracaLbl(d){return d?(d+' '+((GEO.praca||{})[d]||'')).trim():'N/D · sem DDD';}
+function geoUfDoDdd(d){return (GEO.dddUf||{})[d]||'N/D';}
+
+/* Filtro "Projetos" (SINTRO): mesmo ajuste do projAdj do RAW de produção.
+   SÓ = só o subconjunto SINTRO, com leads=0 (o projeto é venda em lote, não tem lead);
+   FORA = total menos o subconjunto. */
+function _geoVd(v,s){var p=projMode();return p==='SO'?s:(p==='FORA'?(v-s):v);}
+function _geoLt(l){return projMode()==='SO'?0:l;}
+
+/* ---- agregação: uma passada monta o recorte atual E a série mensal (p/ Δ e sparkline) ------- */
+function geoAgg(){
+  var nomes=_geoWhoNomes(),selM=_geoMesSel(),base=GEO_BASE;
+  var ok=new Uint8Array(GEO.nomes.length);
+  for(var i=0;i<GEO.nomes.length;i++)if(nomes.has(GEO.nomes[i]))ok[i]=1;
+  var cur={},ser={},meses={};
+  function bump(tgt,k,lt,vd,vs){var c=tgt[k];if(!c)c=tgt[k]={lt:0,vd:0,vs:0};c.lt+=lt;c.vd+=vd;c.vs+=vs;}
+  function bumpSer(k,m,lt,vd,vs){var b=ser[k];if(!b)b=ser[k]={};var c=b[m];if(!c)c=b[m]={lt:0,vd:0,vs:0};c.lt+=lt;c.vd+=vd;c.vs+=vs;}
+  var src=(base==='ddd')?GEO.ddd:GEO.end;
+  src.forEach(function(r){
+    if(!ok[r[0]])return;
+    var m=r[1],lt=r[3],vd=r[4],vs=r[5];
+    meses[m]=1;
+    var uf,sub=null;
+    if(base==='ddd'){var d=r[2]||'';uf=d?geoUfDoDdd(d):'N/D';sub=uf+'|'+d;}
+    else{uf=r[2]||'N/D';}
+    bumpSer(uf,m,lt,vd,vs); if(sub)bumpSer(sub,m,lt,vd,vs);
+    if(selM.size===0||selM.has(m)){bump(cur,uf,lt,vd,vs); if(sub)bump(cur,sub,lt,vd,vs);}
+  });
+  // cidades: sempre folha de VOLUME (sem leads). Pai = 'UF|DDD' na base ddd, 'UF' na base endereço.
+  var cid={};
+  GEO.cid.forEach(function(r){
+    if(!ok[r[0]])return;
+    var m=r[1];if(selM.size!==0&&!selM.has(m))return;
+    var d=r[2]||'',uf=(base==='ddd')?(d?geoUfDoDdd(d):'N/D'):(r[3]||'N/D');
+    var pai=(base==='ddd')?(uf+'|'+d):uf;
+    var b=cid[pai];if(!b)b=cid[pai]={};
+    var c=b[r[4]];if(!c)c=b[r[4]]={v:0,vs:0};
+    c.v+=r[5];c.vs+=r[6];
+  });
+  // vendedores por UF (modo "Vendedores"): grão pessoa, sem nível de DDD (igual à aba antiga).
+  var vend={};
+  src.forEach(function(r){
+    if(!ok[r[0]])return;
+    var m=r[1];if(selM.size!==0&&!selM.has(m))return;
+    var uf=(base==='ddd')?((r[2]||'')?geoUfDoDdd(r[2]):'N/D'):(r[2]||'N/D');
+    var b=vend[uf];if(!b)b=vend[uf]={};
+    var c=b[r[0]];if(!c)c=b[r[0]]={lt:0,vd:0,vs:0};
+    c.lt+=r[3];c.vd+=r[4];c.vs+=r[5];
+  });
+  var mArr=Object.keys(meses).map(Number).sort(function(a,b){return a-b;});
+  // mês de comparação: só existe quando UM mês está selecionado e o anterior tem dado
+  var selArr=Array.from(selM),mesPrev=null,mesAtual=null;
+  if(selArr.length===1){mesAtual=+selArr[0];if(meses[mesAtual-1])mesPrev=mesAtual-1;}
+  return {base:base,cur:cur,ser:ser,cid:cid,vend:vend,meses:mArr,mesAtual:mesAtual,mesPrev:mesPrev};
+}
+function _geoCell(c){return c?{lt:_geoLt(c.lt),vd:_geoVd(c.vd,c.vs),vs:c.vs}:{lt:0,vd:0,vs:0};}
+function _geoConvSer(k,m){var b=(_GEO_AGG.ser[k]||{})[m];if(!b)return null;var x=_geoCell(b);return convVal(x.vd,x.lt);}
+
+/* ---- comparações: p.p. vs média e Δ vs mês anterior (mesma convenção do extrato-vendedor) --- */
+function _ppTxt(d,ttl){
+  if(d===null||d===undefined||!isFinite(d))return '<span style="color:#cbd5e1">—</span>';
+  var up=d>=0,neutro=Math.abs(d)<0.05;
+  var cor=neutro?'#94a3b8':(up?'#16a34a':'#dc2626');
+  var sig=neutro?'':(up?'▲ +':'▼ −');
+  return '<span style="color:'+cor+';font-weight:700"'+(ttl?(' title="'+_geoEsc(ttl)+'"'):'')+'>'+sig+Math.abs(d).toFixed(1).replace('.',',')+' p.p.</span>';
+}
+function _spark(k){
+  var ms=_GEO_AGG.meses;if(ms.length<2)return '<span style="color:#cbd5e1">—</span>';
+  var vals=ms.map(function(m){return _geoConvSer(k,m);});
+  var okv=vals.filter(function(v){return v!==null;});
+  if(okv.length<2)return '<span style="color:#cbd5e1">—</span>';
+  var mn=Math.min.apply(null,okv),mx=Math.max.apply(null,okv),rg=(mx-mn)||1;
+  var W=56,H=16,pts=[],last=null;
+  vals.forEach(function(v,i){
+    if(v===null)return;
+    var x=(ms.length===1?0:i/(ms.length-1))*(W-2)+1,y=H-1-((v-mn)/rg)*(H-3);
+    pts.push(x.toFixed(1)+','+y.toFixed(1));last=[x,y];
+  });
+  var cor=(okv[okv.length-1]>=okv[0])?'#16a34a':'#dc2626';
+  var ttl=ms.map(function(m,i){return (GEO.mesNome[m]||m)+': '+(vals[i]===null?'—':vals[i].toFixed(1).replace('.',',')+'%');}).join(' · ');
+  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="vertical-align:middle"><title>'+_geoEsc(ttl)+'</title>'+
+    '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cor+'" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>'+
+    (last?'<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="1.8" fill="'+cor+'"/>':'')+'</svg>';
+}
+
+/* ---- render principal ---------------------------------------------------------------------- */
 function renderGeo(){
   var tb=document.getElementById('tbl_geo_b');
   if(!_GEO_LOADED){
-    if(tb)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:22px">Carregando dados geográficos (estados e cidades)…</td></tr>';
+    if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">Carregando dados geográficos…</td></tr>';
     if(_GEO_LOADING)return;
     _GEO_LOADING=true;
-    _loadGeo().then(function(){_GEO_LOADED=true;_GEO_LOADING=false;if(activeTab()==='geo')renderGeo();})
-      .catch(function(e){_GEO_LOADING=false;console.error('geo load',e);if(tb)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#991b1b;padding:22px">Erro ao carregar dados geográficos: '+_geoEsc(e.message||e)+'</td></tr>';});
+    _fetchGeoPraca().then(function(){_GEO_LOADED=true;_GEO_LOADING=false;if(activeTab()==='geo')renderGeo();})
+      .catch(function(e){_GEO_LOADING=false;console.error('geo load',e);if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#991b1b;padding:22px">Erro ao carregar dados geográficos: '+_geoEsc(e.message||e)+'</td></tr>';});
     return;
   }
-  var rows=_geoFilteredUF();
-  renderTopEstados(rows);
-  renderGeoKpis(rows);
-  renderGeoMain(rows);
+  _GEO_AGG=geoAgg();
+  renderGeoKpis();
+  renderGeoMapa();
+  renderGeoQuadrantes();
+  if(GEO_MODE==='vend')renderUFVendTable();else renderGeoTable();
 }
-function _geoMesSel(){var s=null;FILTERS.forEach(function(f){if(f.col===C.MES)s=f.sel;});return s||new Set();}
-function _geoWhoNomes(){var s=new Set();RAW.forEach(function(r){var ok=FILTERS.every(function(f){return f.col===C.MES?true:(f.sel.size===0||f.sel.has(r[f.col]));});if(ok)s.add(r[C.NOME]);});return s;}
-function _geoFilteredUF(){var nomes=_geoWhoNomes(),ms=_geoMesSel();return RAW_UF.filter(function(r){return nomes.has(r.nm)&&(ms.size===0||ms.has(r.ms));});}
-function _gestaoOf(nm){if(!_GESTAO_BY_NOME){_GESTAO_BY_NOME={};RAW.forEach(function(r){_GESTAO_BY_NOME[r[C.NOME]]=r[C.GESTAO];});}return _GESTAO_BY_NOME[nm];}
-function _geoEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-/* Filtro "Projetos" (SINTRO) na aba geografica. Ate 02/08/2026 esta aba ignorava o filtro — e
-   como o SINTRO e' 82% das vidas do RN, "Fora SINTRO" mostrava o RN inteiro no ranking de estados.
-   geoVd/geoLt aplicam o mesmo ajuste que projAdj faz no RAW de producao: SO = so' o subconjunto
-   SINTRO (e leads=0, porque o projeto nao tem lead); FORA = total menos o subconjunto. */
-function geoVd(x){var p=projMode();return p==='SO'?(x.vs||0):(p==='FORA'?((x.vd||0)-(x.vs||0)):(x.vd||0));}
-function geoLt(x){return projMode()==='SO'?0:(x.lt||0);}
-function ufAgg(rows){var r={};rows.forEach(function(x){var uf=x.uf;if(!uf||uf==='N/D')return;if(!r[uf])r[uf]={lt:0,vd:0};r[uf].lt+=geoLt(x);r[uf].vd+=geoVd(x);});return r;}
-function cidadeAgg(){
-  var byUF={},seen={},p=projMode();
-  _geoFilteredUF().forEach(function(r){
-    // DEDUP (nm,ms,uf): o RAW_UF tem grao DIMS, entao um mesmo NOME pode ter >1 linha na mesma
-    // (mes,uf) — hoje so' o balde ADMINISTRATIVO. Sem isto o cubo era somado 2x (+18 vidas).
-    var k=r.nm+''+r.ms+''+r.uf; if(seen[k])return; seen[k]=1;
-    var by=VIDAS_BY_CIDADE[r.nm];if(!by)return;var bm=by[r.ms];if(!bm)return;var d=bm[r.uf];if(!d)return;
-    if(!byUF[r.uf])byUF[r.uf]={};
-    for(var cid in d){
-      var cell=d[cid],tot=(cell&&cell.v)||0,s=(cell&&cell.vs)||0;
-      var v=p==='SO'?s:(p==='FORA'?(tot-s):tot);
-      if(v)byUF[r.uf][cid]=(byUF[r.uf][cid]||0)+v;
-    }
-  });
-  return byUF;
+function geoBase(b){
+  if(GEO_BASE===b)return;
+  GEO_BASE=b;GEO_OPEN={};GEO_OPEN2={};GEO_SHOWALL={};GEOV_OPEN={};
+  var on='border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff';
+  var off='border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155';
+  var bd=document.getElementById('geo_base_ddd'),be=document.getElementById('geo_base_end');
+  if(bd)bd.style.cssText=(b==='ddd'?on:off);
+  if(be)be.style.cssText=(b==='end'?on:off)+';border-left:1px solid #d5dde6';
+  var nd=document.getElementById('geo_note_base_ddd'),ne=document.getElementById('geo_note_base_end');
+  if(nd)nd.style.display=(b==='ddd'?'':'none');
+  if(ne)ne.style.display=(b==='end'?'':'none');
+  renderGeo();
 }
-function ufVendAgg(rows){var by={};rows.forEach(function(x){var uf=x.uf||'N/D';var nm=x.nm;if(!by[uf])by[uf]={};if(!by[uf][nm])by[uf][nm]={lt:0,vd:0};by[uf][nm].lt+=geoLt(x);by[uf][nm].vd+=geoVd(x);});return by;}
-function renderTopEstados(rows){
-  var agg=ufAgg(rows);
-  var arr=Object.keys(agg).map(function(uf){return {uf:uf,lt:agg[uf].lt,vd:agg[uf].vd};});
-  arr.sort(function(a,b){return b.vd-a.vd;});
-  arr=arr.slice(0,10);
-  var labels=arr.map(function(x){return x.uf;});
-  var vd=arr.map(function(x){return x.vd;});
-  var cv=arr.map(function(x){return convVal(x.vd,x.lt);});
-  var maxL=Math.max.apply(null,vd.concat([1]));
-  var cvOk=cv.filter(function(x){return x!==null;});
-  var maxC=Math.max.apply(null,cvOk.concat([1]));
-  var y1max=Math.max(5,Math.ceil(maxC*1.35/5)*5);
-  mkChart('ch_uf',{data:{labels:labels,datasets:[
-    {type:'bar',label:'Vidas',data:vd,backgroundColor:GRN,borderRadius:4,barPercentage:.6,order:2,yAxisID:'y'},
-    {type:'line',label:'Conversão %',data:cv.map(function(c){return c===null?null:+c.toFixed(1);}),borderColor:AMB,backgroundColor:AMB,borderWidth:2,borderDash:[7,4],pointRadius:4,tension:.3,order:1,yAxisID:'y1'}
-  ]},options:{
-    layout:{padding:{top:22}},
-    plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
-      if(c.dataset.label==='Conversão %')return 'Conversão: '+(c.parsed.y==null?'—':c.parsed.y.toFixed(1)+'%');
-      return c.dataset.label+': '+nf(c.parsed.y);
-    }}}},
-    scales:{
-      y:{min:0,max:maxL*1.15,position:'left',title:{display:true,text:'vidas'},ticks:{precision:0}},
-      y1:{min:0,max:y1max,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'conversão %'},ticks:{stepSize:y1max/5,callback:function(v){return Math.round(v)+'%';}}}
-    }
-  },plugins:[barLabels]});
-}
-function renderGeoKpis(rows){
-  var agg=ufAgg(rows),ufs=Object.keys(agg),topUf=null;
-  ufs.forEach(function(uf){if(!topUf||agg[uf].vd>agg[topUf].vd)topUf=uf;});
-  document.getElementById('g_uf_n').textContent=nf(ufs.length);
-  var te=document.getElementById('g_uf_top'),ts=document.getElementById('g_uf_top_sub');
-  if(topUf){var cv=convVal(agg[topUf].vd,agg[topUf].lt);te.textContent=topUf;ts.textContent=nf(agg[topUf].vd)+' vidas'+(cv===null?'':' · '+cv.toFixed(1)+'% conv.');}
-  else{te.textContent='—';ts.innerHTML='&nbsp;';}
-  var byUF=cidadeAgg(),cidCount=0,topCid=null,topCidV=0,topCidUf='';
-  Object.keys(byUF).forEach(function(uf){
-    Object.keys(byUF[uf]).forEach(function(cid){
-      if(cid==='N/D')return;
-      cidCount++;
-      if(byUF[uf][cid]>topCidV){topCidV=byUF[uf][cid];topCid=cid;topCidUf=uf;}
-    });
-  });
-  document.getElementById('g_cid_n').textContent=nf(cidCount);
-  var ce=document.getElementById('g_cid_top'),cs=document.getElementById('g_cid_top_sub');
-  if(topCid){ce.textContent=topCid;ce.style.fontSize=(topCid.length>14?'16px':'24px');cs.textContent=topCidUf+' · '+nf(topCidV)+' vidas';}
-  else{ce.textContent='—';cs.innerHTML='&nbsp;';}
-}
-function renderGeoMain(rows){_GEO_ROWS=rows;_GEOV_ROWS=rows;if(GEO_MODE==='vend')renderUFVendTable(rows);else renderUFTable(rows);}
 function geoMode(m){
   if(GEO_MODE===m)return;
   GEO_MODE=m;
   var on='border:0;padding:6px 13px;cursor:pointer;background:#0072ce;color:#fff';
   var offC='border:0;padding:6px 13px;cursor:pointer;background:#fff;color:#334155';
-  var offV=offC+';border-left:1px solid #d5dde6';
   var bc=document.getElementById('geo_mode_cid'),bv=document.getElementById('geo_mode_vend');
   if(bc)bc.style.cssText=(m==='cid'?on:offC);
-  if(bv)bv.style.cssText=(m==='vend'?on+';border-left:1px solid #d5dde6':offV);
+  if(bv)bv.style.cssText=(m==='vend'?on:offC)+';border-left:1px solid #d5dde6';
   var nc=document.getElementById('geo_note_cid'),nv=document.getElementById('geo_note_vend');
   if(nc)nc.style.display=(m==='cid'?'':'none');
   if(nv)nv.style.display=(m==='vend'?'':'none');
-  renderGeoMain(_GEO_ROWS);
+  renderGeo();
 }
 function geoSort(k){
+  if(GEO_MODE==='vend'){
+    if(GEOV_SORT.key===k)GEOV_SORT.dir=(GEOV_SORT.dir==='asc'?'desc':'asc');
+    else{GEOV_SORT.key=k;GEOV_SORT.dir=(k==='uf'?'asc':'desc');}
+    renderUFVendTable();return;
+  }
   if(GEO_SORT.key===k)GEO_SORT.dir=(GEO_SORT.dir==='asc'?'desc':'asc');
   else{GEO_SORT.key=k;GEO_SORT.dir=(k==='uf'?'asc':'desc');}
-  renderUFTable(_GEO_ROWS);
+  renderGeoTable();
 }
-function geoToggle(uf){GEO_OPEN[uf]=!GEO_OPEN[uf];renderUFTable(_GEO_ROWS);}
-function geoShowAll(uf){GEO_SHOWALL[uf]=!GEO_SHOWALL[uf];renderUFTable(_GEO_ROWS);}
-function renderUFTable(rows){
-  _GEO_ROWS=rows;
-  var agg=ufAgg(rows);
-  var byCid=cidadeAgg();
-  var gLt=0,gVd=0,sLt=0,sVd=0;
-  rows.forEach(function(x){var l=geoLt(x),v=geoVd(x);gLt+=l;gVd+=v;if(x.uf&&x.uf!=='N/D'){sLt+=l;sVd+=v;}});
-  var ndLt=gLt-sLt, ndVd=gVd-sVd;
-  var tot=gVd;
-  var arr=Object.keys(agg).map(function(uf){
-    var a=agg[uf];
-    return {uf:uf,lt:a.lt,vd:a.vd,cv:convVal(a.vd,a.lt),share:tot?a.vd/tot*100:0};
+function geoToggle(uf){GEO_OPEN[uf]=!GEO_OPEN[uf];renderGeoTable();}
+function geoToggle2(k){GEO_OPEN2[k]=!GEO_OPEN2[k];renderGeoTable();}
+function geoShowAll(k){GEO_SHOWALL[k]=!GEO_SHOWALL[k];renderGeoTable();}
+
+/* lista de praças (unidade de comparação): DDD na base telefone, UF na base endereço */
+function geoPracas(){
+  var out=[],A=_GEO_AGG;
+  if(A.base==='ddd'){
+    Object.keys(A.cur).forEach(function(k){
+      var p=k.split('|');if(p.length!==2)return;var d=p[1];if(!d)return;
+      var c=_geoCell(A.cur[k]);if(!c.lt&&!c.vd)return;
+      out.push({k:k,id:d,uf:p[0],lbl:geoPracaLbl(d),lt:c.lt,vd:c.vd,vs:c.vs,cv:convVal(c.vd,c.lt)});
+    });
+  }else{
+    Object.keys(A.cur).forEach(function(uf){
+      if(uf==='N/D')return;
+      var c=_geoCell(A.cur[uf]);if(!c.lt&&!c.vd)return;
+      out.push({k:uf,id:uf,uf:uf,lbl:uf,lt:c.lt,vd:c.vd,vs:c.vs,cv:convVal(c.vd,c.lt)});
+    });
+  }
+  return out;
+}
+function geoTotais(){
+  var A=_GEO_AGG,lt=0,vd=0,vs=0,ndLt=0,ndVd=0;
+  Object.keys(A.cur).forEach(function(k){
+    if(A.base==='ddd'&&k.indexOf('|')>=0)return;           // só o nível UF, senão conta 2x
+    var c=_geoCell(A.cur[k]);lt+=c.lt;vd+=c.vd;vs+=c.vs;
+    if(k==='N/D'){ndLt+=c.lt;ndVd+=c.vd;}
   });
-  arr.sort(function(a,b){
-    var k=GEO_SORT.key,r;
-    if(k==='uf')r=String(a.uf).localeCompare(String(b.uf),'pt-BR');
-    else{var av=a[k],bv=b[k];if(av===null)av=-1;if(bv===null)bv=-1;r=av-bv;}
-    return GEO_SORT.dir==='asc'?r:-r;
+  // cv    = conversao do recorte INTEIRO (tem que reconciliar com o resto do painel)
+  // cvLoc = conversao so' das linhas LOCALIZADAS -- e' esta que serve de ancora de comparacao.
+  // Por que a distincao importa: o balde N/D concentra VIDAS sem local mas quase nenhum LEAD (o
+  // lead sempre tem telefone, entao ele cai num estado; a vida sem endereco nao). Em Ago/26, base
+  // Endereco, o N/D tinha 2.777 vidas para 25 leads -- comparar cada estado (~5%) contra a media
+  // geral (7,8%) colocava TODOS abaixo da media, porque numerador e denominador vinham de
+  // populacoes diferentes. Na base DDD o efeito e' pequeno (7,4% x 7,8%), mas a regra e' a mesma.
+  return {lt:lt,vd:vd,vs:vs,ndLt:ndLt,ndVd:ndVd,
+          cv:convVal(vd,lt),cvLoc:convVal(vd-ndVd,lt-ndLt)};
+}
+
+/* ---- KPIs: quatro números que apontam ação, não contagem ----------------------------------- */
+function renderGeoKpis(){
+  var T=geoTotais(),P=geoPracas(),med=T.cvLoc;
+  var el=function(id){return document.getElementById(id);};
+  el('g_conv').textContent=(med===null?'—':med.toFixed(1).replace('.',',')+'%');
+  // deixa explicito o que ficou FORA desta media -- senao o numero da aba diverge do painel sem aviso
+  el('g_conv_sub').textContent=nf(T.vd-T.ndVd)+' vidas localizadas · '+nf(T.lt-T.ndLt)+' leads'+
+    (T.ndVd?(' · '+nf(T.ndVd)+' vidas sem local fora da média'):'');
+  var rel=P.filter(function(x){return x.lt>=GEO_MIN_LEADS&&x.cv!==null;});
+  var acima=rel.filter(function(x){return med!==null&&x.cv>=med;}).length;
+  el('g_acima').textContent=nf(acima)+' de '+nf(rel.length);
+  el('g_acima_sub').textContent=(GEO_BASE==='ddd'?'praças (DDD)':'estados')+' com ≥'+nf(GEO_MIN_LEADS)+' leads';
+  // "vidas na mesa": se cada praça abaixo da média convertesse NA média, quantas vidas a mais
+  var mesa=0;
+  rel.forEach(function(x){if(med!==null&&x.cv<med)mesa+=x.lt*(med-x.cv)/100;});
+  el('g_mesa').textContent='+'+nf(Math.round(mesa));
+  el('g_mesa_sub').textContent='se as abaixo da média subissem à média';
+  // concentração: quantas praças fazem 80% das vidas
+  var ord=P.slice().sort(function(a,b){return b.vd-a.vd;}),acc=0,n80=0;
+  for(var i=0;i<ord.length;i++){acc+=ord[i].vd;n80++;if(T.vd&&acc>=T.vd*0.8)break;}
+  el('g_conc').textContent=nf(n80)+(P.length?(' de '+nf(P.length)):'');
+  el('g_conc_sub').textContent='concentram 80% das vidas';
+}
+
+/* ---- contornos dos estados do Brasil -------------------------------------------------------
+   Fonte: @svg-maps/brazil v2.0.0 (https://www.npmjs.com/package/@svg-maps/brazil),
+   licenca Creative Commons Attribution 4.0 (CC BY 4.0). Copia VENDORIZADA de proposito: a rede
+   Hapvida ja derrubou dashboard por depender de host externo, entao o mapa nao pode buscar
+   nada em runtime. Formato: SIGLA -> [path, cx, cy, yRotuloExterno].
+   cx,cy = centroide dos vertices (ancora do rotulo). yRotuloExterno > 0 = o estado e pequeno
+   demais p/ o rotulo caber dentro, entao ele vai na coluna da direita com linha-guia. */
+var BR_VB_W=780,BR_VB_H=639,BR_LBL_X=648,BR_GUIA_X=634;
+var BR_MAPA={"AC":["m 30.732574,238.03114 -2.08,-0.04 0.54,-1.81 -0.21,-0.83 -0.25,-0.49 -1.25,-0.7 -0.14,-0.45 0.27,-1.15 -0.77,-1.95 -1.09,-0.64 -5.6,-1.25 -7.34,-0.19 0.27,-0.56 2.49,-2.26 0.89,-1.23 0.29,-1.2 -0.22,-1.23 -0.68,-0.91 -0.83,-0.44 -1.68,-2.95 -0.77,-0.44 -0.9,-0.19 -1.13,-1.13 -0.92,-2.38 -2,-1.53 -0.98,-3.62 -0.87,-1.64 -1.88,-1.08 -0.08,-1.17 0.81,0.1 0.42,-0.52 0.07,-0.67 -0.2,-0.42 -2.12,-0.93 -0.36,-0.66 -2.16999996,-1.89 0.04,-0.37 0.62,-0.05 0.49999996,-1.32 -0.01,-1.31 3.01,-0.39 0.5,-0.39 -0.22,-1.35 -1.17,-1.57 0,0 17.95,7.48 23.66,5.66 12.14,3.14 26.44,14.17 28.509996,12.13 0,0 2.97,1.26 0,0 -0.3,0.48 -1.57,0.66 -2.09,1.59 -2.86,2.79 -1.65,0.86 -0.66,-0.18 -1.53,0.18 -0.05,0.56 -1.92,1.3 -2.08,0.99 -1.439996,1.83 -0.44,1.18 -0.61,0.28 -1.17,-0.75 -0.76,-0.13 -2.37,0.05 -0.68,0.26 -0.63,0.45 -0.36,0.86 -2.44,3.48 -3.77,1.25 -0.84,0.69 -1.94,0.51 -1.03,0.03 0.08,-2.11 -1.36,0.2 -3.55,-0.77 -5.24,-0.47 -5.09,0.38 -0.66,-0.58 -2.27,-0.17 -3.56,1.83 -2.73,0.62 -1.68,-0.67 -1.4,-1.44 -1.64,1.16 0.04,-17.55 0.05,-1.1 0.47,-0.71 0.07,-2.35 -0.26,-0.88 0.97,-1.18 0.48,-1.14 -1.16,0.2 -2.97,2.59 -1.6,1.01 -2.06,2.38 -1.95,0.67 -0.65,1.08 -1.81,0.99 z",49.3,230.0,0],"AL":["m 562.17257,230.56114 -0.2,-0.73 -1.42,-0.78 -0.45,0.09 -1.02,-0.29 -0.54,-1.4 0,0 1.32,-1.07 0.64,-1.09 2.17,-0.76 2.38,-3.29 0.09,-0.69 0.82,-0.6 1,1.22 1.67,0.3 1.08,-0.12 2.55,2.02 1.9,2.12 1.78,1.05 1.91,0.48 2.5,-0.65 3.14,0.29 1.17,-0.11 1.86,-1.06 1.16,0.05 1.81,-1.11 2.18,-2.29 0.12,-0.45 1.55,-1.24 2,-0.24 2.24,0.85 2.56,-1.29 1.47,-0.19 1.92,0.81 2.9,0.27 0.27,0.21 0,0 -2.78,4.96 -4.55,5.13 -3.58,3.58 -3.04,4.58 -3.33,2.88 -1,2.03 -1.32,1.79 0,0 -0.6,-1.31 -3.59,-2.23 -0.46,-0.03 -1.66,-0.79 -1.76,-1.45 -1.3,-2.45 -5.42,-3.07 -3.68,-0.95 z",580.9,228.6,240],"AM":["m 166.08257,47.551144 0.72,0.78 0.75,0.34 0.61,0.01 1.13,-0.42 0.63,0.11 0.06,0.96 1.21,1.17 0.97,0.37 0.88,-0.21 1.36,0.11 1.95,0.95 0.49,0.66 -0.91,3.32 -0.71,1.5 2.73,3.74 1.66,4.76 0.19,2.26 0.87,1.12 0.05,0.45 -1.62,1.46 0.36,1.59 0.66,1.58 -0.77,3.04 -0.57,0.96 0.29,4.98 0.88,2.17 1.22,0.84 0.58,0.9 1.13,4.33 -0.06,0.58 -1.14,1.32 -1.84,-0.33 -0.14,1.14 5.01,4.42 0.52,0.04 1.96,1.31 1.48,1.649996 1.04,2.04 0.53,0.07 1.34,-0.42 2.36,1.04 -0.44,-2.11 0.75,-2.289996 0.25,-1.73 -0.37,-1.8 0.82,-2.97 1.02,-1.26 1.28,-0.69 2.09,-0.71 0.55,-0.89 1.6,-0.06 2.83,0.93 1.87,2.04 0.92,2.51 1.82,0.23 1.25,-0.46 1.41,-1.41 2.03,-0.55 0.42,-0.39 0.02,-0.53 -1.14,-1.41 -0.23,-0.73 0.11,-0.66 1.15,-2.64 0.07,-1.13 1.66,-3.03 2.33,-3.26 -0.03,-0.68 18.49,0.07 0,0 0.4,4.86 -0.43,1.45 0.18,2.27 0.24,0.68 1.7,0.85 0.18,0.41 -0.35,0.69 -0.05,2.11 1.83,1.99 0.36,0.19 0.7,-0.18 1.84,1.23 0.55,1.83 0.04,0.93 0.3,0.45 4.64,3.769996 4.58,2.54 0.63,0.9 1.35,1.09 1.88,0.67 2.37,1.31 2.26,0.65 1.36,0.15 1.32,0.82 0.08,0.61 1.27,1.34 2.7,1.44 1.1,2.17 1.87,0.79 0.85,-0.61 1.38,-0.35 0.19,0.48 -0.13,0.78 1.81,1.67 -29.9,64.24 -0.78,1.31 -1.45,1.13 -0.58,0.97 -0.03,1.13 0.82,2.33 0.38,0.57 1.07,0.58 1.58,1.56 0.64,1.26 0.15,1.96 0.57,0.57 0,0 -1.18,1.2 -0.2,0.61 -0.06,0.76 0.34,0.84 -0.27,1.01 -1.2,1.82 -0.86,0.64 -0.42,0.85 0.1,0.85 0.66,1.37 0.46,1.94 -1.38,4.22 -1.18,5.22 -1.21,0.73 -47.85,0.32 0,0 0.04,-0.7 -0.36,-0.38 -1.39,-0.28 -1.92,1.08 -0.54,1.74 -0.68,0.19 -3.24,-1.48 -0.68,-2.88 -0.62,-0.2 -0.98,0.13 -0.46,-0.21 -1.25,-3.27 -2.54,-0.98 -1.33,-1.27 -0.8,-1.91 -0.45,-0.49 -2.15,-1.13 -10.79,0.06 -1.38,2.56 -1.72,0.5 0.09,1.17 -0.26,0.22 -2.48,0.53 -1.19,1.59 -0.05,0.67 0.9,0.7 0.17,0.45 -0.36,1.02 -0.81,1.15 -2.06,1.21 -0.11,1.81 0.24,1.46 -3.87,-0.46 -2.13,0.38 -1.2,1.07 -1.79,-0.1 -0.84,-0.55 -0.46,-0.02 -1.75,1.26 -0.53,0.84 0.26,1.75 -2.54,3.16 -0.68,0.08 -0.68,-0.53 -0.64,-2.26 -0.38,-0.09 -1.84,1.02 -1.3,1.21 -1.37,0.39 -0.77,-0.13 -1.08,0.5 -0.41,0.53 -0.13,0.72 -1.22,0.79 -0.37,0.02 -2.31,-2.33 -0.72,-0.37 -2.87,0.33 -3.96,-0.26 0.16,1.29 -0.15,0.56 -1.55,1.81 -1.92,0.58 -3.26,2.56 0,0 -28.509996,-12.13 -26.44,-14.17 -12.14,-3.14 -23.66,-5.66 -17.95,-7.48 0,0 -0.07,-0.65 0.7,-2.92 1.22,-1.4 4.92,-3.47 2.26,-0.24 0.47,-0.3 0.98,-1.56 0.08,-1.03 -1.74,-4.49 0.38,-1.19 1.18,-2.19 1.28,-1.32 0.92,-1.25 0.42,-0.98 0.3,-1.74 -0.29,-1.32 0.67,-2.04 0.31,-2.31 0.73,-0.75 3.66,-1.63 2.19,-1.23 1.15,-1.04 0.44,-1.4 0.78,-0.37 1.41,-0.11 1.65,-0.93 3.54,-2.73 2.42,-0.43 1.51,0.29 4.19,-1.22 1.5,-0.77 1.82,-0.36 3.33,0.38 1.3,-1.59 0.63,-1.45 1.09,-0.61 2.14,0.2 0.64,0.54 1.32,-0.24 1.1,-0.74 1.71,0.12 0.31,0.53 -0.02,1.18 1.61,1.29 2.83,0.08 0.58,-0.4 0.46,-0.78 -0.11,-0.39 1.17,-4.92 6.7,-37.17 1.16,-2.92 -0.99,-4.959996 0.12,-0.26 -1.3,-1.05 -1.48,-2.75 -0.04,-0.49 0.65,-1.39 -0.52,-1.78 -0.37,-0.4 -1.7,-0.59 -3.03,-2.35 -1.94,-2.28 0.2,-11.51 3.89,-0.26 1.75,-1.17 3.5,-0.92 2.68,1.76 1.22,0.11 1.27,-0.43 -0.49,-1.69 0.3,-1.72 -1.37,-2.1 -0.57,-0.54 -1.15,-0.6 -1.51,0.53 -2.79,-0.61 -3.57,0.09 -0.06,-9.9 0.96,0.04 1.32,-0.58 2.28,-0.6 2.84,0.87 19.03,0.06 -0.46,-0.66 -0.79,-0.14 -0.38,-1.2 0.95,-1.93 1.43,0.4 0.61,1.52 0.87,1.32 0.66,0.35 0.83,0.01 1.61,-0.61 1.94,-2.09 0.32,-0.84 1.259996,-1.24 2.55,-1.39 1.29,0.46 1.17,2.58 1.62,1.99 0.74,1.3 0.66,1.78 0.23,1.55 -0.49,3.63 0.2,1.76 3.2,-0.75 8.31,7.06 0.79,0.28 2.5,0.21 2.3,-1 1.7,-1.7 2.11,-1.16 2.19,-0.11 0.56,0.29 0.77,1.08 -0.02,0.97 -1.11,1.7 0.37,0.98 0.58,0.27 1.33,-0.72 0.56,-0.91 0.23,-1.29 1,-1.16 0.47,-0.23 1,0.18 0.55,-0.18 0.41,-0.66 0.46,-2.31 0.51,-0.37 1.51,-0.36 2.93,-1.77 0.97,0.55 0.93,-0.29 1.6,-1.04 1.02,-1.61 2.11,-1.21 2.03,0.55 2.36,-1.65 0.55,-0.82 0.44,-2.66 -0.03,-1.29 0.77,-0.92 1.03,-0.42 1.74,-0.02 1.34,-0.39 2.06,-1.6 0.96,-0.37 2.28,-0.3 z",146.1,127.3,0],"AP":["m 345.24257,99.961144 -0.94,-0.06 -0.77,0.339996 -1.3,0.12 -2.79,-0.679996 -1.45,-1.03 -0.43,-1.5 -1.87,-1.39 -0.11,-1.3 0.21,-0.69 -0.31,-1.58 -0.33,-0.47 -0.95,-0.19 -0.41,-0.94 0.08,-2.43 -2.93,-3.28 -0.78,0.36 -0.82,-0.19 -1.5,-3.48 0.13,-1.58 -0.59,-1.81 -0.62,-0.56 -0.67,-1.51 -0.19,-2.11 0.43,-3.14 -0.17,-0.33 -2.57,-0.73 -2.02,-2.26 -0.76,-2.83 0.19,-0.72 0.68,-0.23 -0.49,-1.18 -0.68,0.03 -2.84,-2.66 -0.94,0.14 -0.38,0.42 -1.33,0.14 -0.84,-0.27 -0.8,-0.98 -1.14,-0.84 -1.19,-0.12 -0.49,-1.28 -0.67,-0.8 -1.93,-1.05 -1.29,-0.49 -3.39,-0.37 -1.08,0.29 -1.17,-0.02 -0.31,-0.54 -0.24,-1.44 0.25,-4.54 0.62,-1.3 -0.37,-2.3 -0.62,-0.57 0,0 0.35,-0.21 0.99,0.3 -0.01,0.81 -0.29,0.18 0.34,0.97 1.47,-0.06 0.82,0.23 0.35,0.9 0.84,0.71 2.25,0.78 3.29,0.75 2.76,-1.78 0.35,-0.76 1.73,-1.17 0.83,-0.29 0.69,0.94 2.71,0.94 1.08,-0.12 1.72,-1.01 0.12,-0.42 0.32,0.03 1.46,1.3 -0.2,0.87 2.37,-0.17 0.51,0.5 0.95,0.17 0.62,-0.01 0.91,-0.48 1.67,-1.5 1.78,-1.1 1.75,-2.3 0.37,-1 -0.2,-0.54 3.13,-6.5 0.11,-1.82 1.11,-1.3 0.73,-0.19 3.6,-5.79 0.23,-1.15 0.84,-1.2 1.79,-1.55 0.63,-1.66 2.11,-1.14 0.47,-0.92 1.04,-0.58 0.56,1.46 0.88,1.36 -1.67,-4.8 -0.07,-1.29 0.18,-0.33 3.37,2.42 1.14,1.21 0.91,1.22 0.52,1.19 0.03,1.58 0.44,0.31 0.32,-0.48 0.38,-0.1 0.21,0.4 0.21,7.89 0.66,3.87 2.71,6.05 2.66,8.94 3.32,5 1.01,0.35 3.27,-0.08 2.78,0.94 1.29,0.85 0.77,2.65 -0.16,3.33 -1.29,0.96 -1.73,0.43 -0.38,0.33 1.79,-0.15 1.04,-0.42 0.28,0.23 0.12,0.59 -0.17,0.73 -5.03,4.06 -1.17,2.1 -2.15,1.41 -1.94,3.72 -2.91,3.5 -0.7,0.46 -0.94,-0.09 -1.45,0.52 -2.08,2.98 0,0 -1.34,0.07 -0.75,0.9 0,0 -1.47,1.68 -0.97,2.22 -1.12,1.87 -0.84,0.65 -3.01,3.45 -0.36,2.4 0.17,1.8 -1.95,1.81 -0.98,0.12 z m 23.36,-46.99 -0.45,-0.33 -1.1,-1.86 0.07,-0.88 0.23,-0.41 1.66,-0.45 0.43,0.39 0.83,2.27 -0.99,1.1 -0.68,0.17 z m 2.49,17.61 -0.4,-0.25 -0.08,-0.71 1.11,-1.1 0.88,-0.15 1.25,0.24 0.46,-0.11 0.44,-0.64 0.05,0.59 -0.97,1.44 -0.99,0.5 -1.75,0.19 z m 3.44,-2.87 -0.78,-0.23 0,-0.56 0.72,-1.04 1.25,-0.1 0.18,0.35 -0.1,0.51 -1.27,1.07 z m -7.19,-18.42 -0.76,-0.5 0.26,-0.83 0.88,-0.17 0.86,0.32 0.01,0.73 -1.25,0.45 z",343.3,58.2,0],"BA":["m 527.76257,365.59114 -0.36,-0.83 0.68,-1.35 -0.01,-0.53 -0.53,-1.04 -4.13,-3.05 -0.15,-0.51 0.22,-1.51 -0.57,-1.23 -0.65,0.24 -0.2,0.45 -0.34,0.18 -0.22,-0.25 0.53,-4.4 0.82,-3.3 0.82,-0.88 2.47,0.24 1.02,-0.71 0,-0.42 -0.56,-1.02 0.16,-2.65 4.96,-4.22 1.47,-3.08 -0.42,-1.17 -0.78,-1.02 -0.89,-0.06 -0.73,-0.38 -2.83,-2.47 -2.12,0.02 -2.19,-0.6 -2.27,-1.08 -2.73,-0.56 -1.98,-0.14 -1.32,0.99 -1.47,0.5 -2.61,-0.45 -0.57,0.21 -0.44,-3.96 -6.52,-6.2 -0.38,-0.18 -4.39,1.23 -1.53,-1.24 -0.51,0.21 -0.93,-0.22 -2.54,-1.22 -2.17,-1.62 -0.98,0.18 -4.35,-3.63 -1.1,-0.54 -2.73,-0.75 -1.77,0.25 -1.88,0.9 -0.81,1.12 -0.64,0.18 -5.33,-1.47 -0.61,-0.49 -0.26,-1.5 0.14,-0.89 1.29,-2.74 -0.86,-0.46 -2.28,-0.52 -2.18,-0.04 -1.2,-0.5 -1.79,-0.08 -3.83,1.58 -4.26,3.03 -0.64,1.11 -3.37,1.87 -2.02,0.4 -0.95,1.18 -1.81,1.55 -1.43,0.52 -1,-0.15 -1.85,2.58 -1.04,0.77 -2.13,-0.38 -0.72,0.13 -0.69,1 -1.34,0.92 -0.4,-0.24 1.43,-3.43 -0.51,-2.41 0,0 1.48,-1.97 0.25,-0.77 -0.23,-1.27 -0.67,-1.72 0.1,-0.67 0.71,-1.42 -0.05,-0.46 -3.21,-2.62 -1.69,-3.46 -0.62,-3.52 0.05,-1.55 1.2,-3.83 1.59,-1.03 0.23,-0.38 0.06,-0.94 -1.63,-0.84 -0.11,-0.33 0.48,-2.52 1.43,-1.06 -0.02,-0.37 -2.72,-2.46 0,0 -0.04,-0.93 1.36,-2.38 -0.04,-1.07 -0.17,-0.42 -1.46,-0.49 -0.94,-0.65 -0.35,-1.26 0.06,-2.92 0.19,-0.85 1.95,-1.67 1.14,-0.42 0.96,-0.72 -0.29,-0.63 -0.58,-0.52 -0.92,-0.29 -1.03,0.18 -0.35,-0.33 -0.09,-0.5 0.42,-0.96 2.04,-0.82 0.56,-0.45 -0.04,-0.76 -1.88,-0.98 -3.58,-0.67 -1.86,-1.96 -0.23,-0.92 0.5,-1.16 1.01,-0.73 1.52,-3.48 0.9,-0.61 1.01,-0.27 0.35,-0.38 -1.29,-1.8 0.19,-0.37 3.21,-2.62 3.82,-2.02 0.56,-0.47 0.22,-0.98 0.69,-0.65 0,0 2.33,-0.02 1.44,1.34 0.66,1.04 0.53,2.21 1.76,2.49 4.18,1.86 1.8,-0.52 2.11,0.18 0.33,-0.21 0.75,-1.45 1.14,-0.37 0.67,-0.87 1.17,-0.89 2.21,-0.75 1.33,0.17 1.48,0.53 1.35,-0.42 2.97,-2.42 2.95,-5.05 0.72,-0.86 0.24,-0.92 0.3,-2.56 -0.12,-1.16 -2.24,-4.43 0.05,-0.93 3.24,-1.65 1.95,-0.02 1.5,0.46 0.41,0.93 0.32,0.18 2.12,-0.43 1.39,-0.54 1.33,0.38 1.71,0.99 -0.13,0.65 0.19,0.29 0.82,0.28 3,-0.11 1.47,-0.64 1.7,-0.1 0.82,-1.22 1.51,-1.34 2.73,-0.34 0.77,-0.36 0.81,-0.98 2.17,0.01 0.62,0.63 0.31,0.05 1.86,-1.81 -0.1,-2.4 1.99,-0.38 0.79,0.18 1.05,-0.66 1.5,-2.31 0.46,-1.15 0,0 0.89,0.4 1.16,-0.27 2.2,0.29 2.82,1.39 0.44,0.51 -0.06,2.73 0.72,1.94 2.21,0.91 0.27,2 -0.92,1.68 1.83,0.62 0.96,-0.22 0.82,-0.92 2.87,-0.88 0.77,-3.58 0.5,-0.87 0.75,-0.16 0.78,0.53 0.63,0.05 2.39,-1.02 1.1,-1.24 0.17,-0.59 -0.25,-1.36 0.29,-0.25 2.24,-0.45 0.77,-2.05 1.65,-0.44 2.53,-1.46 0.59,-0.1 1.49,0.56 0.83,1.44 1.36,0.81 2.36,0.78 2.99,0.4 1.58,1.15 0.54,1.65 0.39,0.27 0.43,-0.15 0.29,-1.75 0.43,-0.44 1,-0.01 0.45,0.32 0.02,0.63 -0.62,0.88 0.45,0.83 0.5,0.37 2.1,0.86 0.02,0.94 1.22,3.05 0,0 0.54,1.4 1.02,0.29 0.45,-0.09 1.43,0.79 0.2,0.72 0,0 -0.67,1.16 0.21,2.14 1.28,2.5 1.99,1.95 0.75,1.15 -0.08,3.12 -0.66,1.62 -0.09,0.88 0.76,2.75 -0.3,0.58 -0.69,0.55 -2.55,1 -1.13,-0.75 -1.71,-0.01 -0.32,0.3 -0.59,1.58 0.02,0.77 0.95,1.6 1.1,0.66 0.52,1.49 1.43,1.51 0.15,0.39 -0.13,1.42 -0.34,0.39 0.12,0.42 0.59,0.52 1.93,0.92 0.48,0.71 0.54,0.34 1.55,0.64 2.89,-0.88 0,0 0.64,-0.02 0.36,0.41 -4.08,8.83 -3.83,5.19 -1.03,2.33 -5.03,5.74 -2.45,1.26 -0.87,-0.01 0.3,-1.43 0.37,-0.15 0.14,-1.1 -0.45,-1.93 -1.87,-0.25 -0.43,-1.3 -0.68,-0.75 -0.37,0.6 -0.46,2.33 -0.5,0.87 -0.55,0.38 -0.56,-0.29 -0.49,-1.74 0.11,-0.32 0.31,-0.13 -0.03,-0.39 -0.87,1.29 0.93,1.69 0.46,0.23 0.37,-0.15 1.15,0.26 -0.46,1.81 -1.21,1.15 -0.25,1.82 -1.25,0.97 -0.35,0.67 -0.2,0.84 0.18,0.85 -1.35,-0.39 -0.21,0.39 -0.36,2.52 0.36,-0.72 0.75,0.21 0.24,0.54 -0.23,0.41 0.06,0.62 0.3,0.3 0.33,1 -1.04,2.51 0.57,3.44 -0.55,0.49 -0.57,-0.22 -0.14,1.13 0.59,0.46 1.21,-1.72 -0.47,-2.21 0.82,-0.61 0.25,0.54 -0.06,1.76 -0.96,2.61 -0.74,5.43 -0.51,1.81 0.2,2.47 0.78,2.85 0.19,4.54 0.87,6.41 0.99,3.42 -2.21,6.66 -1.35,6.65 -0.47,1.01 -0.16,2.86 -1.06,3.72 -0.09,2.33 0.39,4.42 0.89,1.71 -2.24,2.98 -1.81,0.67 -0.94,0.64 -2.72,3.89 -0.57,2.04 0,0 -8.09,-5.14 -0.31,-0.53 z m 22.28,-78 -0.23,-1.2 0.74,-0.41 1.06,-1.04 0.16,-0.64 -0.37,-0.73 0.76,0.14 0.82,1.05 -0.05,0.53 -2.89,2.3 z m -2.53,6.85 -0.63,-0.03 0.01,-0.67 0.26,-0.36 -0.8,-0.22 -0.42,-0.4 0.13,-1.07 1.87,-0.15 0.16,0.2 0.11,1.13 -0.69,1.57 z",508.4,277.9,0],"CE":["m 574.05257,157.11114 -4.89,1.59 -2.61,2.01 -3.3,6.69 -0.84,1.12 -0.87,0.57 -0.65,1.67 0.15,0.74 -1.4,2.44 -1.46,1.51 -0.57,1.1 -1.03,0.26 -0.78,-0.51 -0.51,0.07 -0.84,0.88 -1.41,2.25 -0.34,1.97 0.64,0.17 0.66,-0.38 0,0 -0.08,0.54 -0.84,1.15 -1.03,3 0.52,1.31 -0.66,1.31 -1.09,0.63 -0.17,0.38 -0.12,0.93 0.24,0.41 0.58,0.29 0.35,0.72 -0.02,1.66 1.24,0.89 0.69,0.08 0.34,1.19 -1.61,3.49 -1.19,1.12 0.17,0.25 0,0 -1.59,0.49 -1.07,0.83 -1.54,2.29 -1.65,0.05 -0.63,-1.64 -0.78,-0.57 -1.36,-0.48 -1.01,-1.07 -0.46,-0.99 -1.83,-0.83 -2.85,-1.9 -3.08,-0.42 -1.29,0.1 -2.14,0.8 -1.63,0.19 -0.89,-0.24 -4.93,-0.2 0,0 0.06,-1.32 -0.68,-0.68 -0.08,-0.97 1.14,-3.11 1.5,-2.25 0.01,-0.69 -0.77,-1.16 -2.56,-0.47 -1.31,-0.65 -1.01,-2.67 -1.05,-5.2 -0.76,-2.57 0.24,-0.45 -0.94,-8.16 -0.11,-0.38 -0.92,-0.69 0.8,-0.58 0.59,-1.58 -0.6,-2.99 -1,-2.01 0.48,-1.6 -0.79,-3.87 0.74,-1.36 0.02,-0.76 -1.36,-1.59 -0.44,-1.73 -3.15,-6.42 -1.8,-4.72 -0.29,-1.29 0.18,-1.46 1.58,-1.97 1.09,-1.85 0.11,-0.8 0,0 0.19,-0.14 -0.04,-0.62 -0.4,-0.66 0.65,-0.81 6.74,-0.22 2.89,-0.43 2.07,-0.66 7.4,0.79 2.12,1.12 1.94,1.5 4.12,2.18 1.46,0.52 4.82,3 1.21,0.2 2.22,2.29 2.99,2.11 2.57,0.72 2.44,2.91 1.22,0.61 2.96,3.81 4.16,3.08 1.46,2 1.04,0.99 1.5,0.82 1.15,0.03 2.37,0.92 0.79,0.67 z",539.0,169.3,0],"DF":["m 416.97257,334.13114 -14.69,-0.02 -0.52,-3.26 0.92,-1.83 0.38,-3.73 11.95,0.01 1.83,1.98 0.06,2.21 -0.59,1.19 -0.21,2.44 z",410.8,329.9,322],"ES":["m 501.89257,411.63114 -0.29,-0.14 0.44,-2.34 0.57,-1.3 -0.59,-3.12 0.16,-0.42 1.72,-2.06 5.15,0.03 0.55,-0.32 0.97,-3.24 1.11,-1.27 0.88,-2.29 0.24,-1.72 0.26,-0.44 1.24,-0.86 1.71,-2.09 0.54,-2.97 -0.29,-2.43 -1.27,-2.81 -1.1,-1.27 -0.52,-0.09 -0.45,0.29 -0.76,-0.28 -0.49,-0.71 0.43,-0.55 1.48,-0.09 0.8,0.35 0.97,0.03 0.95,-0.24 0.32,-0.42 -0.17,-1.72 -1.31,-0.35 -0.21,-0.41 0.3,-1.54 0.03,-1.92 -0.52,-0.66 -1.33,-0.67 -0.3,-0.7 1.17,-1.93 2.17,-1.31 0.31,-0.02 1.05,0.74 1.13,0.11 0.02,-0.81 -1.67,-2.27 1.34,0.13 2.18,-0.29 0.84,-0.61 1.08,-0.32 1.58,-0.08 2.54,0.81 0.91,0.55 0,0 0,0 0,0 0.3,0.53 8.1,5.14 0,0 -0.93,3.35 -0.31,2.86 0.12,3.59 0.72,6.15 -0.31,2.47 -1.49,3.18 -2.75,1.39 -0.55,0.6 -1.67,3.33 -0.98,3.8 -0.77,1.47 -0.83,-0.68 -0.88,-0.13 -0.29,1.28 1.35,0.52 -1.94,4.24 -3.45,3.84 -0.24,-0.27 -1.86,0.66 -0.8,1.23 -0.06,1.39 -0.42,1.25 -1.59,2.02 -0.29,1.13 0,0 -1.62,-1.06 -2.99,0.37 -4.34,-1.01 -2.5,-1.13 -0.67,-4.71 z",518.2,388.9,382],"GO":["m 416.97257,334.13114 -0.87,-1.01 0.21,-2.44 0.59,-1.19 -0.06,-2.21 -1.83,-1.98 -11.95,-0.01 -0.38,3.73 -0.92,1.83 0.52,3.26 14.69,0.02 0,0 0,0 0,0 -0.53,1.52 0.31,1.57 -0.68,1.59 -1.04,1.25 -0.41,1.47 0.85,1.21 0.85,0.34 1.42,1.03 1.65,4.56 0,0.6 -2.32,2.71 -3.24,3.01 -0.43,2.14 1.09,1.11 0.9,-0.47 1.58,0.57 0.47,0.61 0.18,1 -0.17,0.71 -0.73,0.9 -0.51,1.89 1.19,3.46 -3.09,2.06 -1.16,0.2 -0.86,0.9 -0.48,1.12 -4.89,2.74 -0.7,-0.77 -4.35,-1.86 -0.55,0.48 -0.58,0.09 -1.75,0.01 -1.48,-0.28 -3.86,0.16 -2.01,-0.89 -4.13,2.64 -2.91,2.92 -0.33,0 -1.31,-1.42 -1.52,-0.3 -3.19,1.64 -3.71,-0.62 -2.48,0.96 -2.23,0.54 -1.41,2.1 -1.21,2.46 0.06,1 -0.84,1.3 -0.82,0.28 -0.84,-0.16 -0.45,0.14 -0.94,0.74 -1.64,2.1 -0.57,1.9 0.56,0.61 -0.01,0.34 -0.36,0.23 -0.86,-0.46 0,0 -0.24,-0.45 -2.66,-2.24 -3.15,-0.61 -1.62,-1.55 -1.9,-0.43 -1.49,-0.04 -3.35,-1.34 -0.68,-0.85 -3.07,-1.56 -0.67,-0.61 -1.44,-0.71 -1.14,-0.17 -2.7,-1.68 -2.78,0.16 -3.8,-0.7 -0.13,-0.33 0.26,-0.84 0.57,-1.17 1.31,-1.76 -0.08,-0.42 -2.25,-0.9 -1.14,0.67 -0.66,-0.19 -0.28,-0.41 -0.23,-1.11 0.26,-2.58 -0.19,-1.77 0,0 -0.95,-2.2 -0.18,-3.43 -1.41,-2.19 -0.16,-0.71 0.4,-3.41 2.55,-3.85 0.38,-2.91 0.7,-0.77 2.02,-0.84 1.92,-1.77 1.25,-2.02 0.33,-1.95 0.5,-1.01 1.28,-1.04 0.82,-1.43 0.08,-1.54 1.75,-0.97 1.4,-2.62 2.65,-0.13 2.72,-0.86 0.32,-0.28 1.98,-4.19 0.71,-0.96 0.64,-4.1 0.38,-0.74 1.92,-1.94 1.65,-1.01 1.07,-0.26 1.23,0.68 1.21,-0.73 1.39,-1.43 0.84,-2.93 1.17,-2.87 -0.01,-0.8 -0.48,-1.14 0.58,-2.74 1.6,-3.09 -0.12,-5.18 1.21,-0.78 1.03,-2.63 2,-3.17 0.39,-1.07 -0.16,-2.72 0.35,-0.9 0.97,-0.86 0.27,-1.13 -0.08,-0.63 0,0 0.34,-0.45 0.2,-1.88 0.66,-1.23 1.81,-2.09 0.56,-0.3 -0.03,1.71 -1.22,1.88 -0.52,2.34 2.4,0.4 2.2,1.03 3.93,0.4 3.09,1.71 4.07,1.43 0.63,-0.23 1.63,-5.94 1.47,-2.39 1.18,-0.97 1.15,1.31 1.04,1.88 1.11,3.71 0.61,3.1 1.14,0.05 0.75,-0.75 0.3,-1 0.56,-0.54 2.76,0.34 4.53,-0.53 0.22,0.74 -0.56,1.56 3.13,1.47 3.35,0.68 0.69,-0.08 0.51,-3.3 0.55,0.03 1.51,2.62 0.46,0.24 1.78,-0.9 2.52,-2.08 4.53,-1 1.55,0 2.56,-1.1 1.74,-1.34 5.36,-1.42 0,0 2.72,2.46 0.02,0.38 -1.43,1.06 -0.48,2.52 0.1,0.33 1.63,0.84 -0.06,0.94 -0.23,0.38 -1.59,1.03 -1.19,3.83 -0.05,1.55 0.62,3.52 1.7,3.46 3.21,2.62 0.05,0.47 -0.72,1.42 -0.1,0.67 0.67,1.72 0.23,1.28 -0.25,0.77 -1.48,1.97 0,0 -1,1.01 -3.23,-0.34 -0.9,-1.76 -2.42,-1.48 -1.17,1.49 0.58,3.77 -0.57,0.54 -0.4,0.13 -2.78,-1.14 -1.17,0.23 -0.37,0.28 -0.72,3.18 0.72,0.1 0.49,1.16 -0.57,0.94 -0.73,0.7 0.04,1.9 0.42,0.61 0.53,0.19 0.69,4.26 -0.53,0.53 -3.36,0.9 -2.29,1.51 z",386.7,331.5,0],"MA":["m 458.83257,129.18114 -0.04,0.33 -2.04,2.15 -0.43,0.17 -0.04,1.44 1.97,-1.7 0.68,-1.21 2.12,-1.58 0.89,-1.14 1.03,-6.33 1.15,-0.7 1.11,-0.12 1.67,-0.92 0.65,-0.13 0.46,0.12 0.08,1.63 -0.2,0.45 -1.42,1.87 -3.21,1.75 -0.03,0.72 0.73,0.12 0.45,-0.81 1.15,-0.31 0.22,0.83 -0.59,0.51 0.25,0.3 4.21,-4.97 0.86,0.33 2.58,-0.93 4.04,0.43 -0.46,-2.41 0.61,-0.23 2.42,0.08 1.78,0.38 2.63,1.05 1.04,0.11 2.15,1.38 1.4,0.03 1.26,1.3 1.89,1.32 2.5,0.58 1.16,-0.19 0.56,0.76 0.34,0.05 1.59,-0.09 2.46,0.66 0.26,-0.9 -0.67,-0.47 1.67,-0.38 0.57,0.11 -0.09,0.42 0,0 -0.46,1.43 0.23,0.72 0.63,0.54 -0.38,1.53 -1.79,2.27 -4.13,3.97 -3.32,0.46 -0.8,-0.16 -2.92,3.4 0.04,1.8 -0.88,1.83 -1.89,1.85 -0.82,1.98 -0.64,0.17 -0.77,1.05 0.36,1.92 1.23,0.83 0.38,1.28 -0.28,1.46 -1.14,2.87 1.58,2.81 0.55,2.98 -0.11,2.43 -0.21,0.55 -4.1,4.42 -0.17,2.48 0.12,2.11 0.51,2.3 1.78,2.04 1.61,0.91 0.17,0.5 0.13,0.84 -0.39,2.2 -0.29,0.44 -0.12,1.21 -0.5,1.46 -1.21,1.31 -2.29,0.29 -0.65,-0.28 -0.83,0.04 -2.43,0.86 -1.52,0.11 -2.5,-1.82 -1.01,-0.21 -1.46,0.19 -1.01,0.6 -1.12,0.26 -0.23,-0.3 -0.84,0.24 -0.5,0.22 -1.9,1.91 0.01,0.46 -0.63,0.87 -2.01,2 -2.34,0.91 -2.87,2.56 -1.33,0.53 -1.05,0.04 -1.7,1.53 -1.08,0.36 -2.61,0.32 -2.72,0.76 -2.13,1.95 -0.98,2.97 -0.39,2.97 -0.63,2.32 -1.45,2.74 -0.3,0.22 -0.34,0.82 -0.13,1.52 -1.2,2.48 -1.7,1.4 -0.73,2 0.71,1.94 0.47,3.18 1.73,3.06 -0.04,0.52 -0.76,1.4 -0.13,6.36 -1.15,2.45 -0.26,1.06 -0.05,1.92 0,0 -1.28,-0.66 -0.61,-0.82 -0.82,-0.45 -0.99,-0.29 -1.78,0.2 -0.71,-0.18 -1.35,-2 -0.99,-2.86 -2.13,-1.62 -0.14,-1.65 1.64,-1.81 -0.08,-0.53 -3.88,-1.95 -0.62,-1.05 -0.06,-1.66 -0.75,-1.59 -0.94,-0.69 -2.08,-0.28 -0.2,-0.42 0.26,-0.71 2.63,-2.54 -0.37,-1.31 0.73,-2.68 0.69,-1.43 0.57,-0.55 1.34,-0.54 3.39,-0.35 -0.39,-1.35 0.64,-3.25 -0.08,-1.76 -1.8,-1.21 -4.27,0.94 -2.15,1.34 -2.27,-3.02 -0.91,-0.85 -3,-4.15 -0.88,0.07 -0.84,-1.44 0.61,-1.19 -0.11,-0.88 -0.25,-0.34 -1.37,-0.24 -0.42,0.27 -1.93,-1.33 0.18,-0.71 1.76,-0.66 1.75,-2.04 0.25,-1.59 -0.28,-1 0.31,-2.36 1.77,-6.16 0.01,-0.43 -0.68,-1.14 -0.23,-1.08 0.21,-3.72 -0.64,-1.5 -0.47,-3.49 -0.84,-1.03 -3.4,-1.44 -1.22,-0.02 -0.28,-0.32 -0.08,-1.03 -0.59,-0.69 -1.74,-0.29 -0.96,0.52 -1.4,-0.09 -2.78,-1.51 -0.86,-0.06 -1.96,0.53 -2.62,1.85 -0.53,0.64 0,0 -0.49,-0.08 14.71,-11.83 2.35,0.23 1.17,-0.92 1.55,-2.17 0.43,-1.15 1.55,-1.17 0.62,-2.88 1.12,-0.46 2.44,-2.32 0.47,-1.21 0.29,-1.9 1.6,-4.69 1.96,-1.54 1.48,-1.76 0.83,-1.45 0.46,-1.28 -0.18,-1.82 0.79,-0.81 -1.04,-1.58 3.68,-3.09 -0.13,-1.64 0.5,-2.38 1.74,-1.57 0.36,-0.71 0.9,-3.02 0.08,-1.61 -0.43,-0.53 -0.99,0.16 -0.27,-0.49 0.05,-0.62 1.14,-0.15 0.57,-0.74 0.71,-4.39 -0.16,-1.38 0.47,-1.03 0.77,-0.45 0,0 0.63,0 0.24,-0.24 -0.06,-0.54 0.34,-0.749996 0.58,-0.53 1.34,0.98 0.45,1.839996 1.19,0.12 0.77,-1.36 0.61,2.93 0.99,0.04 0.29,-0.49 0.07,-0.94 0.85,-0.04 1.69,0.53 0.5,0.69 -1.43,1.7 0.67,0.7 0.02,0.55 1.21,-2.04 0.49,-1.54 0.45,0 0.4,1.02 0,0.58 -0.87,0.92 -0.27,0.99 0.08,2.71 0.26,0.33 0.47,0.12 0.58,-0.14 0.96,-0.93 -0.47,-1 0.14,-0.6 1.32,-1.43 1.05,-0.25 2.13,0.59 1.5,-1.11 0.05,0.92 -0.36,0.21 -1.13,1.53 0.59,0.58 0.1,-0.37 1.25,-0.6 0.58,0.79 -0.14,1.21 1.63,1.75 0.86,-0.44 1.58,0.67 0.77,2.4 -0.11,0.95 -2.19,2.73 -0.38,0.89 0.1,0.66 0.6,-1.03 1.75,-1.68 0.83,-0.03 0.87,0.81 0.52,1.89 -0.27,1.23 -0.97,0.19 -1.03,0.91 -1.16,1.49 0.07,0.77 -1.16,2.35 -0.62,3.52 0.21,0.34 0.87,0.23 z m 0.52,0.45 -0.06,-0.79 0.53,-1.53 -0.41,-1.07 0.13,-0.66 0.91,-1.24 0.55,-0.19 0.05,2.35 -0.22,1.34 -0.8,0.6 -0.68,1.19 z m -6.3,-25.76 -0.44,-0.46 -0.08,-0.6 0.8,-1.12 0.84,-0.03 0.68,0.42 0.1,0.34 -0.19,0.36 -1.71,1.09 z m 3.5,4.18 -0.29,-0.3 0.06,-0.53 1.06,-0.89 0.48,0.07 0.5,0.85 -0.14,0.61 -0.4,-0.17 -1.27,0.36 z m -14.16,-4.81 -0.21,-0.05 0.95,-3.579996 0.3,0.09 0.03,0.23 -0.41,3.059996 -0.66,0.25 z",450.0,150.1,0],"MG":["m 527.76257,365.59114 -0.91,-0.55 -2.54,-0.81 -1.58,0.08 -1.08,0.32 -0.84,0.61 -2.18,0.29 -1.34,-0.13 1.67,2.27 -0.02,0.81 -1.13,-0.11 -1.05,-0.74 -0.31,0.02 -2.17,1.31 -1.17,1.93 0.3,0.7 1.33,0.67 0.52,0.66 -0.03,1.92 -0.3,1.54 0.21,0.41 1.31,0.35 0.17,1.72 -0.32,0.42 -0.95,0.24 -0.97,-0.03 -0.8,-0.35 -1.48,0.09 -0.43,0.55 0.49,0.71 0.76,0.28 0.45,-0.29 0.52,0.09 1.1,1.27 1.27,2.81 0.29,2.43 -0.54,2.97 -1.71,2.09 -1.24,0.86 -0.26,0.44 -0.24,1.72 -0.88,2.29 -1.11,1.27 -0.97,3.24 -0.55,0.32 -5.15,-0.03 -1.72,2.06 -0.16,0.42 0.59,3.12 -0.57,1.3 -0.44,2.34 0.29,0.14 0,0 -2.53,2.35 -1.24,0.27 -0.56,0.5 0.74,0.7 -2.36,6.05 -1.9,3.71 -0.09,0.75 1.44,0.13 0.29,0.61 -0.21,0.52 -2.53,0.98 -9.51,4.53 -1.37,0.2 0.02,-0.46 -0.49,-0.17 -2.53,-0.27 -0.57,0.06 -1.62,0.94 -1.25,0.16 -3.2,0.08 -0.36,-0.32 -0.51,0.08 -4.1,1.78 -1.05,0.77 -1.71,0.77 -0.5,-0.28 -2.59,0.17 -2.91,1.34 -2.42,0.74 -0.68,0.49 0,0 -1.25,0.73 -2.2,0.22 -1.93,1.02 -1.23,1.24 -1.79,0.67 -2.38,0.25 -2.34,-0.08 -0.01,-0.49 0.35,-0.49 -0.09,-0.35 -1.19,0.33 -0.18,2.3 0.24,0.23 -0.05,0.84 -0.75,0.98 -1.3,0.32 -0.57,-0.43 -3.61,1 -0.19,-0.53 -2.01,0.24 -1.12,-0.25 -2.03,-3.31 1.22,-0.71 -0.52,-1.71 -1.8,-0.83 -1.79,-1.23 -0.71,-1.61 0.53,-1.56 0.19,-3.45 -0.26,-2.94 1.86,-2.72 0.7,-2.18 0.05,-1.27 -0.23,-0.37 -3.7,-1.32 -1,0.05 -0.28,0.36 -0.78,0.31 -1.61,0.05 0.03,-0.85 -0.83,-1.99 -1.3,-1.79 -0.37,-2.21 -0.31,-0.62 -0.79,-0.74 0.19,-1.94 1.52,-2.03 0.06,-0.56 -0.4,-1.55 -1.88,-1.21 -0.58,-0.61 0.29,-2.37 0.57,-1.01 -0.2,-1.04 -3.27,-3.35 -1.3,0.29 -0.85,0.64 -1.65,-0.78 -2.38,0.11 -0.31,0.61 0.2,0.46 -0.44,0.99 -2.78,0.68 -1.11,-0.43 -1.51,-1.45 -1.01,1.25 -8.18,0.68 -0.46,0.48 -0.48,1.19 0.27,2.54 -0.41,0.44 -1.19,-0.52 -0.01,-2.78 -0.25,-0.96 -0.36,-0.39 -0.56,-0.05 -0.26,0.19 -0.41,1.13 -0.67,0.94 -0.54,0.32 -0.62,-0.02 -1.21,-2.1 -0.33,-1.42 0.14,-0.91 -1.68,-0.79 -2.18,-1.42 -1.99,0.59 -1.62,-0.22 -1.67,0.35 -4.29,-0.96 -2.55,-0.08 -1.73,-1.55 -0.75,-0.14 -1.5,0.61 -1.43,1.69 -1.92,0.37 -2.15,1.11 -1.22,1.13 0,0 0.31,-2.62 -0.59,-3.21 0.99,-4.18 0.58,-0.25 0,0 0.86,0.46 0.36,-0.23 0.01,-0.34 -0.56,-0.61 0.57,-1.9 1.64,-2.1 0.94,-0.74 0.45,-0.14 0.84,0.16 0.82,-0.28 0.84,-1.3 -0.06,-1 1.21,-2.46 1.41,-2.1 2.23,-0.54 2.48,-0.96 3.71,0.62 3.19,-1.64 1.52,0.3 1.31,1.42 0.33,0 2.91,-2.92 4.13,-2.64 2.01,0.89 3.86,-0.16 1.48,0.28 1.75,-0.01 0.58,-0.09 0.55,-0.48 4.35,1.86 0.7,0.77 4.89,-2.74 0.48,-1.12 0.86,-0.9 1.16,-0.2 3.09,-2.06 -1.19,-3.46 0.51,-1.89 0.73,-0.9 0.17,-0.71 -0.18,-1 -0.47,-0.61 -1.58,-0.57 -0.9,0.47 -1.09,-1.11 0.43,-2.14 3.24,-3.01 2.32,-2.71 0,-0.6 -1.65,-4.56 -1.42,-1.03 -0.85,-0.34 -0.85,-1.21 0.41,-1.47 1.04,-1.25 0.68,-1.59 -0.31,-1.57 0.53,-1.52 1.27,-0.12 2.29,-1.51 3.36,-0.9 0.53,-0.53 -0.69,-4.26 -0.53,-0.19 -0.42,-0.61 -0.04,-1.9 0.73,-0.7 0.57,-0.94 -0.49,-1.16 -0.72,-0.1 0.72,-3.18 0.37,-0.28 1.17,-0.23 2.78,1.14 0.4,-0.13 0.57,-0.54 -0.58,-3.77 1.17,-1.49 2.42,1.48 0.9,1.76 3.23,0.34 1,-1.01 0,0 0.51,2.41 -1.43,3.44 0.4,0.23 1.34,-0.91 0.7,-1 0.72,-0.13 2.13,0.38 1.04,-0.77 1.85,-2.57 0.99,0.15 1.43,-0.53 1.81,-1.55 0.95,-1.17 2.02,-0.41 3.37,-1.86 0.64,-1.11 4.27,-3.03 3.82,-1.58 1.8,0.09 1.2,0.5 2.18,0.03 2.28,0.53 0.85,0.46 -1.29,2.74 -0.15,0.89 0.26,1.49 0.61,0.5 5.33,1.46 0.64,-0.17 0.81,-1.12 1.88,-0.89 1.77,-0.26 2.73,0.75 1.1,0.54 4.35,3.64 0.98,-0.18 2.17,1.62 2.53,1.22 0.93,0.22 0.51,-0.21 1.53,1.24 4.39,-1.23 0.38,0.18 6.52,6.2 0.44,3.96 0.57,-0.21 2.61,0.45 1.47,-0.5 1.32,-0.99 1.99,0.15 2.73,0.56 2.26,1.08 2.19,0.61 2.12,-0.03 2.83,2.47 0.73,0.38 0.89,0.07 0.78,1.02 0.42,1.17 -1.47,3.08 -4.96,4.22 -0.15,2.65 0.56,1.02 0,0.42 -1.02,0.71 -2.48,-0.24 -0.82,0.88 -0.82,3.3 -0.53,4.4 0.22,0.25 0.35,-0.19 0.2,-0.45 0.64,-0.24 0.58,1.23 -0.22,1.51 0.15,0.51 4.14,3.06 0.53,1.04 0.01,0.53 -0.68,1.35 z",449.4,377.1,0],"MS":["m 359.21257,400.07114 -0.4,2.46 -0.28,0.4 -1.5,0.78 -1.32,0.04 -0.47,0.22 -1.22,1.03 -1.99,2.68 -0.73,0.65 -1.01,0.3 -0.62,1.68 -0.16,2.93 -2.59,3.64 -0.96,0.52 -0.23,0.38 0.31,1.93 -0.08,0.95 -1.21,2.34 -2,2.26 0.35,0.85 -0.28,1.21 -1.44,1.03 -0.4,1.21 -1.73,1.69 -1.26,2.44 -1.95,1.87 -7.56,4.53 -1.26,1.14 -0.74,1.54 -0.84,1.08 0,0 -5.41,2.27 -1.11,0.82 -0.93,2.33 0.02,1.15 -1.45,3.56 -0.67,0.68 -1.66,1.01 -1.11,0.32 -0.33,0.35 -1.57,7.92 -0.36,0.82 -2.38,1.56 0,0 -2.55,-2.33 -3.41,-1.89 -3.99,1.97 -0.68,0.75 -1.66,0.49 -2.58,0.43 -2.36,-0.46 -1.01,-0.65 -0.47,-4.27 -0.32,-0.7 -0.9,-0.95 -0.23,-2.47 0.51,-1.34 -0.64,-0.79 -0.09,-0.44 0,-2.87 -0.89,-1.97 -0.6,-2.74 -0.05,-0.72 0.59,-1.36 0.02,-1.61 -1.57,-1.09 -0.38,-0.8 -0.16,-2.16 -1.65,-1.82 -2.17,-0.26 -1.51,0.31 -1.83,-0.29 -2.46,-1.96 -0.56,-1.49 -1.54,0.33 -2.17,2.74 -1,-0.6 -1.72,0.81 -1.08,0.16 -1.74,-0.69 -2.56,-0.49 -3.46,0.23 -3.66,-0.71 -0.48,-0.91 -1.99,-0.13 -0.89,0.52 -2.5,-0.88 0.91,-7.27 -0.43,-2.38 0.6,-1.42 0.98,-1.46 0.6,-6.03 -0.66,-2.33 -0.05,-1.73 -0.76,-0.96 -0.43,-0.09 -0.49,0.65 -0.64,-3.26 -0.79,-1.87 -1.21,-2.02 -0.35,-1.83 4.03,-2.3 0.76,-0.88 -4.2,-3.86 5.38,-11.42 1.12,-0.06 -0.28,-2.13 -0.74,-0.13 3.23,-10.33 0.66,-1.16 -3.09,-5.85 0.03,-1.91 0,0 0.7,0.2 1.02,1.1 2.15,1.52 5.62,-1.97 2.05,-2 2.02,-2.95 0.09,-1.17 1.4,-1.45 2.59,0.03 1.56,-0.22 0.77,0.34 1.66,-0.51 1.35,-1.25 2.02,-0.49 1.27,0.2 0.76,1.15 2.79,1.25 2.62,0.47 0.65,0.35 0.27,0.86 0.78,1.02 3.03,1.16 1.26,1.11 1.24,0.57 4.52,-0.63 1.26,-0.8 0.49,-0.85 1.43,-0.61 2.44,0.07 1.59,1.04 0.3,1.37 0.24,0.25 0.99,0.04 2.13,-0.88 1.01,0.06 5.62,-6.01 1.34,-0.13 -1.23,6.61 -1.8,0.7 -1.66,2.83 -0.19,0.46 0.15,0.53 1.3,0.11 1.74,1.27 4.62,0.27 0.57,-0.57 2.66,-0.08 0.87,0.08 1.17,0.57 1.55,-0.31 0,0 0.19,1.77 -0.26,2.58 0.23,1.11 0.28,0.41 0.66,0.19 1.14,-0.67 2.25,0.9 0.08,0.42 -1.31,1.76 -0.57,1.17 -0.26,0.84 0.13,0.33 3.8,0.7 2.78,-0.16 2.7,1.68 1.14,0.17 1.44,0.71 0.67,0.61 3.07,1.56 0.68,0.85 3.35,1.34 1.49,0.04 1.9,0.43 1.62,1.55 3.15,0.61 2.66,2.24 0.24,0.45 0,0 -0.58,0.25 -0.99,4.18 0.59,3.21 z",303.0,403.2,0],"MT":["m 207.22257,296.31114 1.47,-1.43 4.11,-2.57 0.52,-2.45 1.43,-3.78 0.93,-1.08 1.64,-0.53 0.43,-0.41 0.58,-0.84 0.52,-2.25 1.66,-2.01 0.56,-2.24 0.07,-1.71 -0.58,-1.49 0.04,-2.05 -1.53,-3.34 -0.9,0.03 -0.58,-0.51 -0.43,-3.25 0.14,-1.32 1.36,-1.08 1.4,-1.75 0.17,-0.75 -1.41,-3.59 -1.07,-0.43 -1.11,-0.11 -3.5,0.09 -1.22,-1.11 0.24,-0.56 -17.16,-0.05 0.9,-9 -1.5,-2.75 -0.27,-1.76 0.03,-0.8 1,-3.52 -0.38,-1.93 0.94,-1.67 -0.83,-2.27 -0.15,-1.39 -0.26,-0.61 -0.78,-0.47 -0.06,-0.35 1.29,-4.99 0.76,-1.42 -0.6,-1.24 -1.4,-0.97 0,0 47.85,-0.32 1.21,-0.73 1.18,-5.22 1.38,-4.22 -0.46,-1.94 -0.66,-1.37 -0.1,-0.85 0.42,-0.85 0.86,-0.64 1.2,-1.82 0.27,-1.01 -0.34,-0.84 0.06,-0.76 0.2,-0.61 1.18,-1.2 0,0 1.17,1.08 2.45,4.06 0.4,1.76 1.37,3.96 1.32,1.93 0.77,1.62 -0.23,2.44 0.48,2.4 0.73,2.2 1.53,1.11 3,2.75 3.38,1.7 0.23,0.94 -0.04,1.1 0.23,0.49 0.95,0.4 0.82,-0.17 1.63,0.45 0.54,0.72 0.2,1.08 0.35,0.32 1.37,-0.45 3.69,1.49 34.04,2.42 62.97,3.48 0,0 -0.65,1.02 -0.56,1.89 -1.1,1.25 -0.44,3.14 -0.43,0.85 -0.37,0.27 -1.94,5.29 -0.54,2.97 -0.04,2.95 -1.88,5.99 0.06,0.86 1.39,1.34 -0.16,0.87 -0.82,0.89 -0.05,0.5 1.1,2.25 -0.47,3.31 0.01,1.57 0.52,0.58 0.44,3.05 -0.74,2.76 0.98,3.34 0.96,0.51 0.8,0.02 0,0 0.08,0.63 -0.27,1.13 -0.97,0.86 -0.35,0.9 0.16,2.72 -0.39,1.07 -2,3.17 -1.03,2.63 -1.21,0.78 0.12,5.18 -1.6,3.09 -0.58,2.74 0.48,1.14 0.01,0.8 -1.17,2.87 -0.84,2.93 -1.39,1.43 -1.21,0.73 -1.23,-0.68 -1.07,0.26 -1.65,1.01 -1.92,1.94 -0.38,0.74 -0.64,4.1 -0.71,0.96 -1.98,4.19 -0.32,0.28 -2.72,0.86 -2.65,0.13 -1.4,2.62 -1.75,0.97 -0.08,1.54 -0.82,1.43 -1.28,1.04 -0.5,1.01 -0.33,1.95 -1.25,2.02 -1.92,1.77 -2.02,0.84 -0.7,0.77 -0.38,2.91 -2.55,3.85 -0.4,3.41 0.16,0.71 1.41,2.19 0.18,3.43 0.95,2.2 0,0 -1.55,0.31 -1.17,-0.57 -0.87,-0.08 -2.66,0.08 -0.57,0.57 -4.62,-0.27 -1.74,-1.27 -1.3,-0.11 -0.15,-0.53 0.19,-0.46 1.66,-2.83 1.8,-0.7 1.23,-6.61 -1.34,0.13 -5.62,6.01 -1.01,-0.06 -2.13,0.88 -0.99,-0.04 -0.24,-0.25 -0.3,-1.37 -1.59,-1.04 -2.44,-0.07 -1.43,0.61 -0.49,0.85 -1.26,0.8 -4.52,0.63 -1.24,-0.57 -1.26,-1.11 -3.03,-1.16 -0.78,-1.02 -0.27,-0.86 -0.65,-0.35 -2.62,-0.47 -2.79,-1.25 -0.76,-1.15 -1.27,-0.2 -2.02,0.49 -1.35,1.25 -1.66,0.51 -0.77,-0.34 -1.56,0.22 -2.59,-0.03 -1.4,1.45 -0.09,1.17 -2.02,2.95 -2.05,2 -5.62,1.97 -2.15,-1.52 -1.02,-1.1 -0.7,-0.2 0,0 -0.66,-0.67 -0.32,-0.8 0.54,-0.71 -2.44,-2.15 -1.28,0.63 -0.52,-0.05 -1.17,-0.68 -0.45,-0.7 -2.02,-1.41 -1.89,-0.76 -0.3,-0.32 -0.3,-1.12 -0.23,-2.93 -0.61,-1.77 -0.19,-3.66 0.88,-1.64 1.14,-1.09 0.34,-1.78 -0.05,-1.89 -0.96,0.06 -0.4,0.6 -0.38,0.16 -26.86,-1.08 -1.05,-12.65 -5.37,-6.13 4.88,-0.06 -0.35,-7.55 -2.64,-5.32 -0.49,-1.97 0.26,-1.06 0.61,-0.55 0.65,-1.28 -1.44,-2.93 -3.11,-1.04 z",281.2,295.5,0],"PA":["m 371.29257,235.50114 -62.97,-3.48 -34.04,-2.42 -3.69,-1.49 -1.37,0.45 -0.35,-0.31 -0.2,-1.09 -0.55,-0.72 -1.63,-0.45 -0.82,0.17 -0.95,-0.39 -0.23,-0.5 0.04,-1.1 -0.23,-0.94 -3.38,-1.7 -3,-2.76 -1.54,-1.11 -0.72,-2.2 -0.48,-2.39 0.23,-2.44 -0.77,-1.63 -1.33,-1.93 -1.37,-3.95 -0.39,-1.76 -2.45,-4.06 -1.18,-1.08 0,0 -0.57,-0.56 -0.15,-1.96 -0.64,-1.26 -1.59,-1.56 -1.07,-0.58 -0.37,-0.57 -0.83,-2.34 0.03,-1.13 0.58,-0.97 1.45,-1.13 0.78,-1.31 29.9,-64.24 -1.81,-1.67 0.13,-0.78 -0.19,-0.48 -1.39,0.35 -0.85,0.61 -1.87,-0.78 -1.1,-2.17 -2.69,-1.45 -1.27,-1.34 -0.08,-0.6 -1.32,-0.82 -1.37,-0.15 -2.25,-0.65 -2.38,-1.31 -1.88,-0.67 -1.35,-1.09 -0.63,-0.9 -4.58,-2.54 -4.64,-3.769996 -0.3,-0.44 -0.04,-0.93 -0.55,-1.83 -1.84,-1.23 -0.7,0.19 -0.36,-0.2 -1.83,-1.98 0.05,-2.11 0.35,-0.69 -0.18,-0.41 -1.69,-0.85 -0.24,-0.68 -0.18,-2.27 0.43,-1.45 -0.4,-4.86 0,0 -1.59,-16.97 0,0 0.75,0.32 0.43,0.58 -0.02,0.48 0.45,0.4 0.92,0.28 1.37,-0.71 0.47,-0.81 2.71,0.23 0.81,-1.05 -0.54,-1.81 1.79,-0.36 1.41,-1.63 2.64,1.01 1.88,0.03 0.54,-1.52 3.33,-1.62 1.97,0.39 1.16,-0.11 0.49,-0.25 1.2,-1.48 0.4,-1.4 1.46,-1.1 0.86,-0.11 0.65,0.46 2.11,-1.13 0.41,0.11 0.37,0.99 0.73,0.45 2.03,0.48 1.61,0.25 0.56,-0.6 1.67,-0.39 0.78,0.28 0.82,-0.01 0.86,-0.34 2.24,0.3 4.67,1.38 0.96,-0.14 1,-0.87 -0.03,-2.28 -2.07,-2.5 -1.24,-0.63 0.49,-1.68 1.31,-1.45 0.28,-1.11 0.31,-0.17 0.71,0.19 0.83,0.76 2.35,1.11 11.62,-2.33 1.57,1.69 1.02,0.06 0.44,-0.29 0,0 0.62,0.57 0.37,2.3 -0.62,1.3 -0.25,4.54 0.24,1.44 0.31,0.54 1.17,0.02 1.08,-0.29 3.39,0.37 1.29,0.49 1.93,1.05 0.67,0.8 0.49,1.28 1.19,0.12 1.14,0.84 0.8,0.98 0.84,0.27 1.33,-0.14 0.38,-0.42 0.94,-0.14 2.84,2.66 0.68,-0.03 0.49,1.18 -0.68,0.23 -0.19,0.72 0.76,2.83 2.02,2.26 2.57,0.73 0.17,0.33 -0.43,3.14 0.19,2.11 0.67,1.51 0.62,0.56 0.59,1.81 -0.13,1.58 1.5,3.48 0.82,0.19 0.78,-0.36 2.93,3.28 -0.08,2.43 0.41,0.94 0.95,0.19 0.33,0.47 0.31,1.58 -0.21,0.69 0.11,1.3 1.87,1.39 0.43,1.5 1.45,1.03 2.79,0.679996 1.3,-0.12 0.77,-0.339996 0.94,0.06 0,0 -0.53,0.739996 0.29,1.59 -0.17,0.53 -1.29,1.11 -1.39,0.17 -0.5,-0.18 -0.84,-0.79 -0.66,-0.15 -3.38,1.58 -0.37,0.54 -1.6,0.72 -0.63,-0.02 -1.55,0.59 0.04,0.58 6.46,-1.06 0.88,0.66 0.13,0.46 0,0.66 -0.62,0.5 0.3,0.36 0.63,-0.2 0.86,-1 1.02,-0.01 0.53,-0.27 0.6,0.12 1.07,-0.42 1.14,-0.57 3.28,-2.34 1.5,-0.35 1.84,-0.81 3.16,-1.84 0.54,-0.999996 0.67,-0.52 2.09,-1.01 0.66,-0.72 -0.25,-0.67 0.21,-0.41 1.13,-0.28 1.09,0.06 0.41,0.21 0.38,3.799996 -0.52,2.58 0.33,1.62 0.81,1.6 1.31,1.35 0.3,1.64 -0.12,0.47 -1.84,1.84 -0.47,0.13 -0.87,-0.52 -1.82,-0.52 -1.26,-0.31 -0.93,0.14 -2.13,-1.04 -0.26,-1.12 -0.88,-0.53 -2.28,3.82 -0.61,2.37 0.68,2.97 0.48,0.64 0.92,0.62 -1.01,-1.14 -0.43,-2.69 0.12,-0.52 2.57,-4.22 2.31,1.18 0.11,0.45 2.53,2.45 -0.25,2.02 -0.74,0.55 0.4,2.33 0.52,1.13 1.12,0.75 0.74,0.15 0.52,0.49 -0.34,-0.64 -0.77,-0.24 -1.2,-1.04 -0.22,-0.68 0.34,-4.2 0.82,-1.19 1.43,0.73 0.83,1.2 -0.09,0.79 1.2,0.86 0.25,-0.29 -1,-1.26 -0.92,-2.1 0,-0.44 2.26,-2.32 1.62,0.09 1.93,0.64 0.34,0.56 -0.61,0.59 0.32,0.28 0.48,0.03 1.03,-0.17 1.33,-0.9 4.09,-0.96 0.77,0.2 1.74,1.06 3.17,-0.42 1.07,-0.41 1.02,-1.01 0.98,-0.59 1.74,-0.51 0.77,0.07 0.06,0.75 -2.04,4.02 -0.24,1.5 -0.46,1.07 -0.83,1.03 -0.01,0.88 0.58,1.42 -0.32,2.47 0.88,-1.19 0.01,-1.4 1.54,-3 1.13,-3.19 1.12,-1.56 0.27,-0.27 0.76,-0.05 0.58,-0.35 1.82,-0.23 0.88,-1.35 1.51,-1.69 1.36,-2.26 0.52,-0.46 0.79,0.49 0.62,-0.46 1.62,2.34 1.19,0.59 -0.05,-0.74 -0.35,-0.75 0.62,-1.01 3.51,-0.51 -1.03,-0.32 -3.51,0.46 -0.31,-0.21 0.29,-2.43 0.51,-0.29 0.67,0.38 1.02,0.11 1.07,-3.099996 -0.68,-1.39 0.03,-0.68 1.17,-1.81 2.84,-2.48 0.36,-0.08 1.11,1.14 2.93,-2.09 0.46,-0.07 0.4,0.45 0.1,0.57 -0.32,0.67 1.07,-0.16 0.81,-0.58 0.36,-0.78 0.63,-0.19 0.28,0.15 0.74,1.39 1.33,1.2 0.2,-0.56 -0.11,-0.38 -0.96,-0.49 -0.14,-0.29 -0.13,-1.2 0.17,-0.42 0.44,-0.19 2.28,0.26 1.18,0.65 0.62,1.02 1.63,0.71 1.65,-0.78 0.53,2.14 -0.5,0.31 -0.03,0.59 0.92,-0.52 1.16,-2.35 0.38,0.23 -0.23,1.33 0.41,0.44 2.51,-0.26 0.45,0.65 0.46,1.68 -0.6,0.95 0.85,-0.5 0.26,0.37 1.89,0.14 3.53,-1.24 -0.31,1.58 -0.75,1.829996 1.47,-0.489996 0.59,-0.62 0.63,1.619996 0,0 -0.77,0.45 -0.47,1.03 0.16,1.38 -0.71,4.39 -0.57,0.74 -1.14,0.15 -0.05,0.62 0.27,0.49 0.99,-0.16 0.43,0.53 -0.08,1.61 -0.9,3.02 -0.36,0.71 -1.74,1.57 -0.5,2.38 0.13,1.64 -3.68,3.09 1.04,1.58 -0.79,0.81 0.18,1.82 -0.46,1.28 -0.83,1.45 -1.48,1.76 -1.96,1.54 -1.6,4.69 -0.29,1.9 -0.47,1.21 -2.44,2.32 -1.12,0.46 -0.62,2.88 -1.55,1.17 -0.43,1.15 -1.55,2.17 -1.17,0.92 -2.35,-0.23 -14.71,11.83 0.49,0.08 0,0 2.29,0.81 1.87,-0.24 1.29,0.12 1.02,1.66 0.39,0.31 0.87,0.14 1.26,1.17 -0.04,0.63 -0.37,0.67 -0.72,0.37 -0.97,0.07 -0.29,0.28 0.09,1.41 1.01,1.34 -0.92,2.75 -0.64,0.48 -1.46,0.46 -0.25,0.46 0.29,1.2 -0.19,1.34 -1.3,0.15 -1.51,1.34 -0.85,1.27 0.15,1.51 -0.24,0.5 -2.5,1.2 -3.41,1.14 -2.47,1.78 -0.19,0.35 0.43,2.19 0.06,2.67 -1.28,2.1 -1.41,1.68 -0.15,0.57 0.17,0.88 0.59,0.96 1.67,1.74 0.75,0.32 0.15,0.3 -0.66,4.04 -1.76,5.15 -1.08,0.81 -1.7,3.24 -0.18,0.99 -0.94,1.54 -0.74,0.85 -1.05,0.16 -1.37,0.92 -1.03,1.92 -1.21,1.68 -1.18,1.09 -1.15,1.58 -1.13,4.46 -1.6,3.66 z m 21.16,-130.31 -4.52,1.96 -3.39,0.52 -2.02,-0.31 -0.65,1.13 -1.84,1.19 -0.72,-0.61 -0.61,-1.53 -0.23,0.28 0.42,1.23 -0.34,0.81 -0.71,0.41 -3.77,-1.64 -0.8,0.72 -4.19,1.26 -3.2,-0.57 -0.81,-0.61 -0.24,-1.85 -0.23,-0.41 -1.11,-1.02 -1.06,-1.6 -0.21,-1.78 0.52,-2.75 0.62,-0.379996 1.76,0.359996 0.93,-0.749996 0.08,-0.56 -1.3,0.43 -1.22,-0.13 -0.94,-0.71 -0.18,-1.05 0.34,-5.08 0.73,-0.76 0.35,0.75 1.76,0.6 0.55,-0.06 -0.46,-0.42 -1.27,-0.22 -0.9,-2.16 0.36,-1.68 0.89,-1.97 1.33,-1.33 0.96,-0.57 1.34,-0.49 1.32,-0.13 3.46,0.52 7.21,1.77 3.7,-0.46 0.11,-0.3 1.14,-0.62 2.16,-0.37 2.89,0.29 2.8,0.82 6.48,0.85 0.63,0.47 -0.05,1.23 -0.7,0.74 -0.68,1.5 -0.36,2.65 -0.86,3.3 -1.29,0.68 -0.35,0.69 0.23,1.19 -1.98,2.579996 -1.39,3.5 -0.49,0.45 z m -47.21,-0.17 -0.75,-0.51 1.1,-2.25 -0.09,-1.79 0.25,-0.21 2.33,-0.479996 0.9,-0.86 0.15,-0.5 -0.2,-2.34 0.86,-2.58 1.26,-1.49 2.29,-1.47 2.87,-0.2 0.72,2.36 -1.1,2.19 -0.85,3.04 -1.1,0.67 -1.34,2.029996 -0.78,0.72 -4.94,3.31 -1.58,0.36 z m 28.48,-22.899996 -1.03,-0.25 -2.45,0.08 -0.79,-0.16 -0.29,-0.26 -0.38,-1.09 0.01,-1.24 1.51,-0.42 1.89,0.04 2.19,-1.29 4.81,-0.6 0.77,0.26 0.68,0.68 -0.18,1.02 -2.56,1.39 -1.78,2.48 -1.1,0.5 -1.3,-1.14 z m 4.79,0 1.86,-1.2 1.98,0.03 1.65,0.62 0.53,0.99 0.05,0.62 -0.88,0.77 -2.85,0.28 -1.17,0.32 -2.26,-0.89 -0.2,-0.53 1.29,-1.01 z m -16.98,4.39 -0.5,-0.26 -0.61,0.04 -1.54,-0.69 0.21,-1.16 0.64,-0.92 1.92,-0.4 2.36,-0.9 1.32,0.08 0.8,0.68 0.09,0.13 -1.93,1.61 -1.07,0.34 -1.69,1.45 z m 9.42,-9.69 -0.82,-0.3 -0.17,-1.66 0.15,-0.6 1.17,-1.31 2.45,-0.92 0.25,0.12 0.53,0.68 0.04,0.89 -1.95,1.99 -1.65,1.11 z m -13.83,20.22 -0.14,-0.41 0.19,-0.93 1.04,-2.81 2.59,-1.69 0.72,-0.28 0.69,0.14 -0.16,1.79 -1.56,0.44 -1.62,2.19 -1.75,1.56 z m 10.91,-17.57 -1.19,-0.31 -0.3,-0.48 0.88,-0.96 0.71,-3.95 0.89,-1.23 0.29,0.13 0.07,0.32 -0.02,2.48 0.6,1.87 -0.32,0.88 -1.03,0.4 -0.58,0.85 z m -14.81,10.19 -0.27,-0.19 0.12,-0.61 0.55,-0.36 1.19,-1.71 0.76,-1.54 0.73,-0.66 1.45,-0.54 -0.2,1.49 -0.4,1 -1.72,1.66 -2.21,1.46 z m 13.87,-7.03 -0.6,-0.15 -0.84,-0.71 -0.96,-1.64 -0.05,-0.38 0.23,-0.29 0.81,-0.58 1.85,0.84 0.29,0.43 0.24,2.09 -0.97,0.39 z m -5.38,30.559996 -0.65,-0.11 -0.88,-0.52 -0.69,0.46 -0.75,-0.28 -1.68,-1.74 0,-0.61 1.28,-0.01 3.06,1.32 0.31,1.49 z m -21.15,-5.54 0.04,-1.03 -0.2,-0.3 0.6,-0.99 2.36,-0.88 0.78,0.38 0.87,0.86 -0.29,0.35 -1.03,0.47 -2.54,0.41 -0.59,0.73 z m 12.7,-6.69 -0.18,-0.03 0.01,-0.35 0.54,-0.939996 1.79,-1.62 0.42,-1.24 0.05,-1.3 0.24,-0.3 0.32,0.44 0,1.51 -0.89,2.73 -0.62,0.649996 -1.68,0.45 z m 6.3,-9.899996 1.65,-2.96 0.88,-0.21 0.71,0.19 0.27,0.87 -0.58,0.71 -2.93,1.4 z m 31.42,18.969996 -0.84,-0.35 -0.34,-1.06 1.04,-1.72 1.07,-0.33 0.19,0.1 -0.02,0.74 -0.74,2.24 -0.36,0.38 z m -33.48,-19.469996 -0.54,-0.2 0.32,-2.04 1.33,-1.81 0.23,0.04 1.29,0.88 -0.01,0.25 -1.55,0.64 -1.07,2.24 z m 2.23,5.03 0.72,0.03 -0.4,0.45 -0.94,0.31 -0.11,1.12 -0.79,0.71 -1.69,0.84 -0.16,-0.18 0.27,-0.83 0.47,-0.63 1.73,-1.67 0.9,-0.15 z m -22.56,10.209996 -0.55,-0.19 -0.07,-0.35 0.43,-0.4 3.56,-1.6 0.54,0.7 -0.01,0.2 -1.4,0.73 -2.5,0.91 z m 63.53,-4.78 -1.03,-0.19 -0.82,-0.79 0.87,-1.249996 1.34,-0.01 0.19,1.19 -0.1,0.589996 -0.45,0.46 z m -37.25,-18.899996 -2.36,0.7 -0.59,0.01 -0.18,-0.21 1.03,-1.04 1.04,-0.51 1.04,0.17 0.44,0.34 0.15,0.23 -0.15,0.21 -0.42,0.1 z m -5.27,8.59 -0.08,-0.76 0.25,-0.5 2.48,-1.46 -0.9,2 -0.81,0.63 -0.94,0.09 z m 2.14,4.53 -0.45,-0.12 -0.07,-0.23 0.78,-1.5 1.19,0.02 -0.12,1.35 -1.33,0.48 z m 28.04,15.829996 -0.28,-0.23 0.9,-1.6 0.68,-0.4 0.23,0.75 0.51,0.37 -0.26,0.52 -0.43,0.34 -0.63,-0.18 -0.72,0.43 z m -26.66,-23.319996 -0.89,-0.07 0.02,-0.19 2.36,-1.84 0.04,0.96 -0.23,0.63 -0.25,0.34 -1.05,0.17 z m 67.46,10.22 -0.38,-0.53 0.19,-0.76 1.02,-0.91 0.25,0.15 0.23,1.75 -1.31,0.3 z",354.6,106.4,0],"PB":["m 610.69257,199.41114 -2.5,-2.06 -0.82,-0.26 -2.65,-0.21 -2.31,1.07 -1.48,1.28 -0.45,1.8 -1.9,1.03 -2.01,0.45 -1.14,-0.02 0,0.6 -0.8,0.53 -2.18,0.29 -3.88,-0.26 -1.61,0.88 -0.55,0.64 -1.82,0.1 -0.89,0.69 -0.54,0.76 0.39,0.73 0.01,0.54 -0.4,0.48 -1.78,1.53 -1.34,0.16 -1.65,0.84 -1.6,-0.79 -0.95,-0.94 -0.35,-2.24 0.24,-0.49 -0.18,-0.3 -1.14,-0.32 -0.44,0.29 -1.51,0.25 0.04,-0.45 2.53,-2.64 0.17,-0.43 -0.72,-1.87 -0.04,-0.47 0.37,-0.78 3,-1.07 0.11,-0.3 -0.5,-1.39 -3.5,-1.92 -1.48,0.41 -2.22,1.26 -0.93,1.51 -1.48,0.87 -1.05,0.31 -2.7,1.88 -1.52,1.64 -1.63,0.23 -2.63,0.97 -0.77,-0.33 0.05,-0.68 -0.63,-1.24 -0.38,-0.08 -0.93,0.73 -1.51,0.32 -0.99,-0.33 -1.4,-1.91 -0.4,-0.09 0,0 -0.17,-0.25 1.19,-1.12 1.61,-3.49 -0.34,-1.19 -0.69,-0.08 -1.24,-0.89 0.02,-1.66 -0.35,-0.72 -0.58,-0.29 -0.24,-0.41 0.12,-0.93 0.17,-0.38 1.09,-0.63 0.66,-1.31 -0.52,-1.31 1.03,-3 0.84,-1.15 0.08,-0.54 0,0 0.57,-0.46 1.93,1.64 0.9,0.42 2.88,0.61 1.16,-1.13 3.23,-1.66 0.82,-0.71 0.1,-1.04 0.41,-0.95 3.18,-1.21 1.43,-0.12 3.26,-1.04 0.64,0.08 0.53,0.44 0.01,1.19 -2.99,3.21 -0.44,0.96 -0.38,1.74 -0.41,0.38 -0.85,0.25 -0.21,0.31 -0.08,1.72 3.53,0.52 0.32,0.23 0.31,1.38 0.29,0.23 3.15,-1.26 1.77,-0.08 1.95,0.3 0.89,1.17 -0.52,1.54 0.83,0.74 2.35,-0.93 0.5,-0.74 0.55,-1.21 -0.47,-0.94 -0.16,-1.42 0.48,-0.59 1.01,0.32 -0.53,-1.53 -0.72,-0.78 0.31,-1.48 1.82,-1.35 1.38,-0.05 0.42,0.39 -0.1,1 0.62,0.49 3.42,0.4 0.53,0.35 5.83,-0.39 2.17,0.3 2.46,1.1 1.04,-0.4 3.5,0.21 0.93,-0.24 0,0 0.09,2.4 1.45,4.39 0.06,0.64 -0.18,0.94 -0.37,0.45 -0.03,0.88 0.58,-0.74 0.51,-1.5 0.01,1.98 0.59,1.01 -0.27,5.18 -0.36,0.6 z",578.0,193.0,168],"PE":["m 558.54257,227.45114 -1.22,-3.04 -0.01,-0.94 -2.11,-0.86 -0.5,-0.37 -0.45,-0.83 0.61,-0.89 -0.02,-0.62 -0.45,-0.32 -1,0.01 -0.43,0.44 -0.29,1.74 -0.43,0.15 -0.39,-0.26 -0.54,-1.65 -1.58,-1.15 -2.99,-0.4 -2.36,-0.77 -1.35,-0.81 -0.83,-1.44 -1.49,-0.56 -0.59,0.11 -2.53,1.46 -1.65,0.44 -0.77,2.05 -2.23,0.45 -0.29,0.25 0.25,1.36 -0.17,0.59 -1.1,1.24 -2.39,1.03 -0.64,-0.06 -0.77,-0.53 -0.76,0.17 -0.5,0.87 -0.77,3.57 -2.87,0.88 -0.82,0.92 -0.96,0.23 -1.84,-0.62 0.92,-1.68 -0.26,-2 -2.21,-0.91 -0.72,-1.94 0.06,-2.73 -0.44,-0.51 -2.81,-1.38 -2.2,-0.29 -1.16,0.26 -0.9,-0.4 0,0 2.62,-1.27 1.97,-1.71 0.54,-0.87 2.29,-1.33 0.97,-0.28 3.89,-3.87 0.74,-1.76 0.06,-2.27 -0.29,-0.54 -1.62,-1.58 0.07,-2.19 -0.6,-1.13 -0.06,-0.95 0.11,-0.45 0.52,-0.33 1.79,-0.16 0,0 4.93,0.2 0.89,0.24 1.63,-0.19 2.14,-0.8 1.29,-0.1 3.08,0.42 2.85,1.9 1.83,0.83 0.46,0.99 1.01,1.07 1.36,0.48 0.78,0.57 0.63,1.64 1.65,-0.05 1.54,-2.29 1.07,-0.83 1.59,-0.49 0,0 0.4,0.09 1.4,1.91 0.99,0.33 1.51,-0.32 0.93,-0.73 0.38,0.08 0.63,1.24 -0.05,0.68 0.77,0.33 2.63,-0.97 1.63,-0.23 1.52,-1.64 2.7,-1.88 1.05,-0.31 1.48,-0.87 0.93,-1.51 2.22,-1.26 1.48,-0.41 3.5,1.92 0.5,1.39 -0.11,0.3 -3,1.07 -0.37,0.78 0.04,0.47 0.72,1.87 -0.17,0.43 -2.53,2.64 -0.04,0.45 1.51,-0.25 0.44,-0.29 1.14,0.32 0.18,0.3 -0.24,0.49 0.35,2.24 0.95,0.94 1.6,0.79 1.65,-0.84 1.34,-0.16 1.78,-1.53 0.4,-0.48 -0.01,-0.54 -0.39,-0.73 0.54,-0.76 0.89,-0.69 1.82,-0.1 0.55,-0.64 1.61,-0.88 3.88,0.26 2.18,-0.29 0.8,-0.53 0,-0.6 1.14,0.02 2.01,-0.45 1.9,-1.03 0.45,-1.8 1.48,-1.28 2.31,-1.07 2.65,0.21 0.82,0.26 2.5,2.06 0,0 0.88,0.23 0.55,1.22 -1.27,1.72 -0.11,0.55 0.01,0.48 0.7,0.37 0.27,0.5 0.19,1.06 -1.96,6.38 -3.25,8.95 0,0 -0.27,-0.21 -2.9,-0.27 -1.92,-0.81 -1.47,0.19 -2.56,1.29 -2.24,-0.85 -2,0.24 -1.55,1.24 -0.12,0.45 -2.18,2.29 -1.81,1.11 -1.16,-0.05 -1.86,1.06 -1.17,0.11 -3.14,-0.29 -2.5,0.65 -1.91,-0.48 -1.78,-1.05 -1.9,-2.12 -2.55,-2.02 -1.08,0.12 -1.67,-0.3 -1,-1.22 -0.82,0.6 -0.09,0.69 -2.38,3.29 -2.17,0.76 -0.64,1.09 z",560.1,211.1,204],"PI":["m 505.96257,127.17114 1.31,0.12 0.69,-0.23 2.24,0.51 0.99,0.85 0.32,0.6 0,0 -0.11,0.8 -1.09,1.85 -1.58,1.97 -0.18,1.46 0.29,1.29 1.8,4.72 3.15,6.42 0.44,1.73 1.36,1.59 -0.02,0.76 -0.74,1.36 0.79,3.87 -0.48,1.6 1,2.01 0.6,2.99 -0.59,1.58 -0.8,0.58 0.92,0.69 0.11,0.38 0.94,8.16 -0.24,0.45 0.76,2.57 1.05,5.2 1.01,2.67 1.31,0.65 2.56,0.47 0.77,1.16 -0.01,0.69 -1.5,2.25 -1.14,3.11 0.08,0.97 0.68,0.68 -0.06,1.32 0,0 -1.79,0.16 -0.52,0.33 -0.11,0.45 0.06,0.95 0.6,1.13 -0.07,2.19 1.62,1.58 0.29,0.54 -0.06,2.27 -0.74,1.76 -3.89,3.87 -0.97,0.28 -2.29,1.33 -0.54,0.87 -1.97,1.71 -2.62,1.27 0,0 -0.45,1.16 -1.5,2.3 -1.05,0.67 -0.79,-0.18 -2,0.38 0.11,2.4 -1.86,1.8 -0.32,-0.05 -0.62,-0.62 -2.16,-0.01 -0.82,0.98 -0.77,0.36 -2.73,0.34 -1.51,1.34 -0.82,1.22 -1.7,0.1 -1.48,0.64 -3,0.11 -0.82,-0.28 -0.19,-0.28 0.13,-0.66 -1.71,-0.98 -1.33,-0.39 -1.39,0.55 -2.13,0.43 -0.32,-0.18 -0.41,-0.93 -1.5,-0.46 -1.95,0.02 -3.24,1.65 -0.06,0.93 2.24,4.44 0.12,1.15 -0.29,2.57 -0.25,0.91 -0.72,0.86 -2.95,5.05 -2.97,2.42 -1.35,0.42 -1.48,-0.53 -1.34,-0.17 -2.2,0.75 -1.17,0.89 -0.67,0.87 -1.14,0.38 -0.75,1.45 -0.33,0.21 -2.11,-0.18 -1.8,0.52 -4.18,-1.85 -1.77,-2.49 -0.53,-2.21 -0.66,-1.04 -1.44,-1.34 -2.33,0.02 0,0 -2.94,-0.21 0,0 0.05,-1.92 0.26,-1.06 1.15,-2.45 0.13,-6.36 0.76,-1.4 0.03,-0.51 -1.73,-3.06 -0.47,-3.19 -0.7,-1.94 0.73,-2 1.7,-1.4 1.2,-2.48 0.13,-1.51 0.34,-0.83 0.3,-0.21 1.44,-2.74 0.63,-2.32 0.39,-2.97 0.98,-2.98 2.13,-1.95 2.72,-0.76 2.61,-0.31 1.07,-0.37 1.7,-1.53 1.05,-0.04 1.34,-0.52 2.86,-2.57 2.34,-0.91 2.01,-2 0.63,-0.87 0,-0.46 1.9,-1.92 0.5,-0.22 0.84,-0.24 0.23,0.3 1.12,-0.26 1,-0.6 1.46,-0.19 1.01,0.21 2.51,1.82 1.51,-0.1 2.44,-0.86 0.83,-0.04 0.65,0.28 2.28,-0.29 1.21,-1.31 0.5,-1.46 0.12,-1.21 0.29,-0.44 0.39,-2.2 -0.13,-0.85 -0.17,-0.5 -1.61,-0.91 -1.78,-2.03 -0.51,-2.3 -0.11,-2.11 0.17,-2.48 4.1,-4.43 0.21,-0.55 0.1,-2.43 -0.55,-2.98 -1.58,-2.8 1.14,-2.87 0.28,-1.47 -0.38,-1.27 -1.23,-0.84 -0.35,-1.92 0.77,-1.05 0.64,-0.17 0.82,-1.98 1.89,-1.85 0.88,-1.83 -0.04,-1.79 2.92,-3.41 0.81,0.16 3.31,-0.46 4.13,-3.97 1.79,-2.27 0.39,-1.53 -0.64,-0.53 -0.22,-0.72 0.46,-1.44 0,0 0.73,0.12 1.47,0.87 0.51,0.51 -0.13,0.31 z",485.9,193.6,0],"PR":["m 397.01257,499.66114 -5.24,-0.03 -0.33,0.44 -1.74,0.24 -0.76,-0.07 -0.11,-0.39 -1.57,0.57 -1.35,1.43 -3.35,2.13 -1.44,-0.16 -1.23,-0.62 -3.13,-2.6 -1.03,-0.39 -0.76,-0.01 -2.84,0.73 -2.33,0.17 -0.81,-0.03 -1.42,-0.76 -1.11,0.14 -1.53,0.65 -0.59,1.47 -0.73,0.87 -1.87,0.98 -3.57,-0.41 -2,1.15 -0.72,0.77 -0.69,1.59 0.85,2.99 -0.87,0.86 -0.92,0.02 -0.75,0.38 -0.17,0.49 -1.33,-1.89 -4.25,0.13 -3.76,-0.43 -1.58,-1.18 -0.16,-0.41 -1.03,-0.63 -4.26,-0.36 -5.29,-1.68 -2.34,0.57 -2.69,-0.03 -2.02,-1.41 -0.32,-0.51 -1.06,-0.24 -0.53,-0.01 -0.71,0.37 -3.63,-0.02 0,0 -0.22,-1.21 -2.53,-4.18 0.02,-2.59 -0.99,-2.88 -3.42,-2.37 -1.09,1.13 -2.12,-0.11 -1.1,0.43 -1.07,0.9 -1.46,-1.08 -0.82,0.06 -0.28,-2.2 0.66,-1.57 1.07,-1.27 1.22,-2.18 0.06,-0.34 -0.49,-0.75 0.02,-1.24 0.9,-3.64 1.26,-3.02 -0.25,-2.3 1.28,-2.38 -0.21,-1.02 -0.84,-0.88 -0.31,-1.6 0.66,-1.06 0.79,-0.54 0,0 2.38,-1.56 0.36,-0.82 1.57,-7.92 0.33,-0.35 1.11,-0.32 1.66,-1.01 0.67,-0.68 1.45,-3.56 -0.02,-1.15 0.93,-2.33 1.11,-0.82 5.41,-2.27 0,0 3.26,-2.29 3.83,0.65 4.01,-0.11 3.27,0.29 1.21,-0.62 0.35,-0.6 0.73,-0.37 1.17,0.29 1.48,0.78 2.52,0.46 2.64,1.09 1.31,0.13 1.07,-0.54 2.58,-0.01 0.78,1 1.75,0.84 3.51,0.8 0.63,0.51 0.71,1.32 1.73,0.07 0.42,-0.34 1.65,0.15 0.66,0.54 5.31,0.13 2.97,-0.85 1.13,1.55 3.59,2.83 0.89,1.76 0.01,2.74 -0.39,0.58 -0.16,0.81 0.38,1.84 1.3,1.51 -0.08,1.76 -0.36,0.56 1.49,3 1.21,1.15 0.67,0.28 0.5,0.68 -0.05,0.89 0.92,1.97 0.6,0.29 0.25,0.44 -0.25,1.05 -1.27,2.13 0.32,2.04 0.6,0.38 1.01,0.21 2.38,-0.12 3.42,-0.53 0.5,0.39 1.58,-0.19 1.59,0.13 1.61,1.26 -0.14,0.41 -0.89,0.65 -0.69,3.3 0.35,0.78 1.07,0.53 0.65,-0.85 1.1,-2.76 0.76,-0.17 2.14,0.58 -0.4,1.95 0.73,3.3 1.42,0.58 0.16,1.32 0,0 -1.35,1.02 -0.61,1.48 -0.55,-0.12 0.27,-1.94 1.44,-0.95 -1.41,0.28 -0.89,0.49 -0.87,-0.02 -0.34,-0.39 -0.57,-0.17 -0.54,0.37 -0.28,0.93 0.52,0.8 -0.73,0.96 -0.3,0.1 -2.48,-0.53 -0.79,-0.54 -0.45,0.12 -0.18,0.9 0.34,0.37 1.61,0.56 1.4,-0.25 2.13,0.6 0.27,0.48 -0.97,0.68 -1.54,2.78 -1.24,0.77 -2.42,0.57 -0.2,0.45 2.95,-0.2 0.15,1.19 z",361.1,480.6,0],"RJ":["m 468.61257,450.54114 -0.07,-0.78 0.38,-0.27 3.19,0.22 2.59,-0.59 -2.53,-1.55 -1.4,-0.5 -2.81,0.68 -1.36,1.6 -1.03,0.32 -0.7,-0.05 -1.35,-2.15 -0.48,0 -0.9,0.42 -0.96,1.06 -3.15,0.8 -0.34,0.91 -0.19,1.9 2.19,0.13 1.07,1.01 -1.15,1.08 -0.94,-0.17 -1.42,0.17 0,0 -0.48,-0.26 -1.63,-1.73 -0.05,-0.41 1.09,-3.5 1.09,-1.15 2.35,-1.01 0.5,0.15 2.77,-0.36 1.5,-0.71 1.65,-2.15 -0.75,-1.64 -1.7,-0.01 -3.15,0.53 -1.77,-0.39 -1.23,-1.59 -0.56,-1.17 -1.27,-0.54 0,0 0.68,-0.49 2.42,-0.74 2.91,-1.34 2.58,-0.17 0.5,0.27 1.72,-0.77 1.05,-0.77 4.09,-1.79 0.52,-0.07 0.36,0.31 3.2,-0.07 1.25,-0.17 1.63,-0.94 0.57,-0.06 2.53,0.27 0.49,0.17 -0.02,0.47 1.38,-0.2 9.51,-4.53 2.53,-0.99 0.21,-0.52 -0.28,-0.61 -1.44,-0.13 0.09,-0.75 1.89,-3.71 2.36,-6.04 -0.73,-0.71 0.56,-0.49 1.24,-0.27 2.53,-2.36 0,0 1.93,0.76 0.67,4.71 2.5,1.13 4.33,1.01 2.99,-0.37 1.62,1.06 0,0 -0.08,1.27 -0.94,1.61 -0.22,2.13 1.14,6.78 -0.5,0.68 -3.08,1.75 -5.97,1.94 -2.83,1.72 -3.5,3.69 -0.11,1.66 0.31,1.19 -0.19,1.62 -0.73,1.48 -1.82,0.51 -6.55,-0.17 -5.79,0.7 -2.39,-0.46 -0.49,-0.38 -0.06,-0.68 1.03,-1.48 0.67,-1.45 -0.09,-0.62 -0.78,-0.18 -2.79,1.15 -0.26,0.69 0.31,0.79 1.38,1.17 0.25,0.97 -0.59,0.52 -1.63,0.51 -1.57,-0.03 -8.04,1.07 -1.46,0.45 z m -5.11,1.99 -0.67,-0.97 2.11,-1.55 1.86,0.94 0.43,0.7 -2.46,0.5 -0.41,-0.35 -0.47,0 -0.39,0.73 z",478.3,440.1,418],"RN":["m 609.55257,183.17114 -0.93,0.24 -3.5,-0.21 -1.04,0.4 -2.46,-1.1 -2.17,-0.3 -5.83,0.39 -0.53,-0.35 -3.42,-0.4 -0.62,-0.49 0.1,-1 -0.42,-0.39 -1.38,0.05 -1.82,1.35 -0.31,1.48 0.72,0.78 0.53,1.53 -1.01,-0.32 -0.48,0.59 0.16,1.42 0.47,0.94 -0.55,1.21 -0.5,0.74 -2.35,0.93 -0.83,-0.74 0.52,-1.54 -0.89,-1.17 -1.95,-0.3 -1.77,0.08 -3.15,1.26 -0.29,-0.23 -0.31,-1.38 -0.32,-0.23 -3.53,-0.52 0.08,-1.72 0.21,-0.31 0.85,-0.25 0.41,-0.38 0.38,-1.74 0.44,-0.96 2.99,-3.21 -0.01,-1.19 -0.53,-0.44 -0.64,-0.08 -3.26,1.04 -1.43,0.12 -3.18,1.21 -0.41,0.95 -0.1,1.04 -0.82,0.71 -3.23,1.66 -1.16,1.13 -2.88,-0.61 -0.9,-0.42 -1.93,-1.64 -0.57,0.46 0,0 -0.66,0.38 -0.64,-0.17 0.34,-1.97 1.41,-2.25 0.84,-0.88 0.51,-0.07 0.78,0.51 1.03,-0.26 0.57,-1.1 1.46,-1.51 1.4,-2.44 -0.15,-0.74 0.65,-1.67 0.87,-0.57 0.84,-1.12 3.3,-6.69 2.61,-2.01 4.89,-1.59 0,0 0.47,0.76 0.86,0.75 3.13,-0.01 1.22,0.41 1.69,1.75 1.32,0.5 3.33,-0.32 2.88,0.52 2.54,-0.24 2.33,-0.73 4.5,0.92 1.27,0.04 1.95,0.86 1.02,0.82 0.64,0.94 2.31,4.74 0.5,1.79 -0.04,0.75 1.48,5.38 0.21,1.68 0.72,0.54 0.96,2.69 z",578.8,176.8,132],"RO":["m 187.58257,291.21114 -1.29,-1.45 -0.44,-1.88 -1.56,-0.52 -0.86,0.32 -1.81,0.08 -4.07,-1.81 -0.01,-0.4 -0.66,-0.61 -1.27,0.59 -1.98,-1.68 -1.52,-0.97 -0.86,-1.46 -0.28,-1.39 -1.04,-0.39 -1.77,1.12 -1.22,-0.03 -1.41,-0.8 -0.87,-1.33 -3.13,-1.58 -1.96,-0.17 -1.14,0.54 -0.9,0.85 -1.43,-0.17 -0.31,-0.3 -2.14,-0.51 -3.06,-0.28 -0.76,-0.43 -1.18,-1.19 -0.3,-1.97 -1.58,-0.49 -1.89,-0.97 -0.82,-1.72 -0.29,-0.2 -2.72,-0.28 -0.38,-0.35 -0.84,-3.71 -0.88,-0.89 -0.48,1.16 -0.66,-0.32 -0.27,-0.64 0.62,-1.53 -0.84,-1.52 -1.36,-0.39 -1.26,-3.47 -0.17,-1.66 1.55,-2.91 -0.21,-1.66 -1.16,-1.97 -0.75,-2.16 -0.06,-2.29 0.62,-0.5 0.38,-1.37 1.04,-1.05 0.36,-1.47 -0.24,-1.49 -0.42,-0.89 -0.09,-1.53 0.54,-1.65 -1.17,-2.18 -1.02,-0.38 -1.09,0.98 -0.06,0.51 -0.84,0.96 -0.57,0 -2.18,-1.02 -5.18,0.08 -5.61,1.78 -1.69,-0.01 -1.48,0.48 0,0 -2.97,-1.26 0,0 3.26,-2.56 1.92,-0.58 1.55,-1.81 0.15,-0.56 -0.16,-1.29 3.96,0.26 2.87,-0.33 0.72,0.37 2.31,2.33 0.37,-0.02 1.22,-0.79 0.13,-0.72 0.41,-0.53 1.08,-0.5 0.77,0.13 1.37,-0.39 1.3,-1.21 1.84,-1.02 0.38,0.09 0.64,2.26 0.68,0.53 0.68,-0.08 2.54,-3.16 -0.26,-1.75 0.53,-0.84 1.75,-1.26 0.46,0.02 0.84,0.55 1.79,0.1 1.2,-1.07 2.13,-0.38 3.87,0.46 -0.24,-1.46 0.11,-1.81 2.06,-1.21 0.81,-1.15 0.36,-1.02 -0.17,-0.45 -0.9,-0.7 0.05,-0.67 1.19,-1.59 2.48,-0.53 0.26,-0.22 -0.09,-1.17 1.72,-0.5 1.38,-2.56 10.79,-0.06 2.15,1.13 0.45,0.49 0.8,1.91 1.33,1.27 2.54,0.98 1.25,3.27 0.46,0.21 0.98,-0.13 0.62,0.2 0.68,2.88 3.24,1.48 0.68,-0.19 0.54,-1.74 1.92,-1.08 1.39,0.28 0.36,0.38 -0.04,0.7 0,0 1.4,0.97 0.6,1.24 -0.76,1.42 -1.29,4.99 0.06,0.35 0.78,0.47 0.26,0.61 0.15,1.39 0.83,2.27 -0.94,1.67 0.38,1.93 -1,3.52 -0.03,0.8 0.27,1.76 1.5,2.75 -0.9,9 17.16,0.05 -0.24,0.56 1.22,1.11 3.5,-0.09 1.11,0.11 1.07,0.43 1.41,3.59 -0.17,0.75 -1.4,1.75 -1.36,1.08 -0.14,1.32 0.43,3.25 0.58,0.51 0.9,-0.03 1.53,3.34 -0.04,2.05 0.58,1.49 -0.07,1.71 -0.56,2.24 -1.66,2.01 -0.52,2.25 -0.58,0.84 -0.43,0.41 -1.64,0.53 -0.93,1.08 -1.43,3.78 -0.52,2.45 -4.11,2.57 -1.47,1.43 0,0 -0.74,-0.04 -2.59,-1.55 -1.27,-1.43 -7.08,0.96 -1.32,-0.43 -0.25,-0.3 -3.38,0.66 -0.48,-0.16 -0.52,-1.35 z",166.8,249.1,0],"RR":["m 234.87257,61.661144 1.6,16.97 0,0 -18.49,-0.07 0.03,0.68 -2.33,3.26 -1.66,3.03 -0.07,1.13 -1.15,2.64 -0.11,0.66 0.23,0.73 1.14,1.41 -0.02,0.53 -0.42,0.39 -2.03,0.55 -1.41,1.41 -1.25,0.46 -1.82,-0.23 -0.92,-2.51 -1.87,-2.04 -2.83,-0.93 -1.6,0.06 -0.55,0.89 -2.09,0.71 -1.28,0.69 -1.02,1.26 -0.82,2.97 0.37,1.8 -0.25,1.73 -0.75,2.289996 0.44,2.11 -2.36,-1.04 -1.34,0.42 -0.53,-0.07 -1.04,-2.04 -1.48,-1.649996 -1.96,-1.31 -0.52,-0.04 -5.01,-4.42 0.14,-1.14 1.84,0.33 1.14,-1.32 0.06,-0.58 -1.13,-4.33 -0.58,-0.9 -1.22,-0.84 -0.88,-2.17 -0.29,-4.98 0.57,-0.96 0.77,-3.04 -0.66,-1.58 -0.36,-1.59 1.62,-1.46 -0.05,-0.45 -0.87,-1.12 -0.19,-2.26 -1.66,-4.76 -2.73,-3.74 0.71,-1.5 0.91,-3.32 -0.49,-0.66 -1.95,-0.95 -1.36,-0.11 -0.88,0.21 -0.97,-0.37 -1.21,-1.17 -0.06,-0.96 -0.63,-0.11 -1.13,0.42 -0.61,-0.01 -0.75,-0.34 -0.72,-0.78 0,0 0.3,-0.46 0.23,-2.28 -0.3,-0.22 -3.37,-0.23 -3.75,0.14 -3.31,-0.7 -0.2,-0.6 0.8,-1.76 0.12,-1.48 -0.73,-1.77 -1.94,-3.54 -0.73,-2.06 -0.47,-3.72 0.79,-1.48 -0.08,-0.96 -1.84,-2 -2.16,-1.06 -2.81,-2.78 -1.06,-1.81 -0.29,-0.96 -1.14,-0.65 -0.25,-0.39 0.03,-0.84 0.29,-0.33 0.9,0.07 1.12,0.66 0.94,1.73 0.61,0.09 3.39,-0.5 1.35,0.1 1.91,0.59 0.61,1.2 0.55,1.93 0.54,0.35 0.96,-0.08 0.74,-0.65 0.95,-0.4 3.18,0.16 0.47,0.05 1.31,1.21 0.6,0.15 0.52,-0.14 0.61,-1.56 1.31,0.14 1.45,0.93 3.93,4.57 1.05,0.57 0.71,0.11 1.51,-0.68 0.74,-1.13 0.1,-0.84 -0.83,-2.76 0.36,-1.74 0.46,-0.28 1.93,-0.05 1.01,-1.1 1.55,-1.09 0.75,0.05 3.9,1.34 0.59,-0.17 0.8,-0.72 1.03,-0.3 1.13,0.35 1.03,-0.21 1.34,-1.28 1,-0.25 1.15,0.23 1.11,-0.07 0.68,-0.85 0.05,-1.35 3.03,-1.81 2.33,0.19 2.76,-0.39 0.89,-1.13 0.09,-0.71 0.59,-1.1199998 0.75,-0.13 1.85,-0.9 1.1,-1.04 1.11,-1.71 -1.2,-3.56 -1.17,-0.36 0.64,-0.18 1.43,0.07 0.8,0.32 3.57,-0.1 1.06,-0.95 0.74,-0.22 1.37,0.42 0.53,1.31 1.04,0.8 0.48,1.37 -0.67,4.9 -0.72,1.3799998 -1.25,0.7 0.06,0.83 1.61,0.41 1.62,-0.22 2.35,0.81 1.82,1.1 -0.88,1.43 -0.01,1.15 2.34,3.42 0.2,1.55 -1.51,2.92 -1.88,1.41 -0.72,1.5 0.27,0.39 0.06,2.17 -1.47,2.41 -0.9,2.77 -0.31,2.57 -0.09,2.67 0.98,1.87 0.51,1.76 -0.01,1.4 1.57,1.03 0.9,0.2 0.13,0.68 -0.46,5.15 0.12,0.74 1.81,0.29 -0.66,1.17 0.46,0.5 2.15,0.74 1.46,1.92 2.66,2.74 z",189.5,43.8,0],"RS":["m 322.25257,638.78114 -0.36,0.01 -1.94,-1.11 -0.2,-0.46 0.52,-4.27 -0.46,-4.25 0.15,-1.07 0.63,-1.24 2.84,-2.38 0.83,-1.56 2.3,-2.56 -1.46,-1.65 -1.07,-0.62 -2.25,-0.6 -2.32,-2.25 -1.21,-1.62 -0.1,-1.59 -0.43,-1.18 -1.23,-2.03 -2.06,-2.24 -0.67,-0.59 -2.39,-1.21 -1.45,0.21 -1.9,-1.51 -1.52,-1.63 -1.25,-0.78 -0.14,-1.7 -1.9,-2.16 -3.32,-0.46 -0.92,-0.47 -1.73,-1.66 -1.76,0.13 -2.17,-1.38 -1.91,-3.71 -1.11,-1.49 -2.53,-2.12 -0.7,0.08 -0.67,1.79 -2.59,2.24 -2.67,0.12 0.1,-2.86 0.4,-1.28 -0.39,-1 -3.65,-4.29 -2.37,-1.77 -2.18,-2.06 -1.75,-2.11 -2.69,-2.21 -1.9,-0.14 -2.15,0.21 -1.14,1.36 -0.06,0.96 -1.03,0.97 -1.11,0.02 -0.58,-0.48 -3.16,0.14 -0.65,-0.48 -0.16,-0.91 -0.49,-0.22 0.85,-0.22 1.04,-0.72 2.52,-2.77 0.11,-1.84 0.6,-1.25 0.82,-0.45 1.29,-0.07 0.64,-0.26 0.92,-1 5.45,-6.48 0.63,-1.42 0.17,-1.11 0.82,-1.07 1.2,-0.85 1.37,-0.41 1.96,-4.22 0.1,-0.61 0.31,-0.37 1.64,-0.86 1.63,-1.8 0.85,-1.15 0.51,-1.29 1.34,-2.1 0.93,-0.29 1.57,0.18 0.55,0.79 0.47,-1.28 -0.21,-0.58 -1.35,-0.82 -0.05,-0.36 0.35,-0.33 1.08,-0.38 0.82,-0.96 2.79,-0.95 1.05,-1.07 0.1,-0.92 0.82,-0.91 2.21,-1.15 2.47,-0.4 1.77,-1.81 0.15,-1.06 1.32,-2.36 0.33,-0.04 0.05,0.36 0.29,0.2 1.33,-0.17 2.44,-1.13 2.68,-0.59 1.21,-0.57 2.1,-2.35 0.5,0.01 0.67,-0.39 1.01,-1.35 2.31,-0.73 0.3,0.38 0,0 3.52,0.39 3.26,-1.15 0.56,-0.81 1.35,0.58 -0.15,0.92 3.08,-0.03 1.63,0.99 2.56,-0.37 1.92,1.15 2.58,-0.41 1.54,0.18 2.8,-0.16 2.26,0.92 2.48,1.4 1,2.44 1.59,0.19 0.09,-0.48 1.81,-0.35 5.56,3.54 1.37,1.55 0.71,-0.03 1.56,0.98 3.03,3.49 1.64,2.21 0.48,1.48 2.17,2.66 1.17,0.55 6.69,1.06 2.11,-0.4 3.35,0.34 0.88,2.34 -2.08,1.58 -1.27,0.41 -0.73,1.86 0.22,2.19 -0.38,1.56 -0.52,1.3 -1.18,0.2 -1.29,1.69 -0.03,1.41 1.8,1.17 0.27,-0.2 -0.28,-0.97 0.01,-0.96 1.49,-0.82 1.58,0.64 0.73,0.91 1.17,0.85 0.45,-0.03 0,0 -1.4,1.73 -3.9,7.04 -4.21,11.6 -6.3,10.48 -5.44,6.66 -6.51,5.96 -6.09,3.68 -3.1,4.31 -0.18,-0.43 0.65,-1.58 0.34,-2.18 -1.18,-1.71 0.1,-0.42 0.93,-0.17 1.01,0.4 0.56,0.58 1.02,0.04 2.58,-1.41 0.82,-0.68 2.85,-3.71 0.75,-0.69 0.45,0.19 1.02,-0.19 1.05,-0.84 0.93,-1.27 0.37,-1.48 0.18,-0.93 -0.23,-2.1 0.2,-1.37 1.57,-0.07 0.74,0.3 0.27,0.83 0.35,-0.26 -0.29,-1.4 0.51,-2.07 0.48,-0.57 2.74,-1.59 0.73,-1.08 0.47,-2.75 -0.21,-2.28 0.56,-0.68 0.5,0.8 0.37,0.03 0.43,-0.42 0.47,-3.08 -0.1,-0.44 -0.95,-1.22 -0.67,-0.03 -0.26,0.69 0.17,0.39 -0.14,0.57 -0.35,0.2 -1.51,-0.02 -2.01,0.4 -0.34,1.61 -0.53,0.05 -0.81,-0.44 0.1,-1.71 -0.82,-0.89 -1.04,0.33 -0.6,-0.48 -0.73,-1.26 -0.4,-1.45 0.12,-0.57 -0.64,-0.69 -0.61,2.71 0.44,2.25 1.25,2.11 -0.57,0.81 -0.74,2.54 0.38,3.03 -0.18,0.77 -0.48,-0.37 0.26,-0.24 -0.03,-0.71 -0.47,-1.28 -0.45,-0.39 -0.53,0.66 -0.03,1.37 -1.41,3.27 -0.05,1.89 0.22,0.52 -0.72,0.7 -1.61,0.64 -0.61,1.58 -4.09,1.57 -0.72,0.53 -0.53,1.59 -0.1,2.27 -0.97,2.27 -2.36,1.3 -0.11,1.76 0.48,0.83 0.25,1.02 -0.95,0.56 -0.25,1.51 0.43,0.6 0.68,-0.14 1.3,0.63 0.15,0.91 -2.13,1.65 -2.32,4.52 -1.93,6.88 -2.01,4.49 -1.68,2.52 -7.79,7.53 z",327.8,572.7,0],"SC":["m 379.56257,558.27114 -0.45,0.03 -1.17,-0.85 -0.73,-0.92 -1.59,-0.63 -1.48,0.82 -0.01,0.96 0.28,0.97 -0.27,0.2 -1.8,-1.17 0.04,-1.41 1.28,-1.69 1.18,-0.2 0.53,-1.31 0.37,-1.55 -0.22,-2.19 0.73,-1.86 1.27,-0.42 2.08,-1.58 -0.88,-2.34 -3.35,-0.34 -2.11,0.4 -6.69,-1.06 -1.16,-0.54 -2.17,-2.66 -0.49,-1.48 -1.63,-2.21 -3.03,-3.49 -1.57,-0.99 -0.71,0.03 -1.37,-1.55 -5.56,-3.54 -1.81,0.34 -0.09,0.48 -1.6,-0.19 -1,-2.44 -2.47,-1.39 -2.27,-0.93 -2.79,0.16 -1.54,-0.18 -2.59,0.41 -1.91,-1.15 -2.57,0.36 -1.63,-0.98 -3.08,0.03 0.15,-0.93 -1.35,-0.58 -0.56,0.81 -3.26,1.16 -3.52,-0.39 0,0 1.45,-2.93 0.73,-2.09 -0.58,-3.25 0.41,-3.21 -0.04,-2.55 0.96,-1.75 0,0 3.63,0.02 0.71,-0.38 0.53,0.01 1.06,0.24 0.31,0.51 2.03,1.41 2.68,0.03 2.34,-0.58 5.29,1.68 4.26,0.36 1.02,0.63 0.17,0.41 1.57,1.18 3.77,0.42 4.25,-0.13 1.33,1.9 0.18,-0.5 0.74,-0.38 0.92,-0.02 0.87,-0.86 -0.85,-2.99 0.69,-1.58 0.72,-0.78 2,-1.14 3.57,0.4 1.87,-0.97 0.73,-0.87 0.59,-1.48 1.53,-0.65 1.11,-0.14 1.42,0.76 0.81,0.03 2.33,-0.17 2.84,-0.73 0.75,0.01 1.04,0.4 3.12,2.6 1.23,0.62 1.44,0.16 3.35,-2.13 1.35,-1.43 1.56,-0.57 0.12,0.39 0.76,0.07 1.74,-0.23 0.33,-0.44 5.24,0.03 0,0 -0.39,1.32 0.51,1.65 -0.07,0.39 -1.5,1.14 -0.98,-0.48 -0.82,-2.53 -0.02,1.12 0.59,2.72 1.71,1.66 0.56,0.95 -1.01,2.29 -0.16,2.32 0.1,0.43 0.76,0.73 0.26,5.86 0.31,0.55 0.43,0.2 0.77,-0.51 0.35,0.72 0.1,0.87 -0.47,0.06 -0.43,-0.28 -1.19,0.63 -0.34,3.84 0.57,2.59 -0.57,0.75 0.31,1.93 0.91,1.88 -0.86,2.34 -0.52,4.01 -1.71,4.68 -0.34,-0.1 -0.36,-0.76 0.21,-0.97 -0.92,-1.18 -0.26,0.33 0.18,2.43 1.16,0.83 -0.92,1.66 -1.64,0.65 -4.13,3.04 -2.8,2.56 -3.75,4.44 -1.04,1.88 z m 17.88,-26.55 -0.15,-0.47 0.25,-1.75 0.76,-2.4 -0.4,-1.18 0.16,-1.02 1.4,-0.76 0.22,0.06 0.66,0.94 -0.54,2.56 -0.82,0.86 -0.59,1.22 0.2,1.17 -1.15,0.77 z m -0.45,-24.37 -1.87,-2.02 2.55,-2.44 0.25,0.04 0.65,1.05 -0.86,1.32 -0.72,2.05 z",370.6,522.0,0],"SE":["m 570.20257,261.95114 -2.9,0.89 -1.55,-0.64 -0.54,-0.34 -0.48,-0.72 -1.92,-0.92 -0.6,-0.52 -0.12,-0.41 0.34,-0.39 0.13,-1.42 -0.15,-0.39 -1.43,-1.51 -0.52,-1.49 -1.09,-0.67 -0.96,-1.6 -0.02,-0.77 0.59,-1.58 0.32,-0.3 1.7,0.01 1.13,0.75 2.55,-0.99 0.69,-0.55 0.3,-0.58 -0.76,-2.75 0.08,-0.88 0.66,-1.62 0.08,-3.11 -0.75,-1.15 -1.99,-1.95 -1.27,-2.5 -0.22,-2.14 0.67,-1.15 0,0 6.46,2.98 3.68,0.95 5.42,3.07 1.3,2.45 1.76,1.45 1.66,0.79 0.46,0.03 3.59,2.23 0.6,1.31 0,0 -2.38,0.76 -4.57,2.94 -0.97,0.89 -1.55,2.21 -0.32,-0.02 0.11,-1.1 -1.05,-1.82 -0.99,0.16 0.34,1.16 1.24,0 0.23,0.24 -0.52,1.97 -1.27,2.09 -0.53,-0.35 -0.37,-0.67 -0.99,-0.16 0.2,0.68 1.13,0.62 -0.26,1.77 -0.86,1.15 -0.93,2.03 -0.78,0.15 -0.3,-0.46 0.48,-1.4 0.41,-0.13 0.31,-0.43 0.37,-1.04 -0.81,-0.37 0.1,0.68 -0.45,1.13 -0.48,0.5 -0.26,1.09 0.28,0.72 -0.26,0.52 z",570.4,251.1,276],"SP":["m 404.84257,488.18114 -0.16,-1.33 -1.42,-0.57 -0.73,-3.3 0.4,-1.95 -2.14,-0.58 -0.76,0.17 -1.1,2.77 -0.66,0.85 -1.06,-0.53 -0.35,-0.78 0.69,-3.3 0.89,-0.66 0.14,-0.4 -1.61,-1.27 -1.59,-0.13 -1.58,0.19 -0.5,-0.38 -3.41,0.53 -2.38,0.12 -1.01,-0.21 -0.6,-0.39 -0.33,-2.04 1.28,-2.12 0.25,-1.05 -0.25,-0.44 -0.6,-0.3 -0.92,-1.97 0.06,-0.89 -0.5,-0.68 -0.67,-0.29 -1.21,-1.14 -1.49,-3.01 0.36,-0.55 0.08,-1.76 -1.3,-1.52 -0.38,-1.84 0.17,-0.81 0.39,-0.58 -0.02,-2.74 -0.89,-1.76 -3.59,-2.83 -1.13,-1.55 -2.97,0.86 -5.31,-0.13 -0.66,-0.54 -1.65,-0.14 -0.42,0.34 -1.72,-0.07 -0.72,-1.32 -0.63,-0.51 -3.51,-0.8 -1.75,-0.84 -0.78,-1 -2.58,0.01 -1.07,0.54 -1.32,-0.13 -2.64,-1.09 -2.53,-0.46 -1.48,-0.79 -1.17,-0.29 -0.73,0.37 -0.34,0.6 -1.21,0.62 -3.28,-0.29 -4.01,0.11 -3.83,-0.65 -3.25,2.29 0,0 0.84,-1.08 0.73,-1.54 1.26,-1.14 7.56,-4.54 1.95,-1.87 1.26,-2.43 1.73,-1.69 0.4,-1.21 1.44,-1.03 0.28,-1.22 -0.35,-0.84 2,-2.26 1.21,-2.34 0.07,-0.94 -0.31,-1.93 0.23,-0.39 0.96,-0.52 2.6,-3.64 0.16,-2.93 0.62,-1.68 1.01,-0.3 0.73,-0.64 1.99,-2.68 1.22,-1.02 0.47,-0.23 1.31,-0.04 1.5,-0.78 0.28,-0.4 0.4,-2.46 0,0 1.22,-1.13 2.15,-1.11 1.92,-0.37 1.43,-1.69 1.5,-0.61 0.75,0.14 1.73,1.55 2.55,0.08 4.29,0.96 1.67,-0.36 1.62,0.22 2,-0.59 2.18,1.42 1.67,0.79 -0.13,0.92 0.33,1.42 1.21,2.09 0.63,0.03 0.54,-0.32 0.67,-0.94 0.41,-1.13 0.26,-0.19 0.55,0.05 0.36,0.39 0.25,0.96 0.01,2.78 1.2,0.53 0.41,-0.45 -0.27,-2.54 0.49,-1.19 0.45,-0.48 8.18,-0.67 1.01,-1.25 1.5,1.46 1.12,0.43 2.78,-0.69 0.44,-0.99 -0.2,-0.46 0.31,-0.61 2.38,-0.11 1.66,0.78 0.85,-0.64 1.31,-0.29 3.26,3.35 0.2,1.04 -0.57,1.01 -0.29,2.37 0.58,0.61 1.89,1.21 0.4,1.55 -0.06,0.56 -1.52,2.03 -0.18,1.94 0.79,0.74 0.31,0.61 0.37,2.21 1.3,1.8 0.83,1.99 -0.03,0.85 1.61,-0.05 0.78,-0.31 0.28,-0.36 1,-0.05 3.7,1.32 0.23,0.37 -0.05,1.27 -0.7,2.18 -1.86,2.72 0.26,2.94 -0.19,3.45 -0.53,1.56 0.72,1.6 1.78,1.24 1.81,0.83 0.51,1.72 -1.21,0.7 2.02,3.31 1.13,0.25 2.01,-0.24 0.18,0.53 3.62,-1 0.56,0.42 1.31,-0.32 0.75,-0.98 0.05,-0.84 -0.24,-0.24 0.17,-2.3 1.19,-0.33 0.09,0.35 -0.35,0.49 0.01,0.48 2.34,0.08 2.39,-0.25 1.79,-0.67 1.23,-1.24 1.93,-1.02 2.21,-0.22 1.24,-0.73 0,0 1.27,0.54 0.56,1.17 1.23,1.59 1.77,0.39 3.15,-0.53 1.7,0.01 0.75,1.64 -1.65,2.15 -1.5,0.71 -2.77,0.36 -0.5,-0.15 -2.35,1.01 -1.09,1.15 -1.09,3.5 0.05,0.41 1.63,1.73 0.48,0.26 0,0 -0.06,0.2 -1.69,0.42 -1.06,-0.82 -1.48,1.11 -0.43,0.65 0.27,0.22 -0.76,0.64 -3.22,1.55 -2.25,0.7 -0.28,0.44 0.04,0.96 0.5,1.55 -0.32,0.42 -1.4,0.26 -0.7,-0.64 -1.34,-0.29 -3.12,-0.5 -0.86,0.15 -1.32,0.34 -1.73,0.82 -0.5,0.51 -1.21,2.15 -1.31,0.57 -0.5,-0.12 0.58,-0.47 -0.48,-1.22 -1.17,-0.85 -0.83,1.23 0.26,0.75 -0.3,0.61 -7.62,4.24 -0.95,0.82 -0.31,1.16 -3.27,3 -3.25,1.95 -1.92,0.53 -4.5,3.21 -2.33,1.96 -0.67,0.08 -0.44,0.62 0.9,0.43 0.66,0.06 0.93,-0.36 0,0.76 -0.62,1.31 -1.32,0.85 -1.06,1.48 z m 44.31,-23.01 -1.54,-0.65 -1.16,0.18 -0.49,-0.38 0.1,-0.78 0.95,-0.65 1.09,-1.85 0.72,0.25 0.66,0.65 0.13,2.91 -0.46,0.32 z",403.8,441.0,0],"TO":["m 433.61257,282.08114 -5.36,1.42 -1.74,1.34 -2.56,1.1 -1.55,0 -4.53,1 -2.52,2.08 -1.78,0.9 -0.46,-0.24 -1.51,-2.62 -0.55,-0.03 -0.51,3.3 -0.69,0.08 -3.35,-0.68 -3.13,-1.47 0.56,-1.56 -0.22,-0.74 -4.53,0.53 -2.76,-0.34 -0.56,0.54 -0.3,1 -0.75,0.75 -1.14,-0.05 -0.61,-3.1 -1.11,-3.71 -1.04,-1.88 -1.15,-1.31 -1.18,0.97 -1.47,2.39 -1.63,5.94 -0.63,0.23 -4.07,-1.43 -3.09,-1.71 -3.93,-0.4 -2.2,-1.03 -2.4,-0.4 0.52,-2.34 1.22,-1.88 0.03,-1.71 -0.56,0.3 -1.81,2.09 -0.66,1.23 -0.2,1.88 -0.34,0.45 0,0 -0.8,-0.02 -0.96,-0.51 -0.98,-3.34 0.74,-2.76 -0.44,-3.05 -0.52,-0.58 -0.01,-1.57 0.47,-3.31 -1.1,-2.25 0.05,-0.5 0.82,-0.89 0.16,-0.87 -1.39,-1.34 -0.06,-0.86 1.88,-5.99 0.04,-2.95 0.54,-2.97 1.94,-5.29 0.37,-0.27 0.43,-0.85 0.44,-3.14 1.1,-1.25 0.56,-1.89 0.65,-1.02 0,0 1.62,-3.69 1.13,-4.45 1.15,-1.58 1.19,-1.1 1.21,-1.68 1.03,-1.92 1.37,-0.92 1.05,-0.16 0.73,-0.85 0.94,-1.54 0.18,-0.99 1.7,-3.24 1.09,-0.8 1.76,-5.15 0.66,-4.04 -0.15,-0.3 -0.74,-0.32 -1.67,-1.74 -0.6,-0.95 -0.16,-0.88 0.14,-0.57 1.41,-1.69 1.29,-2.1 -0.06,-2.67 -0.43,-2.18 0.19,-0.35 2.47,-1.78 3.41,-1.14 2.5,-1.21 0.24,-0.5 -0.15,-1.51 0.86,-1.27 1.51,-1.34 1.29,-0.15 0.19,-1.34 -0.29,-1.2 0.25,-0.46 1.46,-0.46 0.64,-0.48 0.93,-2.75 -1.02,-1.34 -0.09,-1.4 0.29,-0.28 0.97,-0.08 0.72,-0.37 0.37,-0.66 0.03,-0.64 -1.26,-1.17 -0.87,-0.14 -0.39,-0.31 -1.02,-1.66 -1.29,-0.12 -1.87,0.25 -2.29,-0.81 0,0 0.53,-0.64 2.62,-1.85 1.96,-0.53 0.87,0.05 2.78,1.52 1.4,0.08 0.95,-0.52 1.74,0.29 0.59,0.69 0.08,1.03 0.28,0.32 1.22,0.03 3.4,1.43 0.84,1.03 0.47,3.5 0.64,1.5 -0.21,3.72 0.23,1.08 0.67,1.13 -0.01,0.44 -1.77,6.15 -0.31,2.37 0.28,1 -0.25,1.59 -1.75,2.04 -1.76,0.67 -0.18,0.71 1.94,1.32 0.42,-0.27 1.37,0.24 0.25,0.35 0.11,0.88 -0.62,1.19 0.85,1.44 0.88,-0.07 3,4.16 0.91,0.85 2.28,3.02 2.14,-1.34 4.27,-0.94 1.8,1.22 0.08,1.75 -0.64,3.25 0.39,1.35 -3.39,0.35 -1.34,0.54 -0.57,0.55 -0.68,1.43 -0.73,2.68 0.37,1.3 -2.63,2.55 -0.26,0.7 0.2,0.42 2.08,0.29 0.94,0.69 0.74,1.59 0.06,1.66 0.62,1.04 3.88,1.95 0.09,0.53 -1.64,1.81 0.13,1.65 2.14,1.62 0.99,2.87 1.34,2 0.71,0.18 1.78,-0.21 1,0.3 0.82,0.44 0.61,0.82 1.28,0.66 0,0 2.94,0.21 0,0 -0.69,0.65 -0.22,0.98 -0.56,0.47 -3.82,2.02 -3.21,2.62 -0.19,0.37 1.29,1.8 -0.36,0.39 -1.01,0.27 -0.9,0.61 -1.52,3.49 -1.01,0.72 -0.5,1.16 0.23,0.92 1.86,1.95 3.59,0.67 1.87,0.99 0.05,0.76 -0.56,0.45 -2.04,0.81 -0.43,0.96 0.09,0.5 0.35,0.33 1.03,-0.18 0.92,0.29 0.58,0.51 0.29,0.64 -0.96,0.71 -1.15,0.42 -1.95,1.67 -0.19,0.85 -0.05,2.92 0.35,1.25 0.94,0.66 1.05,0.24 0.41,0.25 0.17,0.42 0.05,1.06 -1.36,2.38 z",405.1,231.6,0]};
+/* ---- mapa do Brasil: conversao (cor) + volume (circulo) -------------------------------------
+   POR QUE NAO E' SO' UM COROPLETICO. Mapa de TAXA pintado por area mente: em Ago/26, AC/AP/RO/RR/TO
+   /ES somam 11 vidas (0,1% do mes) e, pintados pela taxa, viravam o vermelho mais escuro ocupando
+   um terco do Brasil -- enquanto SP, com 3.187 vidas, era um verdinho discreto. Duas defesas:
+     1. estado com menos de GEO_MIN_LEADS leads NAO recebe cor (hachura cinza = "nao avaliavel");
+     2. um CIRCULO proporcional a vidas por cima, para o olho achar onde esta o negocio.
+   A escala e' divergente e ancorada na MEDIA do recorte, com o limite no percentil 85 dos desvios
+   (nao no maximo): um outlier sozinho nao pode achatar a cor de todo mundo no meio. */
+var _RAMPA_ABAIXO=[[238,242,246],[252,165,165],[185,28,28]];
+var _RAMPA_ACIMA =[[238,242,246],[134,239,172],[21,128,61]];
+function _rampa(t,r,clara){
+  var i=t<=0.5?0:1,u=t<=0.5?t*2:(t-0.5)*2,a=r[i],b=r[i+1];
+  var c=[0,1,2].map(function(j){return a[j]+(b[j]-a[j])*u;});
+  if(clara)c=c.map(function(v){return v+(255-v)*0.55;});   // versao pastel p/ o preenchimento
+  return 'rgb('+c.map(Math.round).join(',')+')';
+}
+function geoCorUf(cv,med,cap,clara){
+  if(cv===null||med===null||!cap)return '#eef2f6';
+  var d=cv-med,t=Math.min(1,Math.abs(d)/cap);
+  return _rampa(t,d>=0?_RAMPA_ACIMA:_RAMPA_ABAIXO,clara);
+}
+/* centroide de vertices cai mal em alguns estados (AC encosta na borda, PA fica no topo estreito).
+   Ajuste manual so' onde o rotulo ficava feio -- os outros 25 usam o centroide calculado. */
+var BR_NUDGE={AC:[62,233],PA:[352,122],SC:[372,527],MA:[452,158]};
+var BR_R0=4,BR_DR=18;   // raio do anel de volume: r = BR_R0 + BR_DR*sqrt(vidas/maiorEstado)
+function renderGeoMapa(){
+  var host=document.getElementById('geo_mapa');if(!host||typeof BR_MAPA==='undefined')return;
+  var A=_GEO_AGG,T=geoTotais(),med=T.cvLoc;
+  var byUf={};
+  Object.keys(A.cur).forEach(function(k){
+    if(A.base==='ddd'&&k.indexOf('|')>=0)return;
+    byUf[k]=_geoCell(A.cur[k]);
   });
-  var tb=document.getElementById('tbl_geo_b');if(!tb)return;
-  var totCid=0;
-  var out=[];
-  arr.forEach(function(x){
-    var cids=byCid[x.uf]||{};
-    var cidKeys=Object.keys(cids);
-    totCid+=cidKeys.length;
-    var hasCid=cidKeys.length>0;
-    var open=!!GEO_OPEN[x.uf];
-    var caret=hasCid?(open?'▾ ':'▸ '):'&nbsp;&nbsp;';
-    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(open?'#f1f6fb':'#fff')+';'+(hasCid?'cursor:pointer':'')+'"'+(hasCid?(' onclick="geoToggle(\''+x.uf+'\')"'):'')+'>'+
-      '<td style="padding:7px 8px;font-weight:700">'+caret+x.uf+(hasCid?(' <span style="color:var(--muted);font-weight:400;font-size:11px">('+cidKeys.length+' cid.)</span>'):'')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+nf(x.lt)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;font-weight:600">'+nf(x.vd)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+(x.cv===null?'—':x.cv.toFixed(1)+'%')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+x.share.toFixed(1)+'%</td></tr>');
-    if(open&&hasCid){
-      var sumC=cidKeys.reduce(function(s,c){return s+cids[c];},0);
-      var carr=cidKeys.map(function(c){return {c:c,v:cids[c],pct:sumC?cids[c]/sumC*100:0};});
-      carr.sort(function(a,b){return b.v-a.v;});
-      var showAll=!!GEO_SHOWALL[x.uf];
-      var lim=(showAll||carr.length<=10)?carr.length:10;
-      carr.slice(0,lim).forEach(function(cc){
-        out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
-          '<td style="padding:4px 8px 4px 30px;color:#334155">'+_geoEsc(cc.c)+'</td>'+
-          '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
-          '<td style="padding:4px 8px;text-align:right">'+nf(cc.v)+'</td>'+
-          '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
-          '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+cc.pct.toFixed(1)+'%</td></tr>');
-      });
-      if(carr.length>10){
-        out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="geoShowAll(\''+x.uf+'\')">'+
-          '<td colspan="5" style="padding:5px 8px 5px 30px;color:#0072ce;font-weight:600;font-size:12px">'+
-          (showAll?'▴ ver menos (top 10)':'▾ ver mais ('+(carr.length-10)+' cidades)')+'</td></tr>');
-      }
+  var av=function(uf){var c=byUf[uf];return !!c&&c.lt>=GEO_MIN_LEADS;};   // avaliavel?
+  // limite da escala = percentil 85 dos |desvios| entre os estados avaliaveis
+  var ds=[],maxVd=1;
+  Object.keys(byUf).forEach(function(uf){
+    if(uf==='N/D')return;
+    maxVd=Math.max(maxVd,byUf[uf].vd);
+    if(!av(uf))return;
+    var cv=convVal(byUf[uf].vd,byUf[uf].lt);
+    if(cv!==null&&med!==null)ds.push(Math.abs(cv-med));
+  });
+  ds.sort(function(a,b){return a-b;});
+  var cap=Math.max(ds.length?ds[Math.min(ds.length-1,Math.floor(ds.length*0.85))]:0,1);
+  var pv=[],pc=[],pl=[],ext=[];
+  Object.keys(BR_MAPA).forEach(function(uf){
+    var m=BR_MAPA[uf],c=byUf[uf]||{lt:0,vd:0},cv=convVal(c.vd,c.lt),tem=(c.lt>0||c.vd>0),ok=av(uf);
+    var nx=BR_NUDGE[uf],cx=nx?nx[0]:m[1],cy=nx?nx[1]:m[2];
+    var fill=ok?geoCorUf(cv,med,cap,true):(tem?'url(#hach)':'#f4f6f9');
+    var cheia=ok?geoCorUf(cv,med,cap,false):'#cbd5e1';
+    var aberto=(GEO_MODE==='vend'?GEOV_OPEN[uf]:GEO_OPEN[uf]);
+    var txtCv=ok?cv.toFixed(1).replace('.',',')+'%':'';
+    var ttl=uf+(tem?(' · '+nf(c.vd)+' vidas · '+nf(c.lt)+' leads · conversão '+
+        (cv===null?'—':cv.toFixed(1).replace('.',',')+'%')+
+        ((cv!==null&&med!==null)?(' ('+(cv-med>=0?'+':'−')+Math.abs(cv-med).toFixed(1).replace('.',',')+' p.p. vs média)'):'')+
+        (ok?'':' · menos de '+nf(GEO_MIN_LEADS)+' leads: taxa não avaliável')):' · sem dado no recorte');
+    var clic=tem?(' style="cursor:pointer" onclick="geoFocoUf(\''+uf+'\')"'):'';
+    pv.push('<path class="ufp'+(aberto?' ufp-on':'')+'" d="'+m[0]+'" fill="'+fill+'"'+clic+
+      '><title>'+_geoEsc(ttl)+'</title></path>');
+    // ANEL = volume de vidas (raiz, p/ a AREA ser proporcional). Anel e nao disco de proposito:
+    // o disco tapava o rotulo no meio do estado (MS/BA/MT ficavam ilegiveis). O anel cerca o texto.
+    var rAnel=0;
+    if(c.vd>0){
+      var r=BR_R0+BR_DR*Math.sqrt(c.vd/maxVd);
+      if(r>=5){rAnel=r;pc.push('<circle class="ufc" cx="'+cx+'" cy="'+cy+'" r="'+r.toFixed(1)+
+        '" stroke="'+cheia+'"/>');}
+    }
+    if(m[3]>0){    // estado pequeno -> rotulo na coluna da direita, com linha-guia
+      var y=m[3];
+      ext.push('<g'+clic+'><title>'+_geoEsc(ttl)+'</title>'+
+        '<path class="guia" d="M'+cx+' '+cy+' L'+(BR_GUIA_X-16)+' '+y+' L'+(BR_GUIA_X-3)+' '+y+'"/>'+
+        '<rect x="'+(BR_GUIA_X-1)+'" y="'+(y-6.5)+'" width="11" height="11" rx="2" fill="'+
+          (ok?geoCorUf(cv,med,cap,false):'#e2e8f0')+'" stroke="#cbd5e1" stroke-width=".6"/>'+
+        '<text x="'+BR_LBL_X+'" y="'+(y+4)+'" font-size="12" fill="#334155"><tspan font-weight="700">'+uf+'</tspan>'+
+        '<tspan fill="#64748b"> '+(txtCv||'—')+'</tspan></text>'+
+        '<text x="'+BR_LBL_X+'" y="'+(y+15)+'" font-size="10" fill="#94a3b8">'+nf(c.vd)+' vidas</text></g>');
+    }else{
+      // com anel, o rotulo sobe p/ ACIMA dele: centralizado, o anel cortava a linha do "%"
+      // (BA/MS/PA ficavam ilegiveis). Sem anel, fica no centroide mesmo.
+      var y1=rAnel?(cy-rAnel-13):(cy+(txtCv?-1:4)),y2=y1+11;
+      pl.push('<text class="ufl" x="'+cx+'" y="'+y1.toFixed(1)+'" text-anchor="middle" font-size="12" font-weight="700">'+uf+'</text>'+
+        (txtCv?('<text class="ufl ufl2" x="'+cx+'" y="'+y2.toFixed(1)+'" text-anchor="middle" font-size="10.5">'+txtCv+'</text>'):''));
     }
   });
-  if(ndVd>0||ndLt>0){
-    var ndc=convVal(ndVd,ndLt);
-    out.push('<tr style="border-bottom:1px solid #eef2f7;background:#fff" title="Vidas/leads sem estado identificado (venda sem cidade/UF ou lead cujo DDD não mapeia UF). No mês corrente tende a ser tudo até rodar o backfill venda_uf_consulta.">'+
-      '<td style="padding:7px 8px;font-weight:700;color:var(--muted)">&nbsp;&nbsp;N/D <span style="font-weight:400;font-size:11px">· sem estado</span></td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+nf(ndLt)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;font-weight:600;color:var(--muted)">'+nf(ndVd)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(ndc===null?'—':ndc.toFixed(1)+'%')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(tot?(ndVd/tot*100).toFixed(1):'0.0')+'%</td></tr>');
+  // ---- legenda: rampa de cor + aneis aninhados alinhados pela BASE (nested circles) ----------
+  var paradas=[];
+  for(var i=0;i<=10;i++){var t=i/10,d=(t-0.5)*2;
+    paradas.push(_rampa(Math.abs(d),d>=0?_RAMPA_ACIMA:_RAMPA_ABAIXO,false)+' '+(t*100).toFixed(0)+'%');}
+  // 2 amostras, nao 3: com 3 os rotulos do 2o e do 3o anel ficam a 9px um do outro e se tocam.
+  var amo=[maxVd,Math.round(maxVd/9)]
+    .filter(function(v,i,a){return v>=1&&a.indexOf(v)===i;})
+    .map(function(v){return {v:v,r:BR_R0+BR_DR*Math.sqrt(v/maxVd)};});
+  var rM=amo.length?amo[0].r:BR_R0,H=rM*2+14,W=rM*2+62;
+  var aneis=amo.map(function(a){
+    var cy=H-4-a.r;                                  // todos encostados na mesma base
+    return '<circle cx="'+(rM+2)+'" cy="'+cy.toFixed(1)+'" r="'+a.r.toFixed(1)+'" fill="none" stroke="#b6c2ce" stroke-width="1"/>'+
+      '<line x1="'+(rM+2)+'" y1="'+(cy-a.r).toFixed(1)+'" x2="'+(rM*2+7)+'" y2="'+(cy-a.r).toFixed(1)+'" stroke="#dbe2ea" stroke-width="1"/>'+
+      '<text x="'+(rM*2+10)+'" y="'+(cy-a.r+3.5).toFixed(1)+'" font-size="9.5" fill="#94a3b8">'+nf(a.v)+'</text>';
+  }).join('');
+  var lg='<div style="display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted)">'+
+    '<div><div style="display:flex;align-items:center;gap:6px">'+
+      '<span>−'+cap.toFixed(1).replace('.',',')+'</span>'+
+      '<span style="display:inline-block;width:140px;height:11px;border-radius:3px;border:1px solid #e2e8f0;background:linear-gradient(90deg,'+paradas.join(',')+')"></span>'+
+      '<span>+'+cap.toFixed(1).replace('.',',')+' p.p.</span></div>'+
+      '<div style="margin-top:4px">cor = conversão vs <b>média das praças ('+(med===null?'—':med.toFixed(1).replace('.',',')+'%')+')</b></div></div>'+
+    '<div><svg width="'+W+'" height="'+H+'">'+aneis+'</svg>'+
+      '<div style="margin-top:2px">anel = vidas</div></div>'+
+    '</div>'+
+    '<div style="margin-top:6px;font-size:11px;color:var(--muted)">Estado <b>hachurado</b> tem menos de '+
+      nf(GEO_MIN_LEADS)+' leads no recorte: taxa <b>não avaliável</b> — não é o mesmo que "ruim". '+
+      'Clique num estado para abrir na tabela. <span style="color:#cbd5e1">· contornos: @svg-maps/brazil · CC BY 4.0</span></div>';
+  host.innerHTML='<svg viewBox="0 0 '+BR_VB_W+' '+BR_VB_H+'" width="100%" style="height:auto;display:block">'+
+    '<defs><pattern id="hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'+
+      '<rect width="6" height="6" fill="#f4f6f9"/><line x1="0" y1="0" x2="0" y2="6" stroke="#dbe2ea" stroke-width="2"/></pattern></defs>'+
+    '<style>.ufp{stroke:#fff;stroke-width:.9;transition:stroke .12s,stroke-width .12s}'+
+    '.ufp:hover{stroke:#0f172a;stroke-width:2}.ufp-on{stroke:#0072ce;stroke-width:2.2}'+
+    '.ufc{fill:none;stroke-width:3.2;opacity:.95;pointer-events:none}'+
+    '.guia{fill:none;stroke:#94a3b8;stroke-width:.8}'+
+    '.ufl{fill:#1e293b;paint-order:stroke;stroke:#fff;stroke-width:2.6;stroke-linejoin:round;pointer-events:none}'+
+    '.ufl2{fill:#475569}</style>'+
+    pv.join('')+pc.join('')+ext.join('')+pl.join('')+'</svg>'+lg;
+}
+function geoFocoUf(uf){
+  if(GEO_MODE==='vend'){GEOV_OPEN[uf]=!GEOV_OPEN[uf];renderUFVendTable();}
+  else{GEO_OPEN[uf]=!GEO_OPEN[uf];renderGeoTable();}
+  var t=document.getElementById('tbl_geo_b');
+  if(t&&t.parentNode&&t.parentNode.parentNode&&t.parentNode.parentNode.scrollIntoView)
+    t.parentNode.parentNode.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ---- quadrantes: volume x conversão, com as médias cruzando ---------------------------------
+   Separa "muito lead convertendo mal" (prioridade) de "converte bem, falta volume" (escalar) —
+   é a leitura que o ranking por percentual sozinho não dá. */
+function renderGeoQuadrantes(){
+  if(!document.getElementById('ch_quad'))return;
+  var T=geoTotais(),med=T.cvLoc||0;
+  var P=geoPracas().filter(function(x){return x.lt>0&&x.cv!==null;});
+  var mediaLt=P.length?P.reduce(function(s,x){return s+x.lt;},0)/P.length:1;
+  var maxVd=Math.max.apply(null,P.map(function(x){return x.vd;}).concat([1]));
+  var pts=P.map(function(x){return {x:x.lt,y:+x.cv.toFixed(2),r:4+10*Math.sqrt(x.vd/maxVd),_l:x.lbl,_v:x.vd,_p:x.lt<GEO_MIN_LEADS};});
+  mkChart('ch_quad',{type:'bubble',data:{datasets:[
+    {label:'Praças',data:pts,
+     backgroundColor:pts.map(function(p){return p._p?'rgba(148,163,184,.45)':(p.y>=med?'rgba(22,163,74,.55)':'rgba(220,38,38,.5)');}),
+     borderColor:pts.map(function(p){return p._p?'#94a3b8':(p.y>=med?'#16a34a':'#dc2626');}),borderWidth:1}
+  ]},options:{
+    maintainAspectRatio:false,   // deixa o grafico ocupar a altura do canvas (o card ficava com um vazio grande)
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){
+      var p=c.raw;
+      return [p._l,'leads: '+nf(p.x)+' · vidas: '+nf(p._v),
+        'conversão: '+p.y.toFixed(1).replace('.',',')+'% ('+(p.y-med>=0?'+':'−')+Math.abs(p.y-med).toFixed(1).replace('.',',')+' p.p. vs média)'+(p._p?' · volume baixo':'')];
+    }}}},
+    scales:{x:{type:'logarithmic',title:{display:true,text:'leads no recorte (escala log)'}},
+            y:{title:{display:true,text:'conversão %'},ticks:{callback:function(v){return v+'%';}}}}
+  },plugins:[{id:'quadLines',beforeDatasetsDraw:function(ch){
+    var a=ch.chartArea,x=ch.scales.x,y=ch.scales.y,g=ch.ctx;
+    if(!a)return;
+    g.save();g.strokeStyle='#94a3b8';g.setLineDash([5,4]);g.lineWidth=1;
+    var yy=y.getPixelForValue(med);g.beginPath();g.moveTo(a.left,yy);g.lineTo(a.right,yy);g.stroke();
+    var xx=x.getPixelForValue(mediaLt||1);g.beginPath();g.moveTo(xx,a.top);g.lineTo(xx,a.bottom);g.stroke();
+    g.setLineDash([]);g.fillStyle='#94a3b8';g.font='11px system-ui';
+    g.textAlign='right';g.fillText('escalar (converte bem, pouco lead)',Math.max(xx-6,a.left+4),a.top+14);
+    g.textAlign='left';g.fillText('manter (bem e com volume)',Math.min(xx+6,a.right-4),a.top+14);
+    g.textAlign='right';g.fillText('baixa relevância',Math.max(xx-6,a.left+4),a.bottom-6);
+    g.textAlign='left';g.fillText('PRIORIDADE (muito lead, converte mal)',Math.min(xx+6,a.right-4),a.bottom-6);
+    g.restore();
+  }}]});
+}
+
+/* ---- tabela hierárquica UF -> DDD -> Cidade ------------------------------------------------- */
+function _geoTdNum(v,extra){return '<td style="padding:7px 8px;text-align:right'+(extra||'')+'">'+v+'</td>';}
+function renderGeoTable(){
+  var A=_GEO_AGG,T=geoTotais(),med=T.cvLoc,tb=document.getElementById('tbl_geo_b');if(!tb)return;
+  var base=A.base;
+  function dMes(k){
+    if(A.mesPrev===null)return null;
+    var a=_geoConvSer(k,A.mesAtual),b=_geoConvSer(k,A.mesPrev);
+    return (a===null||b===null)?null:(a-b);
   }
-  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
+  var ufs=Object.keys(A.cur)
+    .filter(function(k){return (base!=='ddd'||k.indexOf('|')<0)&&k!=='N/D';})
+    .map(function(uf){var c=_geoCell(A.cur[uf]);
+      return {uf:uf,lt:c.lt,vd:c.vd,vs:c.vs,cv:convVal(c.vd,c.lt),share:T.vd?c.vd/T.vd*100:0,dmes:dMes(uf)};})
+    .filter(function(x){return x.lt>0||x.vd>0;});
+  // -999 joga o "sem valor" pro fim em qualquer direcao de ordenacao (mesma convencao do -1 usado
+  // nas colunas de volume): ordenar por "maiores quedas" nao pode trazer os vazios na frente.
+  function ord(a,b,st){
+    var k=st.key,r;
+    if(k==='uf')r=String(a.uf).localeCompare(String(b.uf),'pt-BR');
+    else if(k==='dmed'){var av=(a.cv===null||med===null)?-999:a.cv-med,bv=(b.cv===null||med===null)?-999:b.cv-med;r=av-bv;}
+    else if(k==='dmes'){var am=(a.dmes===null||a.dmes===undefined)?-999:a.dmes,bm=(b.dmes===null||b.dmes===undefined)?-999:b.dmes;r=am-bm;}
+    else{var x=a[k],y=b[k];if(x===null)x=-1;if(y===null)y=-1;r=x-y;}
+    return st.dir==='asc'?r:-r;
+  }
+  ufs.sort(function(a,b){return ord(a,b,GEO_SORT);});
+  function linha(op){
+    var baixo=op.lt!==null&&op.lt>0&&op.lt<GEO_MIN_LEADS;
+    var dm=op.serK?dMes(op.serK):null;
+    var badge='';
+    if(op.vd>0&&op.vs/op.vd>=0.5)
+      badge=' <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px" title="'+(op.vs/op.vd*100).toFixed(0)+'% das vidas desta linha são do projeto SINTRO (venda em lote, sem lead). A conversão daqui não é comparável com uma praça de venda avulsa — use o filtro Projetos para isolar.">mix SINTRO</span>';
+    var aviso=baixo?' <span style="color:#cbd5e1;font-size:11px" title="Menos de '+nf(GEO_MIN_LEADS)+' leads no recorte: a taxa oscila muito e não é comparável.">◦ volume baixo</span>':'';
+    return '<tr style="border-bottom:1px solid '+op.brd+';background:'+op.bg+(op.click?';cursor:pointer':'')+(baixo?';color:#94a3b8':'')+'"'+(op.click?(' onclick="'+op.click+'"'):'')+'>'+
+      '<td style="padding:'+op.pad+';font-weight:'+op.fw+'">'+op.rot+badge+aviso+'</td>'+
+      _geoTdNum(op.lt===null?'<span style="color:#cbd5e1">—</span>':nf(op.lt))+
+      _geoTdNum(nf(op.vd),';font-weight:600')+
+      _geoTdNum(op.cv===null?'<span style="color:#cbd5e1">—</span>':op.cv.toFixed(1).replace('.',',')+'%')+
+      _geoTdNum((op.cv===null||med===null)?'<span style="color:#cbd5e1">—</span>':_ppTxt(op.cv-med,'contra a média das praças localizadas ('+med.toFixed(1).replace('.',',')+'%)'))+
+      _geoTdNum(dm===null?'<span style="color:#cbd5e1">—</span>':_ppTxt(dm,'conversão em '+(GEO.mesNome[A.mesAtual]||'')+' contra '+(GEO.mesNome[A.mesPrev]||'')))+
+      '<td style="padding:'+op.pad+';text-align:center">'+(op.serK?_spark(op.serK):'<span style="color:#cbd5e1">—</span>')+'</td>'+
+      _geoTdNum(op.share.toFixed(1).replace('.',',')+'%',';color:var(--muted)')+'</tr>';
+  }
+  var out=[],nPracas=0,nCid=0;
+  ufs.forEach(function(x){
+    var aberto=!!GEO_OPEN[x.uf],filhos=[];
+    if(base==='ddd'){
+      Object.keys(A.cur).forEach(function(k){
+        if(k.indexOf(x.uf+'|')!==0)return;
+        var d=k.split('|')[1];if(!d)return;
+        var c=_geoCell(A.cur[k]);if(!c.lt&&!c.vd)return;
+        filhos.push({k:k,d:d,lt:c.lt,vd:c.vd,vs:c.vs,cv:convVal(c.vd,c.lt)});
+      });
+      filhos.sort(function(a,b){return b.vd-a.vd;});
+      nPracas+=filhos.length;
+    }
+    var temFilho=(base==='ddd')?(filhos.length>0):(Object.keys(A.cid[x.uf]||{}).length>0);
+    out.push(linha({rot:(temFilho?(aberto?'▾ ':'▸ '):'&nbsp;&nbsp;')+x.uf+((base==='ddd'&&filhos.length)?(' <span style="color:var(--muted);font-weight:400;font-size:11px">('+filhos.length+' DDD)</span>'):''),
+      lt:x.lt,vd:x.vd,vs:x.vs,cv:x.cv,share:x.share,serK:x.uf,
+      brd:'#eef2f7',bg:aberto?'#f1f6fb':'#fff',pad:'7px 8px',fw:'700',
+      click:temFilho?("geoToggle('"+x.uf+"')"):null}));
+    if(!aberto)return;
+    if(base==='ddd'){
+      filhos.forEach(function(f){
+        var ab2=!!GEO_OPEN2[f.k],ck=Object.keys(A.cid[f.k]||{});
+        nCid+=ck.length;
+        out.push(linha({rot:'<span style="padding-left:22px;display:inline-block">'+(ck.length?(ab2?'▾ ':'▸ '):'&nbsp;&nbsp;')+_geoEsc(geoPracaLbl(f.d))+'</span>',
+          lt:f.lt,vd:f.vd,vs:f.vs,cv:f.cv,share:x.vd?f.vd/x.vd*100:0,serK:f.k,
+          brd:'#f2f6fa',bg:ab2?'#f7fbff':'#fdfeff',pad:'5px 8px',fw:'600',
+          click:ck.length?("geoToggle2('"+f.k+"')"):null}));
+        if(ab2&&ck.length)out.push(_geoCidRows(f.k,true));
+      });
+    }else{
+      nCid+=Object.keys(A.cid[x.uf]||{}).length;
+      out.push(_geoCidRows(x.uf,false));
+    }
+  });
+  // bucket N/D — nunca esconder: é o termômetro da cobertura do dado
+  if(T.ndVd>0||T.ndLt>0){
+    out.push(linha({rot:'&nbsp;&nbsp;N/D <span style="font-weight:400;font-size:11px;color:var(--muted)">· sem '+(base==='ddd'?'DDD identificado':'estado identificado')+'</span>',
+      lt:T.ndLt,vd:T.ndVd,vs:0,cv:convVal(T.ndVd,T.ndLt),share:T.vd?T.ndVd/T.vd*100:0,serK:'N/D',
+      brd:'#eef2f7',bg:'#fff',pad:'7px 8px',fw:'700',click:null}));
+  }
+  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
   var foot=document.getElementById('tbl_geo_foot');
   if(foot){
-    if(!out.length){foot.innerHTML='';}
-    else{
-      var gc=convVal(gVd,gLt), fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
-      foot.innerHTML='<tr>'+
-        '<td style="'+fc+'">TOTAL (mês)</td>'+
-        '<td style="'+fc+';text-align:right">'+nf(gLt)+'</td>'+
-        '<td style="'+fc+';text-align:right">'+nf(gVd)+'</td>'+
-        '<td style="'+fc+';text-align:right">'+(gc===null?'—':gc.toFixed(1)+'%')+'</td>'+
-        '<td style="'+fc+';text-align:right">100%</td></tr>';
-    }
+    var fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
+    foot.innerHTML=!out.length?'':'<tr><td style="'+fc+'">TOTAL</td>'+
+      '<td style="'+fc+';text-align:right">'+nf(T.lt)+'</td>'+
+      '<td style="'+fc+';text-align:right">'+nf(T.vd)+'</td>'+
+      '<td style="'+fc+';text-align:right" title="Conversão do recorte inteiro, incluindo o N/D — é o número que reconcilia com o resto do painel. A coluna “vs média” compara contra a média das praças localizadas'+(T.cvLoc===null?'':' ('+T.cvLoc.toFixed(1).replace('.',',')+'%)')+', que é a única comparável linha a linha.">'+
+        (T.cv===null?'—':T.cv.toFixed(1).replace('.',',')+'%')+'</td>'+
+      '<td style="'+fc+';text-align:right">—</td><td style="'+fc+';text-align:right">—</td>'+
+      '<td style="'+fc+';text-align:center">—</td><td style="'+fc+';text-align:right">100%</td></tr>';
   }
   var sub=document.getElementById('geo_sub');
-  if(sub)sub.textContent=arr.length?('· '+arr.length+' estados · '+nf(totCid)+' cidades'):(gVd>0?'· sem estado identificado (N/D)':'');
+  if(sub)sub.textContent='· '+ufs.length+' estados'+(base==='ddd'?(' · '+nPracas+' praças (DDD)'):'')+(nCid?(' · '+nf(nCid)+' cidades'):'');
+  _geoHeads({uf:'Estado / DDD / Cidade',lt:'Leads',vd:'Vidas',cv:'Conversão',
+             dmed:'vs média',dmes:'Δ mês ant.',share:'% vidas'},GEO_SORT);
+}
+function _geoCidRows(pai,fundo){
+  var cids=_GEO_AGG.cid[pai]||{};
+  var arr=Object.keys(cids).map(function(i){var c=cids[i];return {n:GEO.cids[i],v:_geoVd(c.v,c.vs)};})
+            .filter(function(c){return c.v>0;});
+  arr.sort(function(a,b){return b.v-a.v;});
+  var soma=arr.reduce(function(s,c){return s+c.v;},0);
+  var todos=!!GEO_SHOWALL[pai],lim=(todos||arr.length<=10)?arr.length:10,pad=fundo?46:30,o=[];
+  arr.slice(0,lim).forEach(function(c){
+    o.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
+      '<td style="padding:4px 8px 4px '+pad+'px;color:#334155">'+_geoEsc(c.n)+'</td>'+
+      '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+      '<td style="padding:4px 8px;text-align:right">'+nf(c.v)+'</td>'+
+      '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+      '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+      '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+      '<td style="padding:4px 8px;text-align:center;color:#cbd5e1">—</td>'+
+      '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+(soma?(c.v/soma*100).toFixed(1).replace('.',','):'0,0')+'%</td></tr>');
+  });
+  if(arr.length>10)o.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="geoShowAll(\''+pai.replace(/'/g,"\\'")+'\')">'+
+    '<td colspan="8" style="padding:5px 8px 5px '+pad+'px;color:#0072ce;font-weight:600;font-size:12px">'+
+    (todos?'▴ ver menos (top 10)':'▾ ver mais ('+(arr.length-10)+' cidades)')+'</td></tr>');
+  return o.join('');
+}
+function _geoHeads(labels,st){
+  // casa por data-k, NAO por posicao: a coluna "Tend." nao e' ordenavel e nao tem a classe
+  // .geo-sortable, entao indexar pela ordem do querySelectorAll desalinha tudo depois dela.
   document.querySelectorAll('#tab-geo .geo-sortable').forEach(function(th){
     var k=th.getAttribute('data-k');
-    var base;
-    if(k==='uf'){base='Estado / Cidade';}
-    else{base=th.getAttribute('data-lbl');if(base===null){base=th.textContent.trim();th.setAttribute('data-lbl',base);}}
+    if(!(k in labels))return;
     th.onclick=function(){geoSort(k);};
-    th.textContent=base+(GEO_SORT.key===k?(GEO_SORT.dir==='asc'?' ▲':' ▼'):'');
+    th.innerHTML=labels[k]+(st.key===k?(st.dir==='asc'?' ▲':' ▼'):'');
   });
 }
+
+/* ---- modo "Vendedores" (mantido da versão anterior; sem nível de DDD, grão pessoa) ---------- */
 function quartilMap(){
   var map={};quartilePopulation(C.NOME,false).forEach(function(g){map[g.k]={q:g.q,score:g._score};});
   return map;
@@ -2422,108 +2779,93 @@ function qBadge(q){
   var c=QCOL[q]||'#94a3b8';
   return '<span style="display:inline-block;min-width:22px;text-align:center;background:'+c+';color:#fff;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:6px" title="Quartil '+q+'">'+q+'</span>';
 }
-function geovSort(k){
-  if(GEOV_SORT.key===k)GEOV_SORT.dir=(GEOV_SORT.dir==='asc'?'desc':'asc');
-  else{GEOV_SORT.key=k;GEOV_SORT.dir=(k==='uf'?'asc':'desc');}
-  renderUFVendTable(_GEOV_ROWS);
-}
-function ufVendToggle(uf){GEOV_OPEN[uf]=!GEOV_OPEN[uf];renderUFVendTable(_GEOV_ROWS);}
-function ufVendShowAll(uf){GEOV_SHOWALL[uf]=!GEOV_SHOWALL[uf];renderUFVendTable(_GEOV_ROWS);}
-function renderUFVendTable(rows){
-  _GEOV_ROWS=rows;
-  var frows=rows.filter(function(x){return _gestaoOf(x.nm)!=='ADMINISTRATIVO';});
-  var agg=ufAgg(frows);
-  var byVend=ufVendAgg(frows);
+function ufVendToggle(uf){GEOV_OPEN[uf]=!GEOV_OPEN[uf];renderUFVendTable();}
+function ufVendShowAll(uf){GEOV_SHOWALL[uf]=!GEOV_SHOWALL[uf];renderUFVendTable();}
+function renderUFVendTable(){
+  var A=_GEO_AGG,tb=document.getElementById('tbl_geo_b');if(!tb)return;
   var qmap=quartilMap();
-  var gLt=0,gVd=0,sLt=0,sVd=0;
-  frows.forEach(function(x){var l=geoLt(x),v=geoVd(x);gLt+=l;gVd+=v;if(x.uf&&x.uf!=='N/D'){sLt+=l;sVd+=v;}});
-  var ndLt=gLt-sLt,ndVd=gVd-sVd;
-  var tot=gVd;
-  var arr=Object.keys(agg).map(function(uf){
-    var a=agg[uf];
-    return {uf:uf,lt:a.lt,vd:a.vd,cv:convVal(a.vd,a.lt),share:tot?a.vd/tot*100:0};
+  // este modo é só sobre VENDEDORES: o balde ADMINISTRATIVO sai (por isso o TOTAL fica abaixo do
+  // total do modo Cidades — comportamento herdado da versão anterior da aba, mantido de propósito)
+  var admIdx={};GEO.nomes.forEach(function(n,i){if(_gestaoOf(n)==='ADMINISTRATIVO')admIdx[i]=1;});
+  var byUf={},gLt=0,gVd=0,ndLt=0,ndVd=0;
+  Object.keys(A.vend).forEach(function(uf){
+    var b=A.vend[uf];
+    Object.keys(b).forEach(function(i){
+      if(admIdx[i])return;
+      var c=_geoCell(b[i]);if(!c.lt&&!c.vd)return;
+      if(!byUf[uf])byUf[uf]={};
+      byUf[uf][i]=c;gLt+=c.lt;gVd+=c.vd;
+      if(uf==='N/D'){ndLt+=c.lt;ndVd+=c.vd;}
+    });
+  });
+  // mesma regra do modo Praças: a media de comparacao exclui o N/D (que tem vidas e quase nenhum lead)
+  var med=convVal(gVd-ndVd,gLt-ndLt);
+  var arr=Object.keys(byUf).filter(function(u){return u!=='N/D';}).map(function(uf){
+    var lt=0,vd=0;Object.keys(byUf[uf]).forEach(function(i){lt+=byUf[uf][i].lt;vd+=byUf[uf][i].vd;});
+    return {uf:uf,lt:lt,vd:vd,cv:convVal(vd,lt),share:gVd?vd/gVd*100:0};
   });
   arr.sort(function(a,b){
     var k=GEOV_SORT.key,r;
     if(k==='uf')r=String(a.uf).localeCompare(String(b.uf),'pt-BR');
-    else{var av=a[k],bv=b[k];if(av===null)av=-1;if(bv===null)bv=-1;r=av-bv;}
+    else if(k==='dmed'){var av=(a.cv===null||med===null)?-999:a.cv-med,bv=(b.cv===null||med===null)?-999:b.cv-med;r=av-bv;}
+    else if(k==='dmes'){r=0;}   // este modo nao tem serie mensal -> a coluna vem toda '—'
+    else{var x=a[k],y=b[k];if(x===null)x=-1;if(y===null)y=-1;r=x-y;}
     return GEOV_SORT.dir==='asc'?r:-r;
   });
-  var tb=document.getElementById('tbl_geo_b');if(!tb)return;
   var out=[];
-  function vendChildren(uf,stateVd){
-    var vv=byVend[uf]||{};
-    var carr=Object.keys(vv).map(function(nm){
-      var d=vv[nm];
-      return {nm:nm,lt:d.lt,vd:d.vd,cv:convVal(d.vd,d.lt),pct:stateVd?d.vd/stateVd*100:0,q:(qmap[nm]||{}).q};
-    });
-    carr.sort(function(a,b){return b.vd-a.vd;});
-    var showAll=!!GEOV_SHOWALL[uf];
-    var lim=(showAll||carr.length<=10)?carr.length:10;
-    carr.slice(0,lim).forEach(function(cc){
-      out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
-        '<td style="padding:4px 8px 4px 30px;color:#334155">'+qBadge(cc.q)+_geoEsc(cc.nm)+'</td>'+
-        '<td style="padding:4px 8px;text-align:right">'+nf(cc.lt)+'</td>'+
-        '<td style="padding:4px 8px;text-align:right">'+nf(cc.vd)+'</td>'+
-        '<td style="padding:4px 8px;text-align:right">'+(cc.cv===null?'—':cc.cv.toFixed(1)+'%')+'</td>'+
-        '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+cc.pct.toFixed(1)+'%</td></tr>');
-    });
-    if(carr.length>10){
-      out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="ufVendShowAll(\''+uf+'\')">'+
-        '<td colspan="5" style="padding:5px 8px 5px 30px;color:#0072ce;font-weight:600;font-size:12px">'+
-        (showAll?'▴ ver menos (top 10)':'▾ ver mais ('+(carr.length-10)+' vendedores)')+'</td></tr>');
-    }
-  }
+  function cel(v){return '<td style="padding:7px 8px;text-align:right">'+v+'</td>';}
   arr.forEach(function(x){
-    var nv=Object.keys(byVend[x.uf]||{}).length;
-    var hasV=nv>0;
-    var open=!!GEOV_OPEN[x.uf];
-    var caret=hasV?(open?'▾ ':'▸ '):'&nbsp;&nbsp;';
-    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(open?'#f1f6fb':'#fff')+';'+(hasV?'cursor:pointer':'')+'"'+(hasV?(' onclick="ufVendToggle(\''+x.uf+'\')"'):'')+'>'+
-      '<td style="padding:7px 8px;font-weight:700">'+caret+x.uf+(hasV?(' <span style="color:var(--muted);font-weight:400;font-size:11px">('+nv+' vend.)</span>'):'')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+nf(x.lt)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;font-weight:600">'+nf(x.vd)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+(x.cv===null?'—':x.cv.toFixed(1)+'%')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right">'+x.share.toFixed(1)+'%</td></tr>');
-    if(open&&hasV)vendChildren(x.uf,x.vd);
+    var open=!!GEOV_OPEN[x.uf],vs=byUf[x.uf],vk=Object.keys(vs);
+    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(open?'#f1f6fb':'#fff')+';cursor:pointer" onclick="ufVendToggle(\''+x.uf+'\')">'+
+      '<td style="padding:7px 8px;font-weight:700">'+(open?'▾ ':'▸ ')+x.uf+' <span style="color:var(--muted);font-weight:400;font-size:11px">('+vk.length+' vend.)</span></td>'+
+      cel(nf(x.lt))+cel('<b>'+nf(x.vd)+'</b>')+cel(x.cv===null?'—':x.cv.toFixed(1).replace('.',',')+'%')+
+      cel((x.cv===null||med===null)?'<span style="color:#cbd5e1">—</span>':_ppTxt(x.cv-med,'contra a média deste modo'))+
+      cel('<span style="color:#cbd5e1">—</span>')+
+      '<td style="padding:7px 8px;text-align:center"><span style="color:#cbd5e1">—</span></td>'+
+      cel('<span style="color:var(--muted)">'+x.share.toFixed(1).replace('.',',')+'%</span>')+'</tr>');
+    if(!open)return;
+    var vl=vk.map(function(i){var c=vs[i];return {n:GEO.nomes[i],lt:c.lt,vd:c.vd,cv:convVal(c.vd,c.lt)};});
+    vl.sort(function(a,b){return b.vd-a.vd;});
+    var todos=!!GEOV_SHOWALL[x.uf],lim=(todos||vl.length<=10)?vl.length:10;
+    vl.slice(0,lim).forEach(function(v){
+      var q=(qmap[v.n]||{}).q;
+      out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#fbfdff">'+
+        '<td style="padding:4px 8px 4px 30px;color:#334155">'+qBadge(q)+_geoEsc(v.n)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+nf(v.lt)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+nf(v.vd)+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+(v.cv===null?'—':v.cv.toFixed(1).replace('.',',')+'%')+'</td>'+
+        '<td style="padding:4px 8px;text-align:right">'+((v.cv===null||med===null)?'<span style="color:#cbd5e1">—</span>':_ppTxt(v.cv-med,''))+'</td>'+
+        '<td style="padding:4px 8px;text-align:right;color:#cbd5e1">—</td>'+
+        '<td style="padding:4px 8px;text-align:center;color:#cbd5e1">—</td>'+
+        '<td style="padding:4px 8px;text-align:right;color:var(--muted)">'+(x.vd?(v.vd/x.vd*100).toFixed(1).replace('.',','):'0,0')+'%</td></tr>');
+    });
+    if(vl.length>10)out.push('<tr style="border-bottom:1px solid #f5f7fa;background:#f8fbff;cursor:pointer" onclick="ufVendShowAll(\''+x.uf+'\')">'+
+      '<td colspan="8" style="padding:5px 8px 5px 30px;color:#0072ce;font-weight:600;font-size:12px">'+
+      (todos?'▴ ver menos (top 10)':'▾ ver mais ('+(vl.length-10)+' vendedores)')+'</td></tr>');
   });
   if(ndVd>0||ndLt>0){
     var ndc=convVal(ndVd,ndLt);
-    var ndOpen=!!GEOV_OPEN['N/D'];
-    var ndHasV=Object.keys(byVend['N/D']||{}).length>0;
-    var ndCaret=ndHasV?(ndOpen?'▾ ':'▸ '):'&nbsp;&nbsp;';
-    out.push('<tr style="border-bottom:1px solid #eef2f7;background:'+(ndOpen?'#f1f6fb':'#fff')+';'+(ndHasV?'cursor:pointer':'')+'"'+(ndHasV?(' onclick="ufVendToggle(\'N/D\')"'):'')+' title="Vidas/leads sem estado identificado (venda sem cidade/UF ou lead cujo DDD não mapeia UF).">'+
-      '<td style="padding:7px 8px;font-weight:700;color:var(--muted)">'+ndCaret+'N/D <span style="font-weight:400;font-size:11px">· sem estado</span></td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+nf(ndLt)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;font-weight:600;color:var(--muted)">'+nf(ndVd)+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(ndc===null?'—':ndc.toFixed(1)+'%')+'</td>'+
-      '<td style="padding:7px 8px;text-align:right;color:var(--muted)">'+(tot?(ndVd/tot*100).toFixed(1):'0.0')+'%</td></tr>');
-    if(ndOpen&&ndHasV)vendChildren('N/D',ndVd);
+    out.push('<tr style="border-bottom:1px solid #eef2f7"><td style="padding:7px 8px;font-weight:700;color:var(--muted)">&nbsp;&nbsp;N/D <span style="font-weight:400;font-size:11px">· sem local</span></td>'+
+      cel('<span style="color:var(--muted)">'+nf(ndLt)+'</span>')+cel('<span style="color:var(--muted)"><b>'+nf(ndVd)+'</b></span>')+
+      cel('<span style="color:var(--muted)">'+(ndc===null?'—':ndc.toFixed(1).replace('.',',')+'%')+'</span>')+
+      cel('<span style="color:#cbd5e1">—</span>')+cel('<span style="color:#cbd5e1">—</span>')+
+      '<td style="padding:7px 8px;text-align:center;color:#cbd5e1">—</td>'+
+      cel('<span style="color:var(--muted)">'+(gVd?(ndVd/gVd*100).toFixed(1).replace('.',','):'0,0')+'%</span>')+'</tr>');
   }
-  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
+  tb.innerHTML=out.length?out.join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px">Sem dados no recorte atual.</td></tr>';
   var foot=document.getElementById('tbl_geo_foot');
   if(foot){
-    if(!out.length){foot.innerHTML='';}
-    else{
-      var gc=convVal(gVd,gLt),fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
-      foot.innerHTML='<tr>'+
-        '<td style="'+fc+'">TOTAL (mês)</td>'+
-        '<td style="'+fc+';text-align:right">'+nf(gLt)+'</td>'+
-        '<td style="'+fc+';text-align:right">'+nf(gVd)+'</td>'+
-        '<td style="'+fc+';text-align:right">'+(gc===null?'—':gc.toFixed(1)+'%')+'</td>'+
-        '<td style="'+fc+';text-align:right">100%</td></tr>';
-    }
+    var fc='position:sticky;bottom:0;background:#0072ce;color:#fff;padding:9px 8px;font-weight:800';
+    foot.innerHTML=!out.length?'':'<tr><td style="'+fc+'">TOTAL (sem ADMINISTRATIVO)</td>'+
+      '<td style="'+fc+';text-align:right">'+nf(gLt)+'</td><td style="'+fc+';text-align:right">'+nf(gVd)+'</td>'+
+      '<td style="'+fc+';text-align:right">'+(convVal(gVd,gLt)===null?'—':convVal(gVd,gLt).toFixed(1).replace('.',',')+'%')+'</td>'+
+      '<td style="'+fc+';text-align:right">—</td><td style="'+fc+';text-align:right">—</td>'+
+      '<td style="'+fc+';text-align:center">—</td><td style="'+fc+';text-align:right">100%</td></tr>';
   }
   var sub=document.getElementById('geo_sub');
-  if(sub)sub.textContent=arr.length?('· '+arr.length+' estados'):(gVd>0?'· sem estado identificado (N/D)':'');
-  document.querySelectorAll('#tab-geo .geo-sortable').forEach(function(th){
-    var k=th.getAttribute('data-k');
-    var base;
-    if(k==='uf'){base='Estado / Vendedor';}
-    else{base=th.getAttribute('data-lbl');if(base===null){base=th.textContent.trim();th.setAttribute('data-lbl',base);}}
-    th.onclick=function(){geovSort(k);};
-    th.textContent=base+(GEOV_SORT.key===k?(GEOV_SORT.dir==='asc'?' ▲':' ▼'):'');
-  });
+  if(sub)sub.textContent='· '+arr.length+' estados · modo Vendedores (ADMINISTRATIVO fora)';
+  _geoHeads({uf:'Estado / Vendedor',lt:'Leads',vd:'Vidas',cv:'Conversão',
+             dmed:'vs média',dmes:'Δ mês ant.',share:'% vidas'},GEOV_SORT);
 }
 function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');var menu=document.getElementById('tabMoreMenu'),mbtn=document.getElementById('tabMoreBtn'),mw=document.getElementById('tabMore');if(menu&&mbtn&&menu.contains(btn))mbtn.classList.add('active');if(mw)mw.classList.remove('open');render();}   // render() agora despacha so' a aba ativa
 function toggleMore(ev){ev.stopPropagation();var w=document.getElementById('tabMore');if(w)w.classList.toggle('open');}
