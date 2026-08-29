@@ -255,6 +255,33 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <div class="note" style="margin-top:8px">As linhas tracejadas são as <b>médias</b> do recorte. O canto <b>inferior direito</b> é onde há mais dinheiro na mesa: muito lead entrando e conversão abaixo da média. O <b>superior esquerdo</b> converte bem mas recebe pouco lead — é candidato a receber mais volume. Bolhas cinzas têm menos de 300 leads: a taxa delas oscila demais para servir de conclusão.</div></div>
 </div>
 
+<div class="card" style="margin-bottom:var(--gap)">
+<h3>De onde veio a variação do mês <span id="casc_sub" style="color:var(--muted);font-weight:400"></span></h3>
+<div id="casc_box"><canvas id="ch_casc" style="height:330px;max-height:330px"></canvas>
+<div class="note" style="margin-top:8px">Cada degrau é uma <b>praça</b>, em <b>vidas</b> — quanto ela somou (verde) ou tirou (vermelho) contra o mês anterior. As barras <b>azuis</b> das pontas são os totais dos dois meses, e os degraus fecham exatamente a diferença entre elas. É a leitura que falta no mapa (que pinta <b>nível</b>, não variação) e na coluna <b>Δ mês ant.</b> da tabela (que é em <b>p.p. de conversão</b>, não em vidas). Ficam as <b>5 maiores altas e as 5 maiores quedas</b>; o miolo vira a barra cinza <b>outras N</b>. O eixo <b>não começa em zero</b>: começando, os degraus viravam frestas de 1px. ⚠️ Uma praça pode cair de vidas <b>sem</b> piorar de conversão — foi só menos lead — então leia este gráfico junto da coluna Δ da tabela.</div></div>
+<div id="casc_aviso" class="note" style="display:none">Selecione <b>um único mês</b> no filtro de <b>Mês</b> do topo para ver a variação: com vários meses marcados não existe "mês anterior" definido.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(340px,1fr) minmax(340px,1fr);gap:var(--gap);margin-bottom:var(--gap)">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+<h3 style="margin:0">Conversão mês a mês <span id="evo_sub" style="color:var(--muted);font-weight:400"></span></h3>
+<div style="display:inline-flex;border:1px solid #d5dde6;border-radius:8px;overflow:hidden;font-size:12px;font-weight:700;flex:none" title="Duas leituras da mesma série">
+<button id="evo_lin" type="button" onclick="geoEvo('lin')" style="border:0;padding:5px 11px;cursor:pointer;background:#0072ce;color:#fff">Linhas</button>
+<button id="evo_mat" type="button" onclick="geoEvo('mat')" style="border:0;padding:5px 11px;cursor:pointer;background:#fff;color:#334155;border-left:1px solid #d5dde6">Matriz</button>
+</div>
+</div>
+<div id="evo_wrap_lin" style="margin-top:10px"><canvas id="ch_evo" style="height:400px;max-height:400px"></canvas></div>
+<div id="geo_heat" style="display:none;margin-top:10px"></div>
+<div class="note" style="margin-top:8px">A tabela mostra a <b>foto do recorte</b>; aqui está o <b>filme</b>. Em <b>Linhas</b>, as 6 maiores praças contra a média (tracejado preto). Na <b>Matriz</b>, as 20 maiores praças × mês, cada célula colorida pela distância da média <b>daquele mês</b> — a régua muda mês a mês de propósito, senão um mês fraco pinta a linha inteira de vermelho. Mês com menos de <b>300 leads</b> na praça vira <b>·</b>: taxa não avaliável. Vale olhar: <b>13 das 20 maiores praças trocam de lado da média</b> ao longo do ano, então uma praça "boa" no mês pode não ser boa no ano.</div>
+</div>
+<div class="card">
+<h3>Dentro da praça: como os vendedores se espalham <span id="disp_sub" style="color:var(--muted);font-weight:400"></span></h3>
+<div style="margin-top:10px"><canvas id="ch_disp" style="height:400px;max-height:400px"></canvas></div>
+<div class="note" style="margin-top:8px">Cada bolha é <b>um vendedor naquela praça</b> (tamanho = vidas), <b>verde</b> se está acima da conversão da praça e <b>vermelho</b> se abaixo. A linha <b>azul cheia</b> é a conversão da praça; a <b>preta tracejada</b> é a <b>mediana dos vendedores</b>. Quando a mediana fica bem <b>abaixo</b> da linha azul, a praça não vai bem porque o time todo converte — vai bem porque <b>uma cauda puxa</b> (é o caso de <b>SP: praça 9,9%, mediana 6,8%</b>). Responde a pergunta que a tabela abre e não fecha: <i>o problema é a praça ou é quem está nela?</i> Só entram vendedores com <b>≥40 leads</b> naquela praça — e mesmo aí o ponto de <b>uma</b> pessoa oscila: leia a <b>nuvem</b>, não a bolha. Ficam de fora as linhas <b>não comparáveis</b> (venda em lote do SINTRO, ou vidas &gt; leads) e as praças onde <b>ninguém</b> tem esse volume — lá o volume é pulverizado ou vem de lote, e o subtítulo diz quais são.</div>
+</div>
+</div>
+
 <div class="tablecard">
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
 <h3 style="font-size:14px;font-weight:700">Conversão por praça <span id="geo_sub" style="color:var(--muted);font-weight:400"></span></h3>
@@ -2366,6 +2393,9 @@ function renderGeo(){
   renderGeoKpis();
   renderGeoMapa();
   renderGeoQuadrantes();
+  renderGeoCascata();
+  renderGeoEvo();
+  renderGeoDisp();
   renderGeoTable();
 }
 function geoBase(b){
@@ -2639,6 +2669,286 @@ function renderGeoQuadrantes(){
     g.textAlign='left';g.fillText('PRIORIDADE (muito lead, converte mal)',Math.min(xx+6,a.right-4),a.bottom-6);
     g.restore();
   }}]});
+}
+
+/* ==============================================================================================
+   GRÁFICOS DA ABA (28/08/2026, 4ª rodada — pedido do David: "me traga outros gráficos").
+   Três leituras que nem a tabela nem o mapa dão, todas do MESMO cubo já carregado (payload zero):
+
+     1. CASCATA   — de onde veio a variação de vidas do mês. O mapa pinta NÍVEL, não VARIAÇÃO, e a
+                    coluna "Δ mês ant." é em p.p. de conversão, não em vidas. Sem este gráfico o
+                    fato de que Natal sozinha explicou 92% da queda de Jul→Ago (−3.404 de −3.694)
+                    não aparecia em lugar nenhum da aba.
+     2. EVOLUÇÃO / MATRIZ — a praça é boa SEMPRE ou só neste mês? 13 das 20 maiores praças trocam
+                    de lado da média ao longo do ano: a foto do mês engana em 2 de cada 3.
+     3. DISPERSÃO — a praça vai bem porque o time todo converte ou porque uma cauda puxa? SP faz
+                    9,9% com MEDIANA de vendedor em 6,8%. É o par natural da folha de vendedores.
+   ============================================================================================== */
+function _geoSer(k,m){var b=(_GEO_AGG.ser[k]||{})[m];return b?_geoCell(b):{lt:0,vd:0,vs:0};}
+
+/* Chaves de praça tiradas da SÉRIE, e não de geoPracas(): geoPracas() só enxerga o mês filtrado, e
+   uma praça que existia no mês anterior e sumiu no atual PRECISA aparecer na cascata — senão a
+   soma dos degraus não fecha com o total do mês. */
+function _geoPracaKeys(){
+  var A=_GEO_AGG,dd=(A.base==='ddd');
+  return Object.keys(A.ser).filter(function(k){
+    if(k.indexOf('#')>=0)return false;                       // série de vendedor (pai#idx)
+    if(dd){var p=k.split('|');return p.length===2&&p[1]!=='';}
+    return k.indexOf('|')<0&&k!=='N/D';
+  }).map(function(k){return {k:k,lbl:dd?geoPracaLbl(k.split('|')[1]):k};});
+}
+function _geoMesTot(keys,m){
+  var lt=0,vd=0;keys.forEach(function(p){var c=_geoSer(p.k,m);lt+=c.lt;vd+=c.vd;});
+  return {lt:lt,vd:vd,cv:convVal(vd,lt)};
+}
+/* Um ponto de conversao NAO e' comparavel com os outros quando:
+     - tem mais vidas do que leads (a taxa passa de 100%: venda creditada a quem nao recebeu o
+       lead ali -- PME/ADESAO sem lead, lead de outra praca/outro mes); ou
+     - metade ou mais das vidas vem do SINTRO (venda em lote, que nao tem lead nenhum).
+   E' a mesma regra da badge "mix SINTRO" da tabela. Vale para a linha, para a matriz e para o
+   calculo do limite de cor -- sem ela, Natal (123% em Jun, 82% em Jul, quase tudo SINTRO) achatava
+   as outras 5 pracas numa faixa de 5px. No modo Projetos=SO'/FORA o recorte ja isola o SINTRO,
+   entao so' sobra a regra do >100%. */
+function _geoNaoComp(c){
+  if(c.lt>0&&c.vd>c.lt)return 'mais vidas do que leads: a taxa passa de 100%';
+  if(!projMode()&&c.vd>0&&c.vs/c.vd>=0.5)
+    return Math.round(c.vs/c.vd*100)+'% das vidas s\u00e3o do projeto SINTRO (venda em lote, sem lead)';
+  return '';
+}
+function _geoLblCurto(l){                                    // "11 São Paulo / RMSP" -> ["11","São Paulo"]
+  var m=/^(\d{2})\s+(.*)$/.exec(l);
+  if(!m)return [l];
+  var n=m[2].split('/')[0].trim();
+  return [m[1],n.length>11?(n.slice(0,10)+'…'):n];
+}
+
+/* ---- 1. cascata: de onde veio a variação de vidas do mês ------------------------------------ */
+function renderGeoCascata(){
+  var A=_GEO_AGG,cvs=document.getElementById('casc_box'),avi=document.getElementById('casc_aviso'),
+      sub=document.getElementById('casc_sub');
+  if(!cvs)return;
+  // "mês anterior" só existe com UM mês selecionado — mesma regra da coluna Δ da tabela
+  if(A.mesPrev===null){
+    if(charts['ch_casc']){charts['ch_casc'].destroy();delete charts['ch_casc'];}
+    cvs.style.display='none';if(avi)avi.style.display='';if(sub)sub.textContent='';
+    return;
+  }
+  cvs.style.display='';if(avi)avi.style.display='none';
+  var keys=_geoPracaKeys();
+  keys.push({k:'N/D',lbl:'N/D · sem '+(A.base==='ddd'?'DDD':'estado')});   // p/ a cascata fechar
+  var it=keys.map(function(p){
+    var a=_geoSer(p.k,A.mesAtual),b=_geoSer(p.k,A.mesPrev);
+    return {lbl:p.lbl,d:a.vd-b.vd,a:a.vd,b:b.vd};
+  });
+  var totB=0,totA=0;it.forEach(function(x){totB+=x.b;totA+=x.a;});
+  var mov=it.filter(function(x){return x.d!==0;}).sort(function(a,b){return b.d-a.d;});
+  var TOP=5;                                        // 5 maiores altas + 5 maiores quedas
+  if(mov.length>TOP*2+1){
+    var meio=mov.slice(TOP,mov.length-TOP),soma=0;
+    meio.forEach(function(x){soma+=x.d;});
+    mov=mov.slice(0,TOP).concat([{lbl:'outras '+meio.length,d:soma,_g:true}]).concat(mov.slice(-TOP));
+  }
+  // PISO do eixo. Com beginAtZero os degraus viram frestas de 1px: a queda de Jul->Ago e' 28% do
+  // total, entao 2/3 da altura do grafico era ar. O eixo passa a cobrir so' a faixa da cascata, e
+  // as barras de total partem do piso (a legenda avisa que o eixo nao comeca em zero).
+  var niv=[totB,totA],acc=totB;
+  mov.forEach(function(x){acc+=x.d;niv.push(acc);});
+  var lo=Math.min.apply(null,niv),hi=Math.max.apply(null,niv),pad=Math.max((hi-lo)*0.10,1);
+  var piso=Math.max(0,Math.floor((lo-pad)/100)*100);
+  var labels=[[GEO.mesNome[A.mesPrev]||('mês '+A.mesPrev)]],dados=[[piso,totB]],cor=['#0072ce'],
+      meta=[{t:'tot',v:totB}];
+  acc=totB;
+  mov.forEach(function(x){
+    labels.push(_geoLblCurto(x.lbl));dados.push([acc,acc+x.d]);
+    cor.push(x._g?'#94a3b8':(x.d>=0?'#16a34a':'#dc2626'));
+    meta.push({t:'d',v:x.d,a:x.a,b:x.b,g:!!x._g});acc+=x.d;
+  });
+  labels.push([GEO.mesNome[A.mesAtual]||('mês '+A.mesAtual)]);dados.push([piso,totA]);cor.push('#0072ce');
+  meta.push({t:'tot',v:totA});
+  var dTot=totA-totB;
+  if(sub)sub.textContent='· '+(GEO.mesNome[A.mesPrev]||'')+' → '+(GEO.mesNome[A.mesAtual]||'')+
+    ': '+(dTot>=0?'+':'−')+nf(Math.abs(dTot))+' vidas'+
+    (totB?(' ('+(dTot>=0?'+':'−')+Math.abs(dTot/totB*100).toFixed(1).replace('.',',')+'%)'):'');
+  mkChart('ch_casc',{type:'bar',
+    data:{labels:labels,datasets:[{data:dados,backgroundColor:cor,borderColor:cor,borderWidth:1,borderSkipped:false}]},
+    options:{maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:function(c){return c[0].label;},
+        label:function(c){var m=meta[c.dataIndex];
+          if(m.t==='tot')return 'total do mês: '+nf(m.v)+' vidas';
+          return [(m.v>=0?'+':'−')+nf(Math.abs(m.v))+' vidas'].concat(m.g?[]:[nf(m.b)+' → '+nf(m.a)]);}
+      }}},
+      scales:{x:{ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10}},grid:{display:false}},
+              y:{min:piso,suggestedMax:hi+pad,
+                 title:{display:true,text:'vidas'+(piso>0?' (eixo não começa em zero)':'')},
+                 ticks:{callback:function(v){return nf(v);}}}}}});
+}
+
+/* ---- 2. evolução mensal / matriz praça x mês ------------------------------------------------ */
+var GEO_EVO='lin';                                  // 'lin' = linhas | 'mat' = matriz
+var _EVO_COR=['#0072ce','#16a34a','#d97706','#7c3aed','#dc2626','#0891b2'];
+function geoEvo(v){
+  if(GEO_EVO===v)return;
+  GEO_EVO=v;
+  var on='border:0;padding:5px 11px;cursor:pointer;background:#0072ce;color:#fff';
+  var off='border:0;padding:5px 11px;cursor:pointer;background:#fff;color:#334155';
+  var a=document.getElementById('evo_lin'),b=document.getElementById('evo_mat');
+  if(a)a.style.cssText=(v==='lin'?on:off);
+  if(b)b.style.cssText=(v==='mat'?on:off)+';border-left:1px solid #d5dde6';
+  renderGeoEvo();
+}
+function renderGeoEvo(){
+  var A=_GEO_AGG,ms=A.meses,keys=_geoPracaKeys(),sub=document.getElementById('evo_sub');
+  var wl=document.getElementById('evo_wrap_lin'),wm=document.getElementById('geo_heat');
+  if(!wl||!wm)return;
+  var top=geoPracas().sort(function(a,b){return b.vd-a.vd;});
+  var med={};ms.forEach(function(m){med[m]=_geoMesTot(keys,m).cv;});
+  wl.style.display=(GEO_EVO==='lin'?'':'none');
+  wm.style.display=(GEO_EVO==='mat'?'':'none');
+
+  if(GEO_EVO==='lin'){
+    var seis=top.slice(0,6),fora=0;
+    var ds=seis.map(function(p,i){
+      return {label:p.lbl,borderColor:_EVO_COR[i%6],backgroundColor:_EVO_COR[i%6],
+        borderWidth:2,pointRadius:3,pointHoverRadius:5,tension:.25,spanGaps:false,
+        data:ms.map(function(m){var c=_geoSer(p.k,m);
+          if(c.lt<GEO_MIN_LEADS)return null;
+          if(_geoNaoComp(c)){fora++;return null;}     // ver _geoNaoComp
+          return +convVal(c.vd,c.lt).toFixed(2);})};
+    });
+    ds.push({label:'média das praças',borderColor:'#0f172a',backgroundColor:'#0f172a',
+      borderWidth:2,borderDash:[6,4],pointRadius:0,tension:.25,
+      data:ms.map(function(m){return med[m]===null?null:+med[m].toFixed(2);})});
+    if(sub)sub.textContent='· as 6 maiores praças · tracejado = média das praças no mês'+
+      (fora?(' · '+fora+' ponto(s) fora: venda em lote ou vidas > leads'):'');
+    mkChart('ch_evo',{type:'line',data:{labels:ms.map(function(m){return GEO.mesNome[m]||m;}),datasets:ds},
+      options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10},usePointStyle:true}},
+          tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+
+            (c.parsed.y===null?'—':c.parsed.y.toFixed(1).replace('.',',')+'%');}}}},
+        scales:{y:{title:{display:true,text:'conversão %'},
+                   ticks:{callback:function(v){return v+'%';}}}}}});
+    return;
+  }
+  // ---- matriz praça x mês: cor = distância da média DAQUELE mês (cada mês tem a sua régua) -----
+  var vinte=top.slice(0,20),devs=[];
+  vinte.forEach(function(p){ms.forEach(function(m){
+    var c=_geoSer(p.k,m);if(c.lt<GEO_MIN_LEADS||med[m]===null||_geoNaoComp(c))return;  // fora do cap
+    var v=convVal(c.vd,c.lt);if(v!==null)devs.push(Math.abs(v-med[m]));});});
+  devs.sort(function(a,b){return a-b;});
+  var cap=Math.max(devs.length?devs[Math.min(devs.length-1,Math.floor(devs.length*0.85))]:0,1);
+  var h='<div style="overflow:auto;max-height:430px"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+    '<thead><tr style="color:var(--muted);text-align:center"><th style="padding:4px 6px;text-align:left;position:sticky;left:0;background:#fff">Praça</th>'+
+    ms.map(function(m){return '<th style="padding:4px 6px">'+(GEO.mesNome[m]||m)+'</th>';}).join('')+'</tr></thead><tbody>';
+  vinte.forEach(function(p){
+    h+='<tr><td style="padding:3px 6px;white-space:nowrap;position:sticky;left:0;background:#fff;border-right:1px solid #eef2f7">'+_geoEsc(p.lbl)+'</td>';
+    ms.forEach(function(m){
+      var c=_geoSer(p.k,m),v=(c.lt>0)?convVal(c.vd,c.lt):null;
+      if(c.lt<GEO_MIN_LEADS||med[m]===null||v===null){
+        h+='<td style="padding:3px 6px;text-align:center;color:#cbd5e1;background:#fafbfc" title="'+
+           _geoEsc(p.lbl+' · '+(GEO.mesNome[m]||m)+' · '+nf(c.lt)+' leads: abaixo de '+nf(GEO_MIN_LEADS)+', taxa não avaliável')+'">·</td>';
+        return;
+      }
+      var nc=_geoNaoComp(c);
+      if(nc){          // celula ambar: o numero fica, a COR (que e' o juizo) sai
+        h+='<td style="padding:3px 6px;text-align:center;background:#fef3c7;color:#92400e;font-weight:600"'+
+           ' title="'+_geoEsc(p.lbl+' · '+(GEO.mesNome[m]||m)+' · '+nf(c.vd)+' vidas / '+nf(c.lt)+
+             ' leads · '+v.toFixed(1).replace('.',',')+'% — não comparável: '+nc+'.')+'">◆ '+
+           (v>=100?v.toFixed(0):v.toFixed(1).replace('.',','))+'</td>';
+        return;
+      }
+      var d=v-med[m],t=Math.min(1,Math.abs(d)/cap);
+      h+='<td style="padding:3px 6px;text-align:center;background:'+_rampa(t,d>=0?_RAMPA_ACIMA:_RAMPA_ABAIXO,true)+
+         '" title="'+_geoEsc(p.lbl+' · '+(GEO.mesNome[m]||m)+' · '+nf(c.vd)+' vidas / '+nf(c.lt)+' leads · '+
+           v.toFixed(1).replace('.',',')+'% ('+(d>=0?'+':'−')+Math.abs(d).toFixed(1).replace('.',',')+
+           ' p.p. vs a média de '+(GEO.mesNome[m]||m)+', '+med[m].toFixed(1).replace('.',',')+'%)')+'">'+
+         v.toFixed(1).replace('.',',')+'</td>';
+    });
+    h+='</tr>';
+  });
+  wm.innerHTML=h+'</tbody></table></div>';
+  if(sub)sub.textContent='· as 20 maiores praças · cor = distância da média DAQUELE mês (±'+
+    cap.toFixed(1).replace('.',',')+' p.p.) · · = menos de '+nf(GEO_MIN_LEADS)+' leads · ◆ = não comparável (venda em lote ou vidas > leads)';
+}
+
+/* ---- 3. dispersão dos vendedores dentro da praça --------------------------------------------- */
+function renderGeoDisp(){
+  if(!document.getElementById('ch_disp'))return;
+  var A=_GEO_AGG,sub=document.getElementById('disp_sub'),MIN=40,SLOTS=8,MINPTS=8;
+  // MIN=40 e nao 60: medido no payload de Ago, a 60 leads Natal e Ribeirao Preto ficavam com ZERO
+  // vendedor (e Brasilia com 3) -- 2 das 8 colunas saiam vazias. A 40 a cobertura vira 10/45/61/91.
+  // O ponto individual a 40 leads oscila mesmo; o grafico e' sobre a NUVEM, nao sobre a bolha.
+  // Praca com menos de MINPTS pontos e' pulada -- e o subtitulo DIZ quem ficou de fora.
+  var cand=[],pulou=[],maxVd=1,fora=0;
+  geoPracas().sort(function(a,b){return b.vd-a.vd;}).forEach(function(p){
+    if(cand.length>=SLOTS)return;
+    var b=A.vend[p.k]||{},lista=[];
+    Object.keys(b).forEach(function(i){
+      var c=_geoCell(b[i]);
+      if(c.lt<MIN)return;
+      // fica fora do grafico, mas CONTADO no subtitulo: esconder sem dizer seria pior que mostrar
+      if(_geoNaoComp(c)){fora++;return;}
+      var v=convVal(c.vd,c.lt);if(v===null)return;
+      lista.push({i:i,c:c,v:v});
+    });
+    if(lista.length<MINPTS){if(pulou.length<3)pulou.push(p.lbl);return;}
+    lista.forEach(function(x){maxVd=Math.max(maxVd,x.c.vd);});
+    cand.push({p:p,lista:lista});
+  });
+  var P=cand.map(function(x){return x.p;}),pts=[],marc=[],ys=[];
+  cand.forEach(function(x,ix){
+    var p=x.p,vals=[];
+    x.lista.forEach(function(o){
+      vals.push(o.v);ys.push(o.v);
+      var j=(((+o.i)*2654435761)%997)/997-0.5;               // jitter DETERMINISTICO (nao pula a cada render)
+      pts.push({x:+(ix+j*0.62).toFixed(3),y:+o.v.toFixed(2),r:3+7*Math.sqrt(o.c.vd/maxVd),
+                _n:GEO.nomes[o.i],_lt:o.c.lt,_vd:o.c.vd,_p:p.lbl,_ac:(p.cv!==null&&o.v>=p.cv)});
+    });
+    vals.sort(function(a,b){return a-b;});
+    marc.push({i:ix,praca:p.cv,mediana:vals.length?vals[Math.floor(vals.length/2)]:null,n:vals.length});
+  });
+  ys.sort(function(a,b){return a-b;});
+  var yMax=ys.length?Math.max(ys[Math.min(ys.length-1,Math.floor(ys.length*0.97))]*1.18,1):10;
+  if(sub)sub.textContent='· '+P.length+' maiores praças · '+nf(pts.length)+
+    ' vendedores com ≥'+MIN+' leads na praça'+
+    (pulou.length?(' · fora, sem ninguém com esse volume: '+pulou.join(', ')):'')+
+    (fora?(' · '+fora+' não comparável'):'');
+  mkChart('ch_disp',{type:'bubble',
+    data:{datasets:[{data:pts,
+      backgroundColor:pts.map(function(p){return p._ac?'rgba(22,163,74,.5)':'rgba(220,38,38,.45)';}),
+      borderColor:pts.map(function(p){return p._ac?'#16a34a':'#dc2626';}),borderWidth:1}]},
+    options:{maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){
+        var p=c.raw;return [p._n,p._p,nf(p._lt)+' leads · '+nf(p._vd)+' vidas · '+
+          p.y.toFixed(1).replace('.',',')+'%'];}}}},
+      scales:{x:{min:-0.6,max:P.length-0.4,offset:false,grid:{display:false},
+                 ticks:{stepSize:1,autoSkip:false,font:{size:10},callback:function(v){
+                   var i=Math.round(v);return (Math.abs(v-i)<0.01&&P[i])?_geoLblCurto(P[i].lbl):'';}}},
+              y:{min:0,max:+yMax.toFixed(1),title:{display:true,text:'conversão % do vendedor'},
+                 ticks:{callback:function(v){return v+'%';}}}}},
+    plugins:[{id:'dispMarc',afterDatasetsDraw:function(ch){
+      var a=ch.chartArea,x=ch.scales.x,y=ch.scales.y,g=ch.ctx;if(!a)return;
+      g.save();
+      marc.forEach(function(m){
+        var x0=x.getPixelForValue(m.i-0.44),x1=x.getPixelForValue(m.i+0.44);
+        if(!m.n){   // praca sem NENHUM vendedor >=60 leads: dizer isso e' melhor que uma linha solta
+          g.setLineDash([]);g.fillStyle='#94a3b8';g.font='10px system-ui';g.textAlign='center';
+          g.fillText('sem vendedor',(x0+x1)/2,a.top+13);
+          g.fillText('com ≥60 leads',(x0+x1)/2,a.top+25);
+        }
+        if(m.praca!==null&&m.praca!==undefined){
+          var yy=y.getPixelForValue(m.praca);
+          if(yy>=a.top&&yy<=a.bottom){g.setLineDash([]);g.strokeStyle='#0072ce';g.lineWidth=2.6;
+            g.beginPath();g.moveTo(x0,yy);g.lineTo(x1,yy);g.stroke();}
+        }
+        if(m.mediana!==null){
+          var ym=y.getPixelForValue(m.mediana);
+          if(ym>=a.top&&ym<=a.bottom){g.setLineDash([4,3]);g.strokeStyle='#0f172a';g.lineWidth=1.5;
+            g.beginPath();g.moveTo(x0,ym);g.lineTo(x1,ym);g.stroke();g.setLineDash([]);}
+        }
+      });
+      g.restore();
+    }}]});
 }
 
 /* ---- tabela hierárquica UF -> DDD -> Vendedor (ou Cidade) ---------------------------------- */
