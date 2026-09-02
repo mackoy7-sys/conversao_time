@@ -144,7 +144,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 </script>
 <div class="wrap">
 <div class="head">
-<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 60%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> (conversão vs meta por origem, <b>do período filtrado</b>) · ref. <span id="refdate">30/06/2026</span></p></div>
+<div><h1>Conversão por Vendedor — mesmo mês</h1><p>Score por <b>atingimento de meta</b>: <b>VENDA 60%</b> (volume, meta 60 vidas/mês prorrateada pelos dias decorridos) · <b>PRINCIPAL 30%</b> · <b>DEMAIS FILA 10%</b> (conversão vs meta por origem, <b>do período filtrado</b>) · ref. <span id="refdate">30/06/2026</span><span id="refdate_q"></span></p></div>
 <div style="text-align:right"><div style="font-size:28px;font-weight:800" id="hcount">297</div><div style="font-size:12px;opacity:.85">vendedores</div></div>
 </div>
 
@@ -440,6 +440,7 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 </div>
 
 <div id="tab-quartil" class="tab-panel">
+<div class="note" id="quartil_snap_nota" style="display:none;margin-bottom:var(--gap)"></div>
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--gap);flex-wrap:wrap">
   <div class="fg" style="min-width:180px">
     <label>Ver por</label>
@@ -810,6 +811,57 @@ function qvAdmExcl(g){
   var i=k.indexOf(' - ');            // variantes com sufixo (ex.: "TATI SILVA - VENDEDOR ADM")
   return i>0&&!!_QV_ADM_SET[k.slice(0,i)];
 }
+// ===== Quartil por CHECKPOINT (David 01/09/2026) =====
+// A POSIÇÃO (Q1..Q4) só se move nos dias 10, 20 e último dia do mês. O NÚMERO (score, vidas,
+// atingimentos, conversão) continua sendo recalculado a cada carga — só a atribuição final de `g.q`
+// passa a vir da foto `QUARTIL_SNAP`, gerada por `CONVERSAO_ANO_TODO/congelar_quartil.js` (que roda
+// ESTE MESMO código num vm, então congelar não muda a regra).
+// Fora do escopo da foto (mês histórico, vários meses, "Todos") o cálculo segue AO VIVO, como antes.
+// `?quartil=live` desliga a foto — é como se compara congelado × ao vivo no mesmo instante.
+var QUARTIL_SNAP=null;
+var _QV_LIVE=(function(){try{return /[?&]quartil=live/.test(location.search);}catch(e){return false;}})();
+// Qual foto governa a seleção atual:
+//  1) existe foto do próprio mês -> a mais recente dele (mês já apurado fica congelado p/ sempre);
+//  2) mês corrente (o do REF_DATE) ainda sem foto -> a foto vigente (fechamento do mês anterior);
+//  3) resto (mês antigo, multi-mês, "Todos") -> null = cálculo ao vivo.
+function resolveSnap(){
+  if(_QV_LIVE||!QUARTIL_SNAP||!QUARTIL_SNAP.fotos)return null;
+  var mss=selectedMonths();if(mss.length!==1)return null;
+  var mes=+mss[0],doMes=null;
+  Object.keys(QUARTIL_SNAP.fotos).sort().forEach(function(k){if(+QUARTIL_SNAP.fotos[k].mes===mes)doMes=k;});
+  if(doMes)return QUARTIL_SNAP.fotos[doMes];
+  var rp=refParts();
+  if(rp&&mes===rp.mo&&QUARTIL_SNAP.vigente)return QUARTIL_SNAP.fotos[QUARTIL_SNAP.vigente]||null;
+  return null;
+}
+// Quartil de UMA pessoa segundo a foto. Quem não está na foto (entrou depois do checkpoint) é
+// encaixado pelas FRONTEIRAS DE SCORE congeladas — sem deslocar ninguém (decisão David 01/09/2026).
+function _qFromSnap(snap,g){
+  var q=snap.por_nome[g.k];
+  if(q)return q;
+  if(g._score==null)return null;
+  var c=snap.cortes||{};
+  if(c.q1!=null&&g._score>=c.q1&&g._q1elig)return 'Q1';
+  if(c.q2!=null&&g._score>=c.q2)return 'Q2';
+  if(c.q3!=null&&g._score>=c.q3)return 'Q3';
+  return 'Q4';
+}
+// Carimbo: sem isto, alguém com score de Q2 exibindo badge Q3 (efeito esperado de congelar) vira
+// chamado. Roda no boot e a cada render, porque a foto aplicável muda com o filtro de Mês.
+function _stampQuartilSnap(){
+  var el=document.getElementById('quartil_snap_nota'),hd=document.getElementById('refdate_q');
+  var s=(typeof resolveSnap==='function')?resolveSnap():null;
+  var txt=s?('Quartil apurado em <b>'+s.ref+'</b> · próxima apuração em <b>'+s.proximo+'</b>'):'';
+  if(hd)hd.innerHTML=s?(' · quartil de <b>'+s.ref+'</b>'):'';
+  if(!el)return;
+  if(!s){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  el.innerHTML='📌 <b>A posição de quartil é apurada 3× por mês</b> (dias 10, 20 e último dia do mês) e '+
+    'fica parada entre uma apuração e outra. '+txt+', com números atualizados até <b>'+REF_DATE+'</b>.<br>'+
+    'O <b>Score e todos os números continuam sendo atualizados todo dia</b> — por isso é normal, no meio '+
+    'do período, alguém aparecer com score acima do corte do quartil de cima: a posição só se move na '+
+    'próxima apuração. Meses anteriores mantêm a foto da apuração deles.';
+}
 // quartil: VENDA 60% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 10% (conversão vs meta por origem, DO PERÍODO) + trava anti-ruído ≥QV_LEAD_FLOOR leads-chave
 function assignQuartis(a,noAdm){
   var _fora=[],_pop=[];
@@ -847,10 +899,16 @@ function assignQuartis(a,noAdm){
   // Q1 = os de maior score que passam nas portas, até ~25% do grupo (recompleta com os próximos elegíveis). Demais por score.
   function q1Eligivel(g){return g._attVol!=null && g._attVol>=1 && g._convMedia!=null && g._convMedia>=0.09 && g._kLeads>=QV_LEAD_FLOOR;}
   var ordered=a.slice().sort(function(x,y){return y._score-x._score;});
+  ordered.forEach(function(g){g._q1elig=q1Eligivel(g);});
+  // CONGELADO: a posição vem da foto do checkpoint. Tudo acima (score, ranks, atingimentos, portas)
+  // já foi recalculado ao vivo — só o `g.q` é que fica parado até a próxima apuração.
+  // Visões agregadas (noAdm=true: Supervisor/Gestão/Área/Unidade/Org) seguem ao vivo: a foto é por
+  // pessoa e a chave delas é outra dimensão.
+  var _snap=(typeof resolveSnap==='function')?resolveSnap():null;
+  if(_snap&&!noAdm){a.forEach(function(g){g.q=_qFromSnap(_snap,g);});return;}
   var q1cap=0; for(var qi=0;qi<n;qi++){if(qi<n*0.25)q1cap++;}
   var q1set=[],rest=[];
   ordered.forEach(function(g){
-    g._q1elig=q1Eligivel(g);
     if(q1set.length<q1cap && g._q1elig){q1set.push(g);}
     else{rest.push(g);}
   });
@@ -890,6 +948,7 @@ var _rT=null;
 function renderD(){if(_rT)clearTimeout(_rT);_rT=setTimeout(function(){_rT=null;render();},150);}
 function render(){
   var rows=filtered();
+  _stampQuartilSnap();   // a foto aplicavel muda com o filtro de Mes
   // KPIs (reescopados por Tipo CT/Origem via crossScope, linha a linha — respeita Mes tambem)
   var proms=new Set();rows.forEach(function(r){proms.add(r[C.NOME]);});
   var kpiAgg=[{lt:0,vd:0,vv:0,_rows:rows}];
@@ -3511,9 +3570,13 @@ function _staticClient(root){
         if(f.c!=='chave')return;
         keys=keys.filter(function(k){return _match(f,k);});
       });
+      // Chave listada no _index cujo arquivo nao existe NAO pode matar o boot: todo consumidor de
+      // meta ja' testa `if(M.X)`, entao ausencia e' degradacao, nao erro. Antes disso, um unico 404
+      // (ex.: QUARTIL_SNAP publicado sem a foto) derrubava o dashboard inteiro.
       return Promise.all(keys.map(function(k){
-        return _get(self.t+'/'+k+'.json').then(function(p){return {chave:k,payload:p};});
-      }));
+        return _get(self.t+'/'+k+'.json').then(function(p){return {chave:k,payload:p};},
+          function(e){console.warn('[meta] chave indisponivel, seguindo sem ela: '+k+' ('+(e&&e.message||e)+')');return null;});
+      })).then(function(a){return a.filter(Boolean);});
     });
   };
   // Data-corte visivel: o dado e' uma fotografia diaria, nao ao vivo. Sem isto, numero de ontem
@@ -3579,6 +3642,7 @@ function _initUI(){
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
+    if(M.QUARTIL_SNAP){QUARTIL_SNAP=M.QUARTIL_SNAP;_stampQuartilSnap();}
     // ORIGEM_TAG_STATS / TIPOFILA_STATS / ORIGEMFILA_STATS -> lazy em _loadLeads() (aba "Analise dos Leads")
     var hc=document.getElementById('hcount');
     if(hc){var ns=new Set();RAW.forEach(function(r){if(r[C.NOME]!=='NÃO MAPEADO')ns.add(r[C.NOME]);});hc.textContent=ns.size;}
