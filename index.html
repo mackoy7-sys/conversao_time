@@ -3654,5 +3654,16 @@ function _initUI(){
   }
 })();
 </script>
+
+<!-- run-status-banner:v1 -->
+<style>#runStatusBadge{display:none;position:fixed;right:14px;bottom:14px;z-index:99999;
+background:#8a4b00;color:#fff;padding:9px 13px;border-radius:8px;font:700 13px Arial,sans-serif;
+box-shadow:0 3px 12px #0004}</style>
+<div id="runStatusBadge" role="status"></div>
+<script>(function(){fetch('run_status.json',{cache:'no-store'}).then(function(r){return r.json()})
+.then(function(s){if(s.status==='UPDATED')return;var e=document.getElementById('runStatusBadge');
+var d=s.as_of?String(s.as_of).split('-').reverse().join('/'):'data desconhecida';
+e.textContent='DESATUALIZADO — dados até '+d;e.style.display='block'})
+.catch(function(){})})();</script>
 </body>
 </html>
