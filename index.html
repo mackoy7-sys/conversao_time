@@ -792,6 +792,20 @@ function volTarget(){
   if(t<=0)t=VOL_TARGET_MES;   // guarda p/ seleção só de mês futuro (evita divisão por zero)
   return t;
 }
+// Dias efetivamente cobertos pelo período filtrado — MESMA proração do volTarget, mas em DIAS em vez
+// de meta de vidas. Mês anterior ao mês do REF_DATE = dias cheios do mês; mês do REF_DATE (corrente/
+// parcial) = só os dias decorridos até a data de corte; mês posterior (sem dado) = 0. Base das métricas
+// "por dia" (ex.: Leads/dia/vend.), pra não subestimar a média quando o período inclui um mês incompleto.
+function periodDays(){
+  var rp=refParts(),months=selectedMonths();
+  if(!rp)return months.length*30;
+  var t=0;months.forEach(function(mm){
+    if(mm<rp.mo)t+=new Date(rp.y,mm,0).getDate();
+    else if(mm===rp.mo)t+=rp.d;
+  });
+  if(t<=0)t=rp.d||1;
+  return t;
+}
 var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
@@ -3345,6 +3359,7 @@ function renderQuartilV(){
   var vincLbl=vincSel==='vv'?'Vinculado':'Total vidas';
   var totalScore=ags.length?(ags.reduce(function(s,x){return s+x._score;},0)/ags.length*100):0;
   var volTgt=volTarget();
+  var pDays=periodDays();
   // Atingimento de VOLUME agregado: Σ vidas ÷ Σ meta (meta = alvo por vendedor). Nunca média de razões.
   var avgVol=function(arr){var vd=0,exp=0;arr.forEach(function(g){var V=g._effVd!=null?g._effVd:g.vd||0;vd+=V;exp+=volTgt;});return exp>0?vd/exp*100:null;};
   // Atingimento de META de conversão agregado (origens-chave, do período) — para PRINCIPAL/DEMAIS.
@@ -3409,7 +3424,7 @@ function renderQuartilV(){
         '<div><div style="font-size:11px;color:var(--muted)">Vidas méd./vend.</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+vVend.toFixed(1)+'</div></div>'+
         '<div><div style="font-size:11px;color:var(--muted)">Ating. volume</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+(qVol==null?'–':qVol.toFixed(0)+'%')+'</div></div>'+
         '<div><div style="font-size:11px;color:var(--muted)">Volume de leads</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+nf(totLeads)+'</div></div>'+
-        '<div><div style="font-size:11px;color:var(--muted)">Leads méd./vend.</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+(nVend?(totLeads/nVend).toFixed(1):'0')+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted)">Leads/dia/vend.</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+(nVend&&pDays?(totLeads/nVend/pDays).toFixed(1):'0')+'</div></div>'+
         '<div><div style="font-size:11px;color:var(--muted)">Atingim. meta (conv.)</div><div style="font-size:18px;font-weight:700;color:'+QC[q]+'">'+(qAtt==null?'–':qAtt.toFixed(0)+'%')+'</div></div>'+
       '</div>'+
       origHtml(items)+
@@ -3430,7 +3445,7 @@ function renderQuartilV(){
       '<div><div style="font-size:11px;color:#94a3b8">Vidas méd./vend.</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+(function(){var nv=ags.reduce(function(s,g){return s+(g._names?g._names.size:1);},0);return nv?(totalVidas/nv).toFixed(1):'0';})()+'</div></div>'+
       '<div><div style="font-size:11px;color:#94a3b8">Ating. volume</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+(avgVol(ags)==null?'–':avgVol(ags).toFixed(0)+'%')+'</div></div>'+
       '<div><div style="font-size:11px;color:#94a3b8">Volume de leads</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+nf(totalLeads)+'</div></div>'+
-      '<div><div style="font-size:11px;color:#94a3b8">Leads méd./vend.</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+(function(){var nv=ags.reduce(function(s,g){return s+(g._names?g._names.size:1);},0);return nv?(totalLeads/nv).toFixed(1):'0';})()+'</div></div>'+
+      '<div><div style="font-size:11px;color:#94a3b8">Leads/dia/vend.</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+(function(){var nv=ags.reduce(function(s,g){return s+(g._names?g._names.size:1);},0);return nv&&pDays?(totalLeads/nv/pDays).toFixed(1):'0';})()+'</div></div>'+
       '<div><div style="font-size:11px;color:#94a3b8">Atingim. meta (conv.)</div><div style="font-size:18px;font-weight:700;color:#60a5fa">'+(totalAtt==null?'–':totalAtt.toFixed(0)+'%')+'</div></div>'+
     '</div>'+
     origHtml(ags,'#94a3b8')+
