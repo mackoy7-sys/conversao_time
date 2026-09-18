@@ -897,7 +897,8 @@ function assignQuartis(a,noAdm){
   var _fora=[],_pop=[];
   a.forEach(function(g){((!noAdm&&(qvAdmExcl(g)||qvSintroExcl(g)))?_fora:_pop).push(g);});
   _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
-    g._qvAdm=1;g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
+    g._qvAdm=1;g._qvSint=(!noAdm&&!qvAdmExcl(g)&&qvSintroExcl(g))?1:0;   // _qvSint: saiu por SINTRO (lote), nao por ser ADM
+    g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
     g._accFila=origAccOf(g);g._effVd=effVd(g);
     g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._convMedia=null;g._q1elig=false;g._kLeads=null;g._below=false;
   });
@@ -959,7 +960,7 @@ function quartilePopulation(gcol,noAdm){
   var m={};rows.forEach(function(r){var k=r[gcol];if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};var g=m[k];g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._names.add(r[C.NOME]);g._rows.push(r);});
   var a=Object.values(m);crossScope(a);assignQuartis(a,noAdm);_QV_POP_CACHE={};_QV_POP_CACHE[sig]=a;return a;
 }
-function _copyQuartile(dst,src){['_qvAdm','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
+function _copyQuartile(dst,src){['_qvAdm','_qvSint','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
 function applyQuartileReference(groups,gcol,noAdm){var map={};quartilePopulation(gcol,noAdm).forEach(function(g){map[g.k]=g;});groups.forEach(function(g){_copyQuartile(g,map[g.k]);});return groups;}
 // score 0-100 (o mesmo que define o quartil) colorido pela cor do quartil
 var QCOL={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
@@ -1721,8 +1722,8 @@ function buildHead(cols){
 // Vendedoras administrativas (QV_ADM_NOMES) aparecem como "ADM" cinza; sem quartil no recorte, "—".
 function qTagHTML(g){
   var q=g&&g.q, adm=!!(g&&g._qvAdm);
-  var lbl=q||(adm?'ADM':'—'), bg=q?(QCOL[q]||'#94a3b8'):'#94a3b8';
-  var tip=q?('Quartil '+q+(g._score!=null?' · score '+(g._score*100).toFixed(1).replace('.',','):'')):(adm?'Vendedora administrativa — cálculo próprio, fora do quartil':'Sem quartil no recorte atual');
+  var sint=!!(g&&g._qvSint), lbl=q||(sint?'LOTE':adm?'ADM':'—'), bg=q?(QCOL[q]||'#94a3b8'):'#94a3b8';
+  var tip=q?('Quartil '+q+(g._score!=null?' · score '+(g._score*100).toFixed(1).replace('.',','):'')):(sint?'Produção 100% SINTRO (lote, sem lead) — fora do quartil':adm?'Vendedora administrativa — cálculo próprio, fora do quartil':'Sem quartil no recorte atual');
   return '<span class="q-badge" style="background:'+bg+';width:auto;min-width:23px;height:17px;padding:0 5px;border-radius:5px;font-size:10px;margin-right:6px;vertical-align:middle" title="'+tip+'">'+lbl+'</span>';
 }
 function cellFor(g,mt,k,rc,pos){
@@ -2154,8 +2155,9 @@ function renderExtrato(){
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var QN={Q1:'Elite · Top 25%',Q2:'Bom · 50–75%',Q3:'Mediano · 25–50%',Q4:'Baixo · Bottom 25%'};
   var cor=_admX?'#64748b':QC[ag.q];
-  var qLbl=_admX?'ADM':ag.q, qCls=_admX?'admb':(ag.q.toLowerCase()+'b');
-  var qDesc=_admX?'Administrativo · fora do ranking':QN[ag.q];
+  var _sintX=!!ag._qvSint;
+  var qLbl=_admX?(_sintX?'LOTE':'ADM'):ag.q, qCls=_admX?'admb':(ag.q.toLowerCase()+'b');
+  var qDesc=_admX?(_sintX?'Produção 100% SINTRO (lote) · fora do ranking':'Administrativo · fora do ranking'):QN[ag.q];
   var effV=(ag._effVd!=null?ag._effVd:ag.vd);
   var convGlobal=ag.lt>0?effV/ag.lt*100:0;   // Conv. geral respeita o filtro VIDAS (Total/Vinculado)
   // Conv. Vinculada + Vidas Vinculadas com Lead = ORIG_BY_NOME, agora no eixo QUEM VENDEU
@@ -3367,6 +3369,7 @@ function renderQuartilV(){
   var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var QN={Q1:'Top 25% · Elite',Q2:'50–75% · Bom',Q3:'25–50% · Mediano',Q4:'Bottom 25% · Baixo'};
   var groups={Q1:[],Q2:[],Q3:[],Q4:[]};
+  ags=ags.filter(function(ag){return !!groups[ag.q];});   // fora do quartil (ADM / 100% SINTRO) nao entra nos cards nem nos totais
   ags.forEach(function(ag){groups[ag.q].push(ag);});
   var totalVidas=ags.reduce(function(s,x){return s+x._effVd;},0);
   var totalLeads=ags.reduce(function(s,x){return s+x.lt;},0);
