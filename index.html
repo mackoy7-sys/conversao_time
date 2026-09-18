@@ -745,7 +745,7 @@ function origAccOf(g){
   var acc={};KEY_ORIG_LBL.forEach(function(l){acc[l]={lt:0,vd:0};});
   var nomes=g._names?g._names:[g.k];
   var mss=selectedMonths();
-  nomes.forEach(function(nm){var mm=ORIG_BY_NOME_MES[nm]||{};mss.forEach(function(ms){var d=mm[ms]||{};KEY_ORIG_LBL.forEach(function(l){var o=d[l];if(o){acc[l].lt+=o.lt;acc[l].vd+=o.vd;}});});});
+  nomes.forEach(function(nm){var mm=ORIG_BY_NOME_MES[nm]||{};mss.forEach(function(ms){var d=mm[ms]||{};KEY_ORIG_LBL.forEach(function(l){var o=d[l];if(o){acc[l].lt+=o.lt;acc[l].vd+=Math.max(0,(o.vd||0)-(o.vs||0));}});});});
   return acc;
 }
 // Atingimento de meta de uma classificação: vidas ÷ vidas esperadas (Σ leads×meta). null se não há leads.
@@ -811,6 +811,21 @@ var _curVolTgt=VOL_TARGET_MES;
 // Filtro VIDAS (f_vinc): 'vd'=Total | 'vv'=Vinculado (mesmo mês). Define as vidas efetivas usadas em volume/score/conv geral.
 function vincVV(){return (document.getElementById('f_vinc')||{value:'vd'}).value==='vv';}
 function effVd(g){return (vincVV()?(g.vv||0):(g.vd||0));}
+// ===== SINTRO FORA DO QUARTIL (David 18/09/2026) =====================================
+// SINTRO e' lote vendido de forma centralizada e SEM lead: quem so' registra o lote nao "vendeu" no
+// sentido que o quartil mede, e o lote inflava o componente VENDA (60% do score). Agora:
+//   (1) o quartil sempre mede a producao PROPRIA -> vidas - SINTRO (independente do filtro Projetos);
+//   (2) quem fica com ZERO vida propria no periodo (producao 100% lote) sai da POPULACAO -- mesmo
+//       tratamento das vendedoras ADM, entao nao ocupa vaga nem desloca percentil de ninguem.
+// Quem tem 0 vidas e NENHUM lote continua na populacao (vendedor que nao vendeu e' informacao).
+// Fora do quartil nada muda: tabelas, KPIs e Leads por Origem seguem com o total.
+function grpSintVd(g){
+  var rows=(g&&g._rows)||[], s=0, vv=vincVV();
+  for(var i=0;i<rows.length;i++)s+=(vv?(rows[i][C.VVS]||0):(rows[i][C.VDS]||0));
+  var tot=effVd(g); return s>tot?tot:s;   // guarda: cross-filtro reescopa g.vd, nunca subtrair demais
+}
+function effVdQ(g){var v=effVd(g)-grpSintVd(g);return v>0?v:0;}
+function qvSintroExcl(g){return !!g&&grpSintVd(g)>0&&effVdQ(g)<=0;}
 // Vendedoras ADMINISTRATIVAS (David 03/08/2026): tem calculo proprio, entao ficam FORA do quartil e
 // tambem fora da POPULACAO que define percentis/fronteiras. Seguem normais nas tabelas, KPIs e Leads
 // por Origem — so Score/Quartil ficam "—" (e somem da aba Ranking por Quartil).
@@ -880,7 +895,7 @@ function _stampQuartilSnap(){
 // quartil: VENDA 60% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 10% (conversão vs meta por origem, DO PERÍODO) + trava anti-ruído ≥QV_LEAD_FLOOR leads-chave
 function assignQuartis(a,noAdm){
   var _fora=[],_pop=[];
-  a.forEach(function(g){((!noAdm&&qvAdmExcl(g))?_fora:_pop).push(g);});
+  a.forEach(function(g){((!noAdm&&(qvAdmExcl(g)||qvSintroExcl(g)))?_fora:_pop).push(g);});
   _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
     g._qvAdm=1;g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
     g._accFila=origAccOf(g);g._effVd=effVd(g);
@@ -892,7 +907,7 @@ function assignQuartis(a,noAdm){
   function rankBy(key,rk){var v=a.filter(function(g){return g[key]!=null;});var m=v.length;a.forEach(function(g){g[rk]=null;});v.slice().sort(function(x,y){return x[key]-y[key];}).forEach(function(x,i){x[rk]=m>1?i/(m-1):1;});}
   a.forEach(function(g){
     var acc=origAccOf(g);g._accFila=acc;
-    var V=g._effVd=effVd(g);               // vidas efetivas conforme filtro VIDAS (Total/Vinculado)
+    var V=g._effVd=effVdQ(g);              // vidas PROPRIAS (filtro VIDAS Total/Vinculado, sempre SEM SINTRO)
     g._attVol=tgt>0?V/tgt:null;            // VENDA: atingimento de volume (vidas do período ÷ 60×meses)
     g._attConv=attainOf(acc,null);         // atingimento de conversão GERAL das origens-chave vs meta (do período) — legado, não gateia mais
     var kl=0,kv=0;KEY_ORIG_LBL.forEach(function(l){kl+=(acc[l]?acc[l].lt:0);kv+=(acc[l]?acc[l].vd:0);});g._kLeads=kl;  // leads-chave do período
