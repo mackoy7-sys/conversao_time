@@ -466,12 +466,13 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
     </select>
     <button onclick="downloadResumoCSV()" title="Baixa a tabela de vendedores (score, quartil, leads, vidas, ligadas, conversão, SLA, atingimentos) conforme os filtros aplicados" style="background:#0072ce;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇ Exportar auditoria (CSV)</button>
   </div>
+  <div id="qv_proj_leg" style="display:none;font-size:12px;color:var(--muted);margin:-4px 0 10px"></div>
   <div style="overflow-x:auto">
   <table id="tbl_qv">
     <thead><tr>
-      <th>Q</th><th>Nome</th><th>Área</th><th>Supervisor</th>
-      <th class="num">Score</th><th class="num" title="Atingimento de volume = vidas ÷ (60 × nº meses do período)">At. Vol.</th><th class="num">Leads</th><th class="num" title="% de atendimentos respondidos em ≤2min (denominador: leads DENTRO do horário). Fotografia do período do build de SLA — não varia com o filtro de Mês.">SLA ≤2min</th><th class="num">Vidas</th>
-      <th class="num" title="Conversão geral — TODAS as origens, no período filtrado (vidas ÷ leads)">Conv. geral</th><th class="num" title="Conversão agregada das 5 origens-chave, no período filtrado: Σ vidas ÷ Σ leads das origens abaixo">Conv. ch.</th><th>Tempo de Casa</th><th class="num" title="Tempo de casa em meses">Meses</th>
+      <th>Q</th><th>Nome</th><th>Área</th><th>Supervisor</th><th>Tempo de casa</th>
+      <th class="num">Score</th><th class="num">Leads</th><th class="num">Vidas</th>
+      <th class="num" title="Conversão geral — TODAS as origens, no período filtrado (vidas ÷ leads)">Conv. geral</th><th class="num" title="Conversão agregada das 5 origens-chave, no período filtrado: Σ vidas ÷ Σ leads das origens abaixo">Conv. ch.</th>
       <th class="num" title="Espontâneo · conversão do período filtrado">Espon.</th><th class="num" title="Carrinho Abandonado · conversão do período filtrado">C.Abnd.</th><th class="num" title="Carrinho Abandonado Conecta · conversão do período filtrado">C.Abnd.Con.</th><th class="num" title="EugenIA · conversão do período filtrado">Eugen.</th><th class="num" title="Conecta · conversão do período filtrado">Conecta</th>
     </tr></thead><tbody></tbody>
   </table>
@@ -898,7 +899,7 @@ function assignQuartis(a,noAdm){
   a.forEach(function(g){((!noAdm&&(qvAdmExcl(g)||qvSintroExcl(g)))?_fora:_pop).push(g);});
   _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
     g._qvAdm=1;g._qvSint=(!noAdm&&!qvAdmExcl(g)&&qvSintroExcl(g))?1:0;   // _qvSint: saiu por SINTRO (lote), nao por ser ADM
-    g.q=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
+    g.q=null;g._qProj=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
     g._accFila=origAccOf(g);g._effVd=effVd(g);
     g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._convMedia=null;g._q1elig=false;g._kLeads=null;g._below=false;
   });
@@ -936,16 +937,20 @@ function assignQuartis(a,noAdm){
   // Visões agregadas (noAdm=true: Supervisor/Gestão/Área/Unidade/Org) seguem ao vivo: a foto é por
   // pessoa e a chave delas é outra dimensão.
   var _snap=(typeof resolveSnap==='function')?resolveSnap():null;
-  if(_snap&&!noAdm){a.forEach(function(g){g.q=_qFromSnap(_snap,g);});return;}
+  // Atribuição AO VIVO sempre calculada (g._qLive): sem foto vira o próprio g.q; com foto vira a
+  // PROJEÇÃO (g._qProj) — onde a pessoa ficaria se a apuração fosse agora (David 20/10/2026).
   var q1cap=0; for(var qi=0;qi<n;qi++){if(qi<n*0.25)q1cap++;}
   var q1set=[],rest=[];
   ordered.forEach(function(g){
     if(q1set.length<q1cap && g._q1elig){q1set.push(g);}
     else{rest.push(g);}
   });
-  q1set.forEach(function(g){g.q='Q1';});
+  q1set.forEach(function(g){g._qLive='Q1';});
   var mr=rest.length;
-  rest.forEach(function(g,j){g.q=j<mr/3?'Q2':j<2*mr/3?'Q3':'Q4';});
+  rest.forEach(function(g,j){g._qLive=j<mr/3?'Q2':j<2*mr/3?'Q3':'Q4';});
+  if(_snap&&!noAdm){var _rpq=(typeof refParts==='function')?refParts():null,_projOn=!!_rpq&&+_snap.mes===_rpq.mo;   // projeção só no mês corrente: mês já apurado fica congelado, sem "próxima apuração"
+    a.forEach(function(g){g.q=_qFromSnap(_snap,g);g._qProj=_projOn?g._qLive:null;});}
+  else{a.forEach(function(g){g.q=g._qLive;g._qProj=null;});}
 }
 // Populacao do quartil = periodo/metricas; filtros organizacionais sao apenas "holofote".
 // Isto vale para Vendedor, Supervisor, Unidade, Gestao, Times, Tempo de Casa e Status e alimenta
@@ -960,7 +965,7 @@ function quartilePopulation(gcol,noAdm){
   var m={};rows.forEach(function(r){var k=r[gcol];if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};var g=m[k];g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._names.add(r[C.NOME]);g._rows.push(r);});
   var a=Object.values(m);crossScope(a);assignQuartis(a,noAdm);_QV_POP_CACHE={};_QV_POP_CACHE[sig]=a;return a;
 }
-function _copyQuartile(dst,src){['_qvAdm','_qvSint','q','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
+function _copyQuartile(dst,src){['_qvAdm','_qvSint','q','_qProj','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
 function applyQuartileReference(groups,gcol,noAdm){var map={};quartilePopulation(gcol,noAdm).forEach(function(g){map[g.k]=g;});groups.forEach(function(g){_copyQuartile(g,map[g.k]);});return groups;}
 // score 0-100 (o mesmo que define o quartil) colorido pela cor do quartil
 var QCOL={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
@@ -3247,7 +3252,7 @@ function downloadResumoCSV(){
   function p1(x){return (x==null)?'':(x*100).toFixed(1).replace('.',',');}
   function pcv(v,l){return l>0?(v/l*100).toFixed(1).replace('.',','):'';}
   var ent=vb==='sup'?'Supervisor':vb==='gestao'?'Gestão':'Vendedor';
-  var head=['#','Quartil','Score (0-100)',ent,'Gestão','Supervisor','Área','Organização','Status','Tempo de casa',
+  var head=['#','Quartil','Quartil projetado (hoje)','Score (0-100)',ent,'Gestão','Supervisor','Área','Organização','Status','Tempo de casa',
             'Leads','Leads produtivos','Vidas','Vidas ligadas','% ligadas','Conversão %','SLA <=2min %',
             'At. Volume %','At. Conversão-chave %','At. Principal %','At. Demais fila %'];
   var mSel=null;try{FILTERS.forEach(function(f){if(f.col===C.MES)mSel=f.sel;});}catch(e){}
@@ -3262,7 +3267,7 @@ function downloadResumoCSV(){
     var lp=0;(ag._rows||[]).forEach(function(r){lp+=(r[C.LP]||0);});
     var sla=slaPctVal(ag);
     L.push([
-      i+1, ag.q, (ag._score!=null?(ag._score*100).toFixed(1).replace('.',','):''),
+      i+1, ag.q, (ag._qProj||''), (ag._score!=null?(ag._score*100).toFixed(1).replace('.',','):''),
       ag.k,
       (vb==='gestao'?ag.k:(r0[C.GESTAO]||'')),
       (vb==='sup'?ag.k:(ag.sup||r0[C.SUP]||'')),
@@ -3322,23 +3327,48 @@ async function downloadVendasMesCSV(){
 }
 // ---- ordenacao da tabela "Ranking por Quartil" (clique no header, mesma UX do Detalhe por Vendedor) ----
 var QV_SORT={key:'sc',dir:'desc'};
-var QV_TXTKEYS={q:1,nome:1,area:1,sup:1,tempo:1};
+var QV_TXTKEYS={q:1,nome:1,area:1,sup:1};
 function qvCols(){
   return [
     {t:'Q',k:'q'},{t:'Nome',k:'nome'},{t:'Área',k:'area'},{t:'Supervisor',k:'sup'},
+    {t:'Tempo de casa',k:'tempo'},
     {t:'Score',k:'sc',n:1},
-    {t:'At. Vol.',k:'attvol',n:1,ti:'Atingimento de volume = vidas ÷ (60 × nº meses do período)'},
     {t:'Leads',k:'lt',n:1},
-    {t:'SLA ≤2min',k:'sla',n:1,ti:'% de atendimentos respondidos em ≤2min (denominador: leads DENTRO do horário). Fotografia do período do build de SLA — não varia com o filtro de Mês.'},
     {t:'Vidas',k:'vd',n:1},
     {t:'Conv. geral',k:'cv',n:1,ti:'Conversão geral — TODAS as origens, no período filtrado (vidas ÷ leads)'},
-    {t:'Conv. ch.',k:'cvch',n:1,ti:'Conversão agregada das 5 origens-chave, no período filtrado: Σ vidas ÷ Σ leads das origens abaixo'},
-    {t:'Tempo de Casa',k:'tempo'},
-    {t:'Meses',k:'meses',n:1,ti:'Tempo de casa em meses'}
+    {t:'Conv. ch.',k:'cvch',n:1,ti:'Conversão agregada das 5 origens-chave, no período filtrado: Σ vidas ÷ Σ leads das origens abaixo'}
   ].concat(KEY_ORIG_LBL.map(function(lbl,i){return {t:lbl,k:'ko'+i,n:1,ti:lbl+' · conversão do período filtrado'};}));
 }
 function sortQV(key){if(QV_SORT.key===key)QV_SORT.dir=QV_SORT.dir==='asc'?'desc':'asc';else{QV_SORT.key=key;QV_SORT.dir=QV_TXTKEYS[key]?'asc':'desc';}renderQuartilV();}
 function tempoCasaMesesQV(s){var a=/(\d+)\s*A/i.exec(s),me=/(\d+)\s*M/i.exec(s),d=/(\d+)\s*D/i.exec(s);if(!a&&!me&&!d)return 0;return (a?+a[1]:0)*12+(me?+me[1]:0)+((d?+d[1]:0)>=15?1:0);}
+// Tempo de casa por extenso: 16 meses -> "1 ano e 4 meses" (a faixa tempoStr já chega como "1A 4M 10D").
+function tempoCasaTxtQV(s){
+  if(!/\d+\s*[AMD]/i.test(s||''))return '—';
+  var m=tempoCasaMesesQV(s),y=Math.floor(m/12),r=m%12,p=[];
+  if(y)p.push(y+(y>1?' anos':' ano'));
+  if(r)p.push(r+(r>1?' meses':' mês'));
+  return p.length?p.join(' e '):'menos de 1 mês';
+}
+// Célula "Q": badge cheio = Q apurado (congelado no checkpoint); chip = onde a pessoa ficaria se a
+// apuração fosse agora, com os números de hoje (ag._qProj). Só aparece quando muda.
+function qvQCell(ag,snap){
+  var QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
+  var base='<span class="q-badge '+ag.q.toLowerCase()+'b" style="width:36px;height:22px;border-radius:6px;font-size:12px">'+ag.q+'</span>';
+  var p=ag._qProj;
+  if(!p||p===ag.q)return base;
+  var d=(+ag.q.slice(1))-(+p.slice(1));   // >0 = sobe
+  var up=d>0,ar=(up?'▲':'▼')+(Math.abs(d)>1?(up?'▲':'▼'):'');
+  var why='';
+  if(!up&&ag.q==='Q1'){
+    var mt=[];
+    if(!(ag._attVol!=null&&ag._attVol>=1))mt.push('volume abaixo da meta');
+    if(!(ag._convMedia!=null&&ag._convMedia>=0.09))mt.push('conversão das origens-chave abaixo de 9%');
+    if(!(ag._kLeads>=QV_LEAD_FLOOR))mt.push('menos de '+QV_LEAD_FLOOR+' leads-chave');
+    why=mt.length?' Motivo: '+mt.join('; ')+'.':' Motivo: saiu do top 25% de score.';
+  }else if(up&&p==='Q1')why=' Passa nas portas do Q1 e entra no top 25% de score.';
+  var tip='Apurado'+(snap?' em '+snap.ref:'')+': '+ag.q+'. Pelos números de hoje: '+p+'.'+why+(snap&&snap.proximo?' Próxima apuração em '+snap.proximo+'.':'');
+  return base+'<span title="'+tip+'" style="display:inline-block;margin-left:5px;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;background:'+QC[p]+'1f;color:'+QC[p]+'"><span style="color:'+(up?'#16a34a':'#dc2626')+'">'+ar+'</span> '+p+'</span>';
+}
 function qvSortVal(ag,key){
   if(key==='q')return ag.q;
   if(key==='nome')return ag.k;
@@ -3480,6 +3510,14 @@ function renderQuartilV(){
   });
   window._QV_LAST={rows:tableRows,vb:vbSel,volTgt:volTgt};   // p/ o botao "Exportar auditoria (CSV)"
   document.getElementById('qv-rows').textContent='('+tableRows.length+' '+vbLabel+')';
+  var snapQ=(vbSel==='nome')?resolveSnap():null;
+  if(snapQ&&!ags.some(function(g){return !!g._qProj;}))snapQ=null;
+  (function(){var el=document.getElementById('qv_proj_leg');if(!el)return;
+    if(!snapQ){el.style.display='none';el.innerHTML='';return;}
+    var up=0,dn=0;ags.forEach(function(g){if(g._qProj&&g._qProj!==g.q){if(+g._qProj.slice(1)<+g.q.slice(1))up++;else dn++;}});
+    el.style.display='';
+    el.innerHTML='<b>Q</b> = posição apurada em <b>'+snapQ.ref+'</b> (fixa até <b>'+snapQ.proximo+'</b>). O chip ao lado mostra onde a pessoa ficaria se a apuração fosse hoje, com os números atuais: <b style="color:#16a34a">▲ '+up+' sobem</b> · <b style="color:#dc2626">▼ '+dn+' descem</b>.';
+  })();
   var qvBody=tableRows.map(function(ag){
     var cor=QC[ag.q];
     var cv=ag.lt?ag._effVd/ag.lt*100:0;
@@ -3488,21 +3526,18 @@ function renderQuartilV(){
     var cvCh=chL?chV/chL*100:null;
     var cvChTxt=cvCh==null?'–':cvCh.toFixed(1)+'%';
     return '<tr>'+
-      '<td><span class="q-badge '+ag.q.toLowerCase()+'b" style="width:36px;height:22px;border-radius:6px;font-size:12px">'+ag.q+'</span></td>'+
+      '<td style="white-space:nowrap">'+qvQCell(ag,snapQ)+'</td>'+
       '<td>'+(vbSel==='nome'
         ? '<a href="https://painelvendedores-hap.vercel.app/?v='+encodeURIComponent(ag.k)+'" target="_blank" rel="noopener" title="Abrir o painel individual de '+ag.k+'" style="color:#0072ce;text-decoration:none;font-weight:600">'+ag.k+' <span style="font-size:11px">↗</span></a>'
         : ag.k)+'</td>'+
       '<td>'+ag.area+'</td>'+
       '<td>'+ag.sup+'</td>'+
+      '<td style="font-size:12px;white-space:nowrap">'+tempoCasaTxtQV(ag.tempoStr)+'</td>'+
       '<td class="num"><b style="color:'+cor+'">'+(ag._score*100).toFixed(0)+'</b></td>'+
-      '<td class="num">'+(ag._attVol==null?'–':(ag._attVol*100).toFixed(0)+'%')+'</td>'+
       '<td class="num">'+nf(ag.lt)+'</td>'+
-      '<td class="num">'+slaPctHTML(ag)+'</td>'+
       '<td class="num">'+nf(ag._effVd)+'</td>'+
       '<td class="num"><b style="color:'+cvCor+'">'+cv.toFixed(1)+'%</b></td>'+
       '<td class="num" style="color:#64748b">'+cvChTxt+'</td>'+
-      '<td style="font-size:12px">'+ag.tempo+'</td>'+
-      '<td class="num" style="font-size:12px">'+(function(s){var a=/(\d+)\s*A/i.exec(s),me=/(\d+)\s*M/i.exec(s),d=/(\d+)\s*D/i.exec(s);if(!a&&!me&&!d)return '—';return (a?+a[1]:0)*12+(me?+me[1]:0)+((d?+d[1]:0)>=15?1:0);})(ag.tempoStr)+'</td>'+
       KEY_ORIG_LBL.map(function(lbl){var o=(ag._accFila||{})[lbl];if(!o||o.lt===0)return '<td class="num" style="color:#cbd5e1">—</td>';var pct=o.vd/o.lt*100;var col=pct>=10?'#16a34a':pct>=5?'#d97706':'#dc2626';return '<td class="num" style="color:'+col+';font-weight:600">'+pct.toFixed(1)+'%</td>';}).join('')+
     '</tr>';
   }).join('');
