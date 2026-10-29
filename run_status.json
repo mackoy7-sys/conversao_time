@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "run_id": "daily-20261028T151727",
+  "run_id": "daily-20261029T081422",
   "component": "conversao_time",
   "status": "UPDATED",
   "core_status": "PUBLISHED",
   "optional_status": "OK",
   "source": "datalake",
-  "as_of": "2026-10-28",
-  "generated_at": "2026-10-28T16:02:24-03:00",
+  "as_of": "2026-10-29",
+  "generated_at": "2026-10-29T09:13:41-03:00",
   "warnings": []
 }
