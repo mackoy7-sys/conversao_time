@@ -478,6 +478,12 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
   </table>
   </div>
 </div>
+<div class="tablecard" id="qv_fora_card" style="display:none">
+  <details>
+    <summary style="cursor:pointer;font-size:14px;font-weight:700;list-style:none"><span id="qv_fora_tit">Fora do ranking</span> <span style="color:var(--muted);font-weight:400;font-size:12px">▾ clique para abrir</span></summary>
+    <div id="qv_fora_body" style="margin-top:12px;overflow-x:auto"></div>
+  </details>
+</div>
 </div>
 
 <div class="foot">Hapvida Comercial Digital · Conversão por Vendedor (vínculo por nome, mesmo mês) · gerado em 30/06/2026 · não publicar sem OK</div>
@@ -827,6 +833,46 @@ function grpSintVd(g){
 }
 function effVdQ(g){var v=effVd(g)-grpSintVd(g);return v>0?v:0;}
 function qvSintroExcl(g){return !!g&&grpSintVd(g)>0&&effVdQ(g)<=0;}
+
+// ===== FORA DO QUARTIL + SELO DE AFASTADO (David 06/11/2026) =========================================
+// Vale de OUTUBRO/2026 em diante (QUARTIL_FORA.vig). Sai da POPULACAO (nao ocupa vaga nem desloca percentil):
+// DESLIGADO, cargo diferente de PROMOTOR no mes (supervisor/assistente/analista/gerente), gestao TREINAMENTO e
+// exclusoes MANUAIS com motivo (ex.: SINTRO de projeto). ACTIONLINE FICA. AFASTADO/LICENCA/FERIAS FICAM no
+// ranking, avaliados pelo que produziram, e so' ganham um selo (QUARTIL_FORA.a). Os dados vem do build
+// (QUARTIL_FORA = sidecar de meta, gerado por quartil_fora.py a partir do cadastro/arvore do mes).
+// Ausente (null) = comportamento anterior. Meses antes da vigencia e "Todos" seguem como estavam.
+var QUARTIL_FORA=null, _QV_FORA_OFF=false;
+function _qvForaKey(g){return _qvAdmKey(typeof g==='string'?g:(g&&g.nome!=null?g.nome:(g?g.k:'')));}
+function qvForaMotivo(g){
+  if(_QV_FORA_OFF||!QUARTIL_FORA||!g)return null;
+  var ms=selectedMonths();if(!ms.length)return null;
+  var vig=+QUARTIL_FORA.vig||0;
+  for(var i=0;i<ms.length;i++){if(ms[i]<vig)return null;}
+  var k=_qvForaKey(g),p=(QUARTIL_FORA.p||{})[k];
+  if(p)return p;
+  var c=(QUARTIL_FORA.c||{})[k];
+  if(c){var last=String(Math.max.apply(null,ms));if(c[last])return {t:'CARGO',c:c[last],d:null};}
+  return null;
+}
+function qvForaLbl(f){return f.t==='DESLIGADO'?'DESLIG.':f.t==='TREINAMENTO'?'TREIN.':f.t==='CARGO'?'ADM':(f.t||'FORA');}
+function qvForaTip(f){
+  if(f.t==='DESLIGADO')return 'Desligado(a)'+(f.d?' em '+f.d.slice(8,10)+'/'+f.d.slice(5,7):'')+' — fora do quartil';
+  if(f.t==='CARGO')return 'Cargo '+String(f.c||'').toLowerCase()+' — não é vendedor, fora do quartil';
+  if(f.t==='TREINAMENTO')return 'Treinamento — não é vendedor, fora do quartil';
+  if(f.t==='SINTRO')return 'Vendedor de projeto SINTRO — fora do quartil';
+  return 'Fora do quartil';
+}
+// Periodos de afastamento (ferias/licenca/afastado) que tocam o recorte de meses selecionado.
+function qvAfastBadges(nome){
+  if(!QUARTIL_FORA||!QUARTIL_FORA.a)return [];
+  var lst=QUARTIL_FORA.a[_qvForaKey(nome)];if(!lst||!lst.length)return [];
+  var ms=selectedMonths();if(!ms.length)return [];
+  var vig=+QUARTIL_FORA.vig||0,mn=Math.min.apply(null,ms),mx=Math.max.apply(null,ms);
+  if(mx<vig)return [];
+  var rp=(typeof refParts==='function')?refParts():null,y=rp?rp.y:2026;
+  var ini=y+'-'+('0'+mn).slice(-2)+'-01',fim=y+'-'+('0'+mx).slice(-2)+'-'+('0'+new Date(y,mx,0).getDate()).slice(-2);
+  return lst.filter(function(x){return !x.i||(x.i<=fim&&(!x.f||x.f>=ini));});
+}
 // Vendedoras ADMINISTRATIVAS (David 03/08/2026): tem calculo proprio, entao ficam FORA do quartil e
 // tambem fora da POPULACAO que define percentis/fronteiras. Seguem normais nas tabelas, KPIs e Leads
 // por Origem — so Score/Quartil ficam "—" (e somem da aba Ranking por Quartil).
@@ -896,9 +942,9 @@ function _stampQuartilSnap(){
 // quartil: VENDA 60% (atingimento de volume vs 60/mês, período-sensível) · PRINCIPAL 30% · DEMAIS FILA 10% (conversão vs meta por origem, DO PERÍODO) + trava anti-ruído ≥QV_LEAD_FLOOR leads-chave
 function assignQuartis(a,noAdm){
   var _fora=[],_pop=[];
-  a.forEach(function(g){((!noAdm&&(qvAdmExcl(g)||qvSintroExcl(g)))?_fora:_pop).push(g);});
+  a.forEach(function(g){((!noAdm&&(qvAdmExcl(g)||qvForaMotivo(g)||qvSintroExcl(g)))?_fora:_pop).push(g);});
   _fora.forEach(function(g){         // fora do quartil: mantem vidas/conv p/ as tabelas, zera score/quartil
-    g._qvAdm=1;g._qvSint=(!noAdm&&!qvAdmExcl(g)&&qvSintroExcl(g))?1:0;   // _qvSint: saiu por SINTRO (lote), nao por ser ADM
+    g._qvAdm=1;g._qvFora=(!noAdm&&!qvAdmExcl(g))?qvForaMotivo(g):null;g._qvSint=(!noAdm&&!qvAdmExcl(g)&&!g._qvFora&&qvSintroExcl(g))?1:0;   // _qvSint: saiu por SINTRO (lote), nao por ser ADM
     g.q=null;g._qProj=null;g._score=null;g._rv=null;g._rk=null;g._rc=null;
     g._accFila=origAccOf(g);g._effVd=effVd(g);
     g._attVol=null;g._attP=null;g._attD=null;g._attConv=null;g._convMedia=null;g._q1elig=false;g._kLeads=null;g._below=false;
@@ -948,7 +994,7 @@ function assignQuartis(a,noAdm){
   q1set.forEach(function(g){g._qLive='Q1';});
   var mr=rest.length;
   rest.forEach(function(g,j){g._qLive=j<mr/3?'Q2':j<2*mr/3?'Q3':'Q4';});
-  if(_snap&&!noAdm){var _rpq=(typeof refParts==='function')?refParts():null,_projOn=!!_rpq&&+_snap.mes===_rpq.mo;   // projeção só no mês corrente: mês já apurado fica congelado, sem "próxima apuração"
+  if(_snap&&!noAdm){var _rpq=(typeof refParts==='function')?refParts():null,_msq=selectedMonths(),_projOn=!!_rpq&&_msq.length===1&&+_msq[0]===_rpq.mo;   // projeção só no mês corrente: mês já apurado fica congelado, sem "próxima apuração"
     a.forEach(function(g){g.q=_qFromSnap(_snap,g);g._qProj=_projOn?g._qLive:null;});}
   else{a.forEach(function(g){g.q=g._qLive;g._qProj=null;});}
 }
@@ -965,7 +1011,7 @@ function quartilePopulation(gcol,noAdm){
   var m={};rows.forEach(function(r){var k=r[gcol];if(!m[k])m[k]={k:k,lt:0,vd:0,vv:0,area:r[C.AREA],sup:r[C.SUP],tempo:r[C.FAIXA]||'—',tempoStr:r[C.TEMPO]||'',_names:new Set(),_rows:[]};var g=m[k];g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._names.add(r[C.NOME]);g._rows.push(r);});
   var a=Object.values(m);crossScope(a);assignQuartis(a,noAdm);_QV_POP_CACHE={};_QV_POP_CACHE[sig]=a;return a;
 }
-function _copyQuartile(dst,src){['_qvAdm','_qvSint','q','_qProj','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
+function _copyQuartile(dst,src){['_qvAdm','_qvSint','_qvFora','q','_qProj','_score','_rv','_rk','_rc','_effVd','_attVol','_attP','_attD','_attConv','_convMedia','_q1elig','_kLeads','_below','_accFila'].forEach(function(k){dst[k]=src?src[k]:null;});}
 function applyQuartileReference(groups,gcol,noAdm){var map={};quartilePopulation(gcol,noAdm).forEach(function(g){map[g.k]=g;});groups.forEach(function(g){_copyQuartile(g,map[g.k]);});return groups;}
 // score 0-100 (o mesmo que define o quartil) colorido pela cor do quartil
 var QCOL={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
@@ -1727,13 +1773,13 @@ function buildHead(cols){
 // Vendedoras administrativas (QV_ADM_NOMES) aparecem como "ADM" cinza; sem quartil no recorte, "—".
 function qTagHTML(g){
   var q=g&&g.q, adm=!!(g&&g._qvAdm);
-  var sint=!!(g&&g._qvSint), lbl=q||(sint?'LOTE':adm?'ADM':'—'), bg=q?(QCOL[q]||'#94a3b8'):'#94a3b8';
-  var tip=q?('Quartil '+q+(g._score!=null?' · score '+(g._score*100).toFixed(1).replace('.',','):'')):(sint?'Produção 100% SINTRO (lote, sem lead) — fora do quartil':adm?'Vendedora administrativa — cálculo próprio, fora do quartil':'Sem quartil no recorte atual');
+  var fora=g&&g._qvFora, sint=!!(g&&g._qvSint), lbl=q||(fora?qvForaLbl(fora):sint?'LOTE':adm?'ADM':'—'), bg=q?(QCOL[q]||'#94a3b8'):'#94a3b8';
+  var tip=q?('Quartil '+q+(g._score!=null?' · score '+(g._score*100).toFixed(1).replace('.',','):'')):(fora?qvForaTip(fora):sint?'Produção 100% SINTRO (lote, sem lead) — fora do quartil':adm?'Vendedora administrativa — cálculo próprio, fora do quartil':'Sem quartil no recorte atual');
   return '<span class="q-badge" style="background:'+bg+';width:auto;min-width:23px;height:17px;padding:0 5px;border-radius:5px;font-size:10px;margin-right:6px;vertical-align:middle" title="'+tip+'">'+lbl+'</span>';
 }
 function cellFor(g,mt,k,rc,pos){
   if(!k)return '<td class="'+rc+'">'+pos+'.</td>';
-  if(k==='k')return '<td><span class="exp">▸</span>'+(VIEWBY==='nome'?qTagHTML(g):'')+g.k+'</td>';
+  if(k==='k')return '<td><span class="exp">▸</span>'+(VIEWBY==='nome'?qTagHTML(g):'')+g.k+(VIEWBY==='nome'?afastBadgeHTML(g.k):'')+'</td>';
   if(k==='lt')return '<td class="num">'+nf(g.lt)+'</td>';
   if(k==='sla')return '<td class="num">'+slaPctHTML(g)+'</td>';
   if(k==='vd')return '<td class="num">'+nf(effVd(g))+'</td>';
@@ -2161,8 +2207,8 @@ function renderExtrato(){
   var QN={Q1:'Elite · Top 25%',Q2:'Bom · 50–75%',Q3:'Mediano · 25–50%',Q4:'Baixo · Bottom 25%'};
   var cor=_admX?'#64748b':QC[ag.q];
   var _sintX=!!ag._qvSint;
-  var qLbl=_admX?(_sintX?'LOTE':'ADM'):ag.q, qCls=_admX?'admb':(ag.q.toLowerCase()+'b');
-  var qDesc=_admX?(_sintX?'Produção 100% SINTRO (lote) · fora do ranking':'Administrativo · fora do ranking'):QN[ag.q];
+  var _foraX=ag._qvFora, qLbl=_admX?(_foraX?qvForaLbl(_foraX):_sintX?'LOTE':'ADM'):ag.q, qCls=_admX?'admb':(ag.q.toLowerCase()+'b');
+  var qDesc=_admX?(_foraX?qvForaTip(_foraX)+' · fora do ranking':_sintX?'Produção 100% SINTRO (lote) · fora do ranking':'Administrativo · fora do ranking'):QN[ag.q];
   var effV=(ag._effVd!=null?ag._effVd:ag.vd);
   var convGlobal=ag.lt>0?effV/ag.lt*100:0;   // Conv. geral respeita o filtro VIDAS (Total/Vinculado)
   // Conv. Vinculada + Vidas Vinculadas com Lead = ORIG_BY_NOME, agora no eixo QUEM VENDEU
@@ -3385,6 +3431,46 @@ function qvSortVal(ag,key){
   if(key.indexOf('ko')===0){var lbl=KEY_ORIG_LBL[+key.slice(2)],o=(ag._accFila||{})[lbl];return (o&&o.lt>0)?o.vd/o.lt*100:-1;}
   return 0;
 }
+
+// ===== Selo de afastado + painel "Fora do ranking" (David 06/11/2026) ================================
+function afastBadgeHTML(nome){
+  var l=qvAfastBadges(nome);if(!l.length)return '';
+  var x=l[0],nm={AFASTADO:'AFASTADO',LICENCA:'LICENÇA',FERIAS:'FÉRIAS'}[x.t]||x.t;
+  var d=function(s){return s?s.slice(8,10)+'/'+s.slice(5,7):'';};
+  var per=x.i?(' desde '+d(x.i)+(x.f?' até '+d(x.f):' (sem data de volta)')):' (sem data registrada)';
+  return '<span class="q-badge" style="background:#d97706;width:auto;min-width:23px;height:17px;padding:0 5px;border-radius:5px;font-size:10px;margin-left:6px;vertical-align:middle" title="Estava '+nm.toLowerCase()+' no período'+per+' — avaliado normalmente pelo que produziu">'+nm+'</span>';
+}
+// "Teria Qn": recalcula a populacao COM os excluidos (foto/fronteiras congeladas valem do mesmo jeito)
+function _qvTeriaMap(gcol){
+  var m={};_QV_FORA_OFF=true;_QV_POP_CACHE={};
+  try{quartilePopulation(gcol,false).forEach(function(g){m[g.k]=g.q;});}catch(e){}
+  finally{_QV_FORA_OFF=false;_QV_POP_CACHE={};}
+  return m;
+}
+function renderQvFora(popAgs,visKeys,vbSel,gcol){
+  var card=document.getElementById('qv_fora_card');if(!card)return;
+  var all=(vbSel==='nome'&&QUARTIL_FORA)?popAgs.filter(function(g){return !!g._qvFora;}):[];
+  if(!all.length){card.style.display='none';return;}
+  var lista=all.filter(function(g){return (g._qvFora.t==='DESLIGADO'||g._qvFora.t==='SINTRO')&&visKeys.has(g.k);});
+  var adm=all.filter(function(g){return g._qvFora.t==='CARGO'||g._qvFora.t==='TREINAMENTO';}).length;
+  var teria=_qvTeriaMap(gcol),QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
+  var ord={Q1:1,Q2:2,Q3:3,Q4:4};
+  lista.sort(function(a,b){var qa=ord[teria[a.k]]||9,qb=ord[teria[b.k]]||9;return qa-qb||(b._effVd||b.vd||0)-(a._effVd||a.vd||0)||a.k.localeCompare(b.k,'pt-BR');});
+  var nd=lista.filter(function(g){return g._qvFora.t==='DESLIGADO';}).length,ns=lista.length-nd;
+  var fd=function(s){return s?s.slice(8,10)+'/'+s.slice(5,7):'—';};
+  card.style.display='';
+  document.getElementById('qv_fora_tit').innerHTML='Fora do ranking · '+lista.length+' '+(lista.length===1?'pessoa':'pessoas')+
+    ' <span style="color:var(--muted);font-weight:400;font-size:12px">'+(nd?nd+' desligado'+(nd>1?'s':''):'')+(nd&&ns?' · ':'')+(ns?ns+' de projeto SINTRO':'')+'</span>';
+  var rows=lista.map(function(g){
+    var f=g._qvFora,q=teria[g.k],r0=(g._rows&&g._rows[0])||[];
+    var mot=f.t==='DESLIGADO'?'<span class="q-badge" style="background:#dc2626;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">DESLIGADO</span>':'<span class="q-badge" style="background:#64748b;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">'+(f.t==='SINTRO'?'SINTRO · PROJETO':f.t)+'</span>';
+    return '<tr><td style="font-weight:600">'+g.k+'</td><td>'+mot+'</td><td class="num">'+(f.t==='DESLIGADO'?fd(f.d):'—')+'</td><td>'+(g.sup||'')+'</td><td>'+(r0[C.GESTAO]||'')+'</td><td class="num">'+nf(g.lt)+'</td><td class="num">'+nf(effVd(g))+'</td><td class="num">'+(q?'<span class="q-badge '+q.toLowerCase()+'b" style="width:30px;height:20px;border-radius:6px;font-size:11px">'+q+'</span>':'—')+'</td></tr>';
+  }).join('');
+  document.getElementById('qv_fora_body').innerHTML=
+    '<div style="font-size:12px;color:var(--muted);margin:0 0 8px">Quem sairia no ranking se estivesse ativo, com o quartil que <b>teria</b> neste recorte (mesma foto/fronteiras). Não ocupam vaga nem deslocam o percentil de ninguém. Seguem nas tabelas, KPIs e Leads por Origem.</div>'+
+    (lista.length?'<table><thead><tr><th>Nome</th><th>Motivo</th><th class="num">Saiu em</th><th>Supervisor</th><th>Gestão</th><th class="num">Leads</th><th class="num">Vidas</th><th class="num">Teria</th></tr></thead><tbody>'+rows+'</tbody></table>':'<div style="font-size:13px;color:var(--muted)">Ninguém neste recorte.</div>')+
+    '<div style="font-size:11px;color:var(--muted);margin-top:10px">'+(adm?adm+' pessoa'+(adm>1?'s':'')+' com cargo de gestão/administrativo (supervisor, assistente, analista, gerente) e TREINAMENTO também ficam fora do cálculo, sem listar. ':'')+'<b>Afastados</b> (férias, licença) <b>continuam no ranking</b>, avaliados pelo que produziram, com o selo <span class="q-badge" style="background:#d97706;width:auto;height:15px;padding:0 5px;border-radius:5px;font-size:9px;vertical-align:middle">AFASTADO</span>. ACTIONLINE permanece. Regra válida de outubro/2026 em diante.</div>';
+}
 function renderQuartilV(){
   var vbSel=document.getElementById('qv_viewby').value;
   var gcol=vbSel==='sup'?C.SUP:vbSel==='gestao'?C.GESTAO:C.NOME;
@@ -3529,7 +3615,7 @@ function renderQuartilV(){
       '<td style="white-space:nowrap">'+qvQCell(ag,snapQ)+'</td>'+
       '<td>'+(vbSel==='nome'
         ? '<a href="https://painelvendedores-hap.vercel.app/?v='+encodeURIComponent(ag.k)+'" target="_blank" rel="noopener" title="Abrir o painel individual de '+ag.k+'" style="color:#0072ce;text-decoration:none;font-weight:600">'+ag.k+' <span style="font-size:11px">↗</span></a>'
-        : ag.k)+'</td>'+
+        : ag.k)+(vbSel==='nome'?afastBadgeHTML(ag.k):'')+'</td>'+
       '<td>'+ag.area+'</td>'+
       '<td>'+ag.sup+'</td>'+
       '<td style="font-size:12px;white-space:nowrap">'+tempoCasaTxtQV(ag.tempoStr)+'</td>'+
@@ -3542,6 +3628,7 @@ function renderQuartilV(){
     '</tr>';
   }).join('');
   document.getElementById('tbl_qv').innerHTML=_sortableHead(qvCols(),QV_SORT,'sortQV')+'<tbody>'+qvBody+'</tbody>';
+  renderQvFora(popAgs,visKeys,vbSel,gcol);
 }
 
 const ORIG_BY_NOME={};
@@ -3717,6 +3804,7 @@ function _initUI(){
     if(M.TIPO_BY_NOME_MES)Object.assign(TIPO_BY_NOME_MES,M.TIPO_BY_NOME_MES);
     if(M.LEADTIPO_BY_NOME_MES)Object.assign(LEADTIPO_BY_NOME_MES,M.LEADTIPO_BY_NOME_MES);
     if(M.LEADTIPO_PROD)Object.assign(LEADTIPO_PROD,M.LEADTIPO_PROD);
+    if(M.QUARTIL_FORA)QUARTIL_FORA=M.QUARTIL_FORA;
     if(M.QUARTIL_SNAP){QUARTIL_SNAP=M.QUARTIL_SNAP;_stampQuartilSnap();}
     // ORIGEM_TAG_STATS / TIPOFILA_STATS / ORIGEMFILA_STATS -> lazy em _loadLeads() (aba "Analise dos Leads")
     var hc=document.getElementById('hcount');
