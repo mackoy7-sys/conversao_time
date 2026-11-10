@@ -837,7 +837,7 @@ function qvSintroExcl(g){return !!g&&grpSintVd(g)>0&&effVdQ(g)<=0;}
 // ===== FORA DO QUARTIL + SELO DE AFASTADO (David 06/11/2026) =========================================
 // Vale de OUTUBRO/2026 em diante (QUARTIL_FORA.vig). Sai da POPULACAO (nao ocupa vaga nem desloca percentil):
 // DESLIGADO, cargo diferente de PROMOTOR no mes (supervisor/assistente/analista/gerente), gestao TREINAMENTO e
-// exclusoes MANUAIS com motivo (ex.: SINTRO de projeto). ACTIONLINE FICA. AFASTADO/LICENCA/FERIAS FICAM no
+// exclusoes MANUAIS com motivo (ex.: SINTRO de projeto) e a equipe ACTIONLINE (David, 10/11/2026; antes ficava). AFASTADO/LICENCA/FERIAS FICAM no
 // ranking, avaliados pelo que produziram, e so' ganham um selo (QUARTIL_FORA.a). Os dados vem do build
 // (QUARTIL_FORA = sidecar de meta, gerado por quartil_fora.py a partir do cadastro/arvore do mes).
 // Ausente (null) = comportamento anterior. Meses antes da vigencia e "Todos" seguem como estavam.
@@ -854,12 +854,13 @@ function qvForaMotivo(g){
   if(c){var last=String(Math.max.apply(null,ms));if(c[last])return {t:'CARGO',c:c[last],d:null};}
   return null;
 }
-function qvForaLbl(f){return f.t==='DESLIGADO'?'DESLIG.':f.t==='TREINAMENTO'?'TREIN.':f.t==='CARGO'?'ADM':(f.t||'FORA');}
+function qvForaLbl(f){return f.t==='DESLIGADO'?'DESLIG.':f.t==='TREINAMENTO'?'TREIN.':f.t==='ACTIONLINE'?'ACTION.':f.t==='CARGO'?'ADM':(f.t||'FORA');}
 function qvForaTip(f){
   if(f.t==='DESLIGADO')return 'Desligado(a)'+(f.d?' em '+f.d.slice(8,10)+'/'+f.d.slice(5,7):'')+' — fora do quartil';
   if(f.t==='CARGO')return 'Cargo '+String(f.c||'').toLowerCase()+' — não é vendedor, fora do quartil';
   if(f.t==='TREINAMENTO')return 'Treinamento — não é vendedor, fora do quartil';
   if(f.t==='SINTRO')return 'Vendedor de projeto SINTRO — fora do quartil';
+  if(f.t==='ACTIONLINE')return 'Equipe ACTIONLINE — fora do quartil';
   return 'Fora do quartil';
 }
 // Periodos de afastamento (ferias/licenca/afastado) que tocam o recorte de meses selecionado.
@@ -3452,7 +3453,7 @@ function renderQvFora(popAgs,visKeys,vbSel,gcol){
   var all=(vbSel==='nome'&&QUARTIL_FORA)?popAgs.filter(function(g){return !!g._qvFora;}):[];
   if(!all.length){card.style.display='none';return;}
   var lista=all.filter(function(g){return (g._qvFora.t==='DESLIGADO'||g._qvFora.t==='SINTRO')&&visKeys.has(g.k);});
-  var adm=all.filter(function(g){return g._qvFora.t==='CARGO'||g._qvFora.t==='TREINAMENTO';}).length;
+  var adm=all.filter(function(g){return g._qvFora.t==='CARGO'||g._qvFora.t==='TREINAMENTO'||g._qvFora.t==='ACTIONLINE';}).length;
   var teria=_qvTeriaMap(gcol),QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var ord={Q1:1,Q2:2,Q3:3,Q4:4};
   lista.sort(function(a,b){var qa=ord[teria[a.k]]||9,qb=ord[teria[b.k]]||9;return qa-qb||(b._effVd||b.vd||0)-(a._effVd||a.vd||0)||a.k.localeCompare(b.k,'pt-BR');});
@@ -3469,7 +3470,7 @@ function renderQvFora(popAgs,visKeys,vbSel,gcol){
   document.getElementById('qv_fora_body').innerHTML=
     '<div style="font-size:12px;color:var(--muted);margin:0 0 8px">Quem sairia no ranking se estivesse ativo, com o quartil que <b>teria</b> neste recorte (mesma foto/fronteiras). Não ocupam vaga nem deslocam o percentil de ninguém. Seguem nas tabelas, KPIs e Leads por Origem.</div>'+
     (lista.length?'<table><thead><tr><th>Nome</th><th>Motivo</th><th class="num">Saiu em</th><th>Supervisor</th><th>Gestão</th><th class="num">Leads</th><th class="num">Vidas</th><th class="num">Teria</th></tr></thead><tbody>'+rows+'</tbody></table>':'<div style="font-size:13px;color:var(--muted)">Ninguém neste recorte.</div>')+
-    '<div style="font-size:11px;color:var(--muted);margin-top:10px">'+(adm?adm+' pessoa'+(adm>1?'s':'')+' com cargo de gestão/administrativo (supervisor, assistente, analista, gerente) e TREINAMENTO também ficam fora do cálculo, sem listar. ':'')+'<b>Afastados</b> (férias, licença) <b>continuam no ranking</b>, avaliados pelo que produziram, com o selo <span class="q-badge" style="background:#d97706;width:auto;height:15px;padding:0 5px;border-radius:5px;font-size:9px;vertical-align:middle">AFASTADO</span>. ACTIONLINE permanece. Regra válida de outubro/2026 em diante.</div>';
+    '<div style="font-size:11px;color:var(--muted);margin-top:10px">'+(adm?adm+' pessoa'+(adm>1?'s':'')+' com cargo de gestão/administrativo (supervisor, assistente, analista, gerente), TREINAMENTO e a equipe ACTIONLINE também ficam fora do cálculo, sem listar. ':'')+'<b>Afastados</b> (férias, licença) <b>continuam no ranking</b>, avaliados pelo que produziram, com o selo <span class="q-badge" style="background:#d97706;width:auto;height:15px;padding:0 5px;border-radius:5px;font-size:9px;vertical-align:middle">AFASTADO</span>. ACTIONLINE permanece. Regra válida de outubro/2026 em diante.</div>';
 }
 function renderQuartilV(){
   var vbSel=document.getElementById('qv_viewby').value;
