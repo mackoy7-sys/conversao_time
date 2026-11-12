@@ -3450,21 +3450,36 @@ function _qvTeriaMap(gcol){
 }
 function renderQvFora(popAgs,visKeys,vbSel,gcol){
   var card=document.getElementById('qv_fora_card');if(!card)return;
-  var all=(vbSel==='nome'&&QUARTIL_FORA)?popAgs.filter(function(g){return !!g._qvFora;}):[];
+  // Vendedores ADM do mes (David 12/11/2026): sidecar c[chave][mes]='VENDEDOR ADM' (a partir de nov/2026) + os 3 da lista fixa
+  // QV_ADM_NOMES, que nao passam por _qvFora. Entram no painel com o motivo VENDEDOR ADM; fora do contador de cargo do rodape.
+  var ehAdmV=function(g){
+    if(!QUARTIL_FORA)return false;var ms=selectedMonths();if(!ms.length)return false;
+    var vig=+QUARTIL_FORA.vig||0;for(var i=0;i<ms.length;i++){if(ms[i]<vig)return false;}
+    var c=(QUARTIL_FORA.c||{})[_qvForaKey(g)];return !!(c&&c[String(Math.max.apply(null,ms))]==='VENDEDOR ADM');
+  };
+  var admVis=new Set();filtered().forEach(function(r){var k=r[C.NOME];if(k&&r[C.GESTAO]!=='ADMINISTRATIVO'&&k!=='NÃO MAPEADO'&&k!=='N/D')admVis.add(k);});
+  var all=(vbSel==='nome'&&QUARTIL_FORA)?popAgs.filter(function(g){return !!g._qvFora||ehAdmV(g);}):[];
+  // os 3 da lista fixa QV_ADM_NOMES nunca entram em quartilePopulation (qvAdmExcl): agrega direto das linhas filtradas
+  if(vbSel==='nome'&&QUARTIL_FORA){
+    var _m3={};
+    filtered().forEach(function(r){var k=r[C.NOME];if(!k||r[C.GESTAO]==='ADMINISTRATIVO'||k==='NÃO MAPEADO'||k==='N/D'||!qvAdmExcl(k)||!ehAdmV(k))return;
+      var g=_m3[k]||(_m3[k]={k:k,lt:0,vd:0,vv:0,sup:r[C.SUP],_rows:[]});g.lt+=r[C.LT];g.vd+=r[C.VD];g.vv+=r[C.VV];g._rows.push(r);});
+    Object.keys(_m3).forEach(function(k){if(!all.some(function(g){return g.k===k;}))all.push(_m3[k]);});
+  }
   if(!all.length){card.style.display='none';return;}
-  var lista=all.filter(function(g){return (g._qvFora.t==='DESLIGADO'||g._qvFora.t==='SINTRO')&&visKeys.has(g.k);});
-  var adm=all.filter(function(g){return g._qvFora.t==='CARGO'||g._qvFora.t==='TREINAMENTO'||g._qvFora.t==='ACTIONLINE';}).length;
+  var lista=all.filter(function(g){return ehAdmV(g)?admVis.has(g.k):(g._qvFora&&(g._qvFora.t==='DESLIGADO'||g._qvFora.t==='SINTRO')&&visKeys.has(g.k));});
+  var adm=all.filter(function(g){return g._qvFora&&!ehAdmV(g)&&(g._qvFora.t==='CARGO'||g._qvFora.t==='TREINAMENTO'||g._qvFora.t==='ACTIONLINE');}).length;
   var teria=_qvTeriaMap(gcol),QC={Q1:'#16a34a',Q2:'#0072ce',Q3:'#d97706',Q4:'#dc2626'};
   var ord={Q1:1,Q2:2,Q3:3,Q4:4};
   lista.sort(function(a,b){var qa=ord[teria[a.k]]||9,qb=ord[teria[b.k]]||9;return qa-qb||(b._effVd||b.vd||0)-(a._effVd||a.vd||0)||a.k.localeCompare(b.k,'pt-BR');});
-  var nd=lista.filter(function(g){return g._qvFora.t==='DESLIGADO';}).length,ns=lista.length-nd;
+  var nd=lista.filter(function(g){return !ehAdmV(g)&&g._qvFora.t==='DESLIGADO';}).length,na=lista.filter(ehAdmV).length,ns=lista.length-nd-na;
   var fd=function(s){return s?s.slice(8,10)+'/'+s.slice(5,7):'—';};
   card.style.display='';
   document.getElementById('qv_fora_tit').innerHTML='Fora do ranking · '+lista.length+' '+(lista.length===1?'pessoa':'pessoas')+
-    ' <span style="color:var(--muted);font-weight:400;font-size:12px">'+(nd?nd+' desligado'+(nd>1?'s':''):'')+(nd&&ns?' · ':'')+(ns?ns+' de projeto SINTRO':'')+'</span>';
+    ' <span style="color:var(--muted);font-weight:400;font-size:12px">'+[nd?nd+' desligado'+(nd>1?'s':''):'',ns?ns+' de projeto SINTRO':'',na?na+' vendedor'+(na>1?'es':'')+' ADM':''].filter(Boolean).join(' · ')+'</span>';
   var rows=lista.map(function(g){
-    var f=g._qvFora,q=teria[g.k],r0=(g._rows&&g._rows[0])||[];
-    var mot=f.t==='DESLIGADO'?'<span class="q-badge" style="background:#dc2626;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">DESLIGADO</span>':'<span class="q-badge" style="background:#64748b;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">'+(f.t==='SINTRO'?'SINTRO · PROJETO':f.t)+'</span>';
+    var f=ehAdmV(g)?{t:'ADMVEND',d:null}:g._qvFora,q=teria[g.k],r0=(g._rows&&g._rows[0])||[];
+    var mot=f.t==='ADMVEND'?'<span class="q-badge" style="background:#9333ea;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">VENDEDOR ADM</span>':f.t==='DESLIGADO'?'<span class="q-badge" style="background:#dc2626;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">DESLIGADO</span>':'<span class="q-badge" style="background:#64748b;width:auto;height:17px;padding:0 6px;border-radius:5px;font-size:10px">'+(f.t==='SINTRO'?'SINTRO · PROJETO':f.t)+'</span>';
     return '<tr><td style="font-weight:600">'+g.k+'</td><td>'+mot+'</td><td class="num">'+(f.t==='DESLIGADO'?fd(f.d):'—')+'</td><td>'+(g.sup||'')+'</td><td>'+(r0[C.GESTAO]||'')+'</td><td class="num">'+nf(g.lt)+'</td><td class="num">'+nf(effVd(g))+'</td><td class="num">'+(q?'<span class="q-badge '+q.toLowerCase()+'b" style="width:30px;height:20px;border-radius:6px;font-size:11px">'+q+'</span>':'—')+'</td></tr>';
   }).join('');
   document.getElementById('qv_fora_body').innerHTML=
