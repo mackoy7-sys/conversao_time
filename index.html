@@ -156,7 +156,6 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <button class="tab-btn" onclick="switchTab('origem',this)">Análise dos Leads</button>
 <button class="tab-btn" onclick="switchTab('geo',this)">Análise por Estado</button>
 <button class="tab-btn" onclick="switchTab('quartil',this)">Análise de Quartil</button>
-<button class="tab-btn" onclick="switchTab('produtos',this)">Produtos 2026</button>
 <div class="tab-more" id="tabMore">
 <button class="tab-btn" id="tabMoreBtn" onclick="toggleMore(event)">Outros ▾</button>
 <div class="tab-more-menu" id="tabMoreMenu">
@@ -385,46 +384,6 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <tr><th rowspan="2">Faixa</th><th colspan="3" style="text-align:center;border-left:1px solid #e2e8f0">Time Próprio</th><th colspan="3" style="text-align:center;border-left:1px solid #e2e8f0">Time Terceiros</th></tr>
 <tr><th class="num" style="border-left:1px solid #e2e8f0">Agentes</th><th class="num">Vidas</th><th class="num">Conv.</th><th class="num" style="border-left:1px solid #e2e8f0">Agentes</th><th class="num">Vidas</th><th class="num">Conv.</th></tr>
 </thead><tbody></tbody></table></div>
-</div>
-
-<div id="tab-produtos" class="tab-panel">
-<div class="filters" style="margin-bottom:var(--gap)">
-<div class="fg"><label title="Companhia = planilha de produtos de 18/11/2026, todos os canais de venda. Venda Digital = BASE_DIGITAL_FULL corte 10/11/2026, só o canal digital, que é 19,4% do Individual da companhia.">Visão</label>
-<select id="f_prd_vis" class="sel" onchange="renderProdutos()">
-<option value="comp">Companhia</option>
-<option value="vd">Venda Digital (canal digital)</option>
-</select></div>
-<div class="fg"><label title="Recorta o gráfico de vidas, a tabela e o gráfico de ticket. O empilhado de participação mostra sempre os quatro, porque composição só faz sentido com o todo.">Produto</label>
-<select id="f_prd_prod" class="sel" onchange="renderProdutos()">
-<option value="">Todos</option>
-<option>Individual</option>
-<option>PIM</option>
-<option>Administradora</option>
-<option>Middle I</option>
-</select></div>
-</div>
-
-<div class="note">Dados estáticos: planilha de produtos de 18/11/2026 (companhia) e BASE_DIGITAL_FULL corte 10/11/2026 (Venda Digital e ticket).
-Esta aba <b>não</b> acompanha a carga diária nem os filtros do topo da página — quando chegar base nova, os números aqui precisam ser trocados à mão.
-Novembro fica fora das médias nas duas visões: está parcial em ambas, e com cortes diferentes.
-<a href="https://claude.ai/artifact/HouGcvGoCvDf9c6tCTrj53" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Abrir a análise completa &rarr;</a></div>
-
-<div class="card"><h3 id="h_prd_lin">Vidas por mês</h3><canvas id="ch_prd_lin"></canvas></div>
-
-<div class="card"><h3>Participação de cada produto no mês</h3>
-<p style="font-size:12px;color:var(--muted);margin:-8px 0 12px">Mostra sempre os quatro produtos — o filtro de Produto não se aplica aqui, porque composição precisa do todo.</p>
-<canvas id="ch_prd_emp"></canvas></div>
-
-<div class="tablecard"><table id="tbl_prd"><thead><tr>
-<th>Produto</th><th class="num">Jan–out</th><th class="num">% do total</th><th class="num">Média jan–jun</th>
-<th class="num">Média jul–out</th><th class="num">Variação</th><th class="num">Jan &rarr; out</th><th class="num">Nov (parcial)</th>
-</tr></thead><tbody></tbody></table></div>
-
-<div class="card"><h3 id="h_prd_tk">Ticket médio por mês, em R$ — sempre Venda Digital</h3>
-<p style="font-size:12px;color:var(--muted);margin:-8px 0 12px" id="p_prd_tk"></p>
-<canvas id="ch_prd_tk"></canvas></div>
-
-<div class="note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a" id="n_prd"></div>
 </div>
 
 <div id="tab-tempo" class="tab-panel">
@@ -1142,7 +1101,6 @@ function render(){
   if(at==='geral')renderGeralMes(rows);              // grafico "Apurado geral por mes" so na Visao Geral
   else if(at==='org'){renderOrg(rows);renderOrgTempo(rows);}
   else if(at==='tempo')renderTempo(rows);
-  else if(at==='produtos')renderProdutos();
   else if(at==='extrato')renderExtrato();
   else if(at==='quartil')renderQuartilV();
   else if(at==='geo')renderGeo();                    // aba "Análise por Estado" (cubo geo_praca, lazy)
@@ -3328,127 +3286,6 @@ function qBadge(q){
 function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');var menu=document.getElementById('tabMoreMenu'),mbtn=document.getElementById('tabMoreBtn'),mw=document.getElementById('tabMore');if(menu&&mbtn&&menu.contains(btn))mbtn.classList.add('active');if(mw)mw.classList.remove('open');render();}   // render() agora despacha so' a aba ativa
 function toggleMore(ev){ev.stopPropagation();var w=document.getElementById('tabMore');if(w)w.classList.toggle('open');}
 document.addEventListener('click',function(e){var w=document.getElementById('tabMore');if(w&&!w.contains(e.target))w.classList.remove('open');});
-
-// ---------- Produtos 2026 (tab-produtos) ----------
-// Numeros ESTATICOS: planilha de produtos da companhia (18/11/2026) e BASE_DIGITAL_FULL (10/11/2026).
-// Nao vem dos cubos diarios, entao nao reagem a carga do dia nem aos filtros do topo da pagina.
-// Novembro e parcial nas duas visoes, com cortes diferentes: fica fora das medias.
-var PRD_M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'];
-var PRD_ROX='#7c3aed';
-var PRD_COR={'PIM':AMB,'Individual':ACC,'Administradora':GRN,'Middle I':PRD_ROX};
-var PRD_ORD=['PIM','Individual','Administradora','Middle I'];
-var PRD_BASE={
-  comp:{rot:'Companhia', nota:'planilha de 18/11/2026, todos os canais', v:{
-    'PIM':           [19439,20414,29140,26043,28478,27710,24897,32446,34228,38790],
-    'Individual':    [24913,23505,33335,30350,32672,31872,23541,23132,24202,23119],
-    'Administradora':[5403,5547,8321,6475,10546,17823,14173,10804,16588,7086],
-    'Middle I':      [2494,2201,2451,1893,3419,2781,3135,2184,3360,2793]},
-    nov:{'PIM':18123,'Individual':10823,'Administradora':5630,'Middle I':1307},
-    novTxt:'nov parcial (metade do mês)'},
-  vd:{rot:'Venda Digital', nota:'BASE_DIGITAL_FULL, corte 10/11/2026', v:{
-    'PIM':           [3216,2957,4250,3266,3439,2650,2886,3989,3368,4188],
-    'Individual':    [4980,4395,6042,5578,6374,5901,4528,4679,5005,5011],
-    'Administradora':[50,110,260,119,464,4743,4362,1980,131,585],
-    'Middle I':      [48,159,270,14,277,42,97,154,104,228]},
-    nov:{'PIM':925,'Individual':1267,'Administradora':4,'Middle I':13},
-    novTxt:'nov até o dia 10'}};
-var PRD_TK={
-  'Individual':    [372.49,371.20,390.23,387.91,373.59,347.04,369.37,363.94,405.35,394.41],
-  'Administradora':[303.34,341.93,349.83,365.10,320.81,305.33,307.43,309.95,383.45,341.86],
-  'PIM':           [258.63,260.10,251.20,258.59,261.26,270.01,256.31,263.33,270.61,261.95],
-  'Middle I':      [187.15,217.52,230.73,176.86,262.97,300.53,509.90,290.50,304.52,267.05]};
-var PRD_TK_DIV=[326.67,324.46,330.68,339.86,331.60,316.61,320.28,315.84,351.08,333.03];
-
-function _prdPct(x){return (x>=0?'+':'−')+Math.abs(x).toFixed(1).replace('.',',')+'%';}
-function _prdSum(a){return a.reduce(function(x,y){return x+y;},0);}
-function _prdVis(){var e=document.getElementById('f_prd_vis');return (e&&e.value)||'comp';}
-function _prdProd(){var e=document.getElementById('f_prd_prod');return (e&&e.value)||'';}
-
-function renderProdutos(){
-  var B=PRD_BASE[_prdVis()], alvo=_prdProd();
-  var lista=alvo?[alvo]:PRD_ORD;
-  var tot=PRD_M.map(function(_,i){var s=0;PRD_ORD.forEach(function(k){s+=B.v[k][i];});return s;});
-
-  document.getElementById('h_prd_lin').textContent='Vidas por mês — '+
-    (alvo?alvo:'os quatro produtos')+' · '+B.rot+' · jan–out/26';
-
-  // linhas
-  mkChart('ch_prd_lin',{type:'line',data:{labels:PRD_M,datasets:lista.map(function(k){
-    return {label:k,data:B.v[k],borderColor:PRD_COR[k],backgroundColor:PRD_COR[k],tension:.25,borderWidth:2.5,pointRadius:3};})},
-    options:{plugins:{legend:{position:'bottom',display:!alvo},tooltip:{callbacks:{afterBody:function(it){
-      return 'Total do mês: '+nf(tot[it[0].dataIndex]);}}}},
-      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v>=1000?(v/1000)+'k':v;}}}}}});
-
-  // empilhado 100% - sempre os quatro
-  mkChart('ch_prd_emp',{type:'bar',data:{labels:PRD_M,datasets:PRD_ORD.map(function(k){
-    return {label:k,data:B.v[k].map(function(v,i){return tot[i]?+(v/tot[i]*100).toFixed(1):0;}),
-            backgroundColor:PRD_COR[k]};})},
-    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
-      var k=PRD_ORD[c.datasetIndex];
-      return k+': '+c.parsed.y.toFixed(1).replace('.',',')+'% ('+nf(B.v[k][c.dataIndex])+')';}}}},
-      scales:{x:{stacked:true},y:{stacked:true,max:100,ticks:{callback:function(v){return v+'%';}}}}}});
-
-  // ticket - sempre Venda Digital. Com "Todos", Middle I fica fora: roda com 14 a 277 vidas/mes,
-  // o ticket dele vai de R$ 177 a R$ 510 e esmagaria a escala dos outros tres.
-  var listaTk=alvo?lista:lista.filter(function(k){return k!=='Middle I';});
-  var serie=listaTk.map(function(k){
-    return {label:k,data:PRD_TK[k],borderColor:PRD_COR[k],backgroundColor:PRD_COR[k],tension:.25,borderWidth:2.5,pointRadius:3};});
-  serie.push({label:'Venda Digital (todos)',data:PRD_TK_DIV,borderColor:'#94a3b8',backgroundColor:'#94a3b8',
-              tension:.25,borderWidth:2,borderDash:[6,4],pointRadius:0});
-  var tks=serie.reduce(function(a,s){return a.concat(s.data);},[]);
-  mkChart('ch_prd_tk',{type:'line',data:{labels:PRD_M,datasets:serie},
-    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
-      return c.dataset.label+': R$ '+c.parsed.y.toFixed(2).replace('.',',');}}}},
-      scales:{y:{min:Math.floor(Math.min.apply(null,tks)/20)*20-10,ticks:{callback:function(v){return 'R$ '+v;}}}}}});
-  document.getElementById('p_prd_tk').innerHTML=
-    (_prdVis()==='vd'
-      ? 'Mesmo universo da visão escolhida acima.'
-      : 'A planilha da companhia traz só quantidade, sem mensalidade. Este gráfico é a <b>Venda Digital</b>, '+
-        '19,4% do Individual da companhia — não acompanha a visão Companhia.')+
-    ' Eixo ampliado, não começa em zero.'+
-    (alvo==='Middle I'
-      ? ' Middle I roda com 14 a 277 vidas por mês, então o ticket dele oscila entre R$ 177 e R$ 510.'
-      : (alvo ? '' : ' Middle I fica fora deste gráfico por oscilar demais em cima de pouco volume — selecione-o no filtro para vê-lo.'));
-
-  // tabela
-  var TJ=0;PRD_ORD.forEach(function(k){TJ+=_prdSum(B.v[k]);});
-  var h='';
-  lista.forEach(function(k){
-    var a=B.v[k], s=_prdSum(a);
-    var m1=_prdSum(a.slice(0,6))/6, m2=_prdSum(a.slice(6))/4;
-    var vr=(m2/m1-1)*100, jo=(a[9]/a[0]-1)*100;
-    h+='<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;background:'+PRD_COR[k]+'"></span>'+k+'</td>'+
-       '<td class="num">'+nf(s)+'</td><td class="num">'+(s/TJ*100).toFixed(1).replace('.',',')+'%</td>'+
-       '<td class="num">'+nf(Math.round(m1))+'</td><td class="num">'+nf(Math.round(m2))+'</td>'+
-       '<td class="num" style="color:'+(vr>=0?'var(--green)':'#dc2626')+'">'+_prdPct(vr)+'</td>'+
-       '<td class="num" style="color:'+(jo>=0?'var(--green)':'#dc2626')+'">'+_prdPct(jo)+'</td>'+
-       '<td class="num" style="color:var(--muted)">'+nf(B.nov[k])+'</td></tr>';
-  });
-  var T1=_prdSum(tot.slice(0,6))/6, T2=_prdSum(tot.slice(6))/4, TN=0;
-  PRD_ORD.forEach(function(k){TN+=B.nov[k];});
-  var TV=(T2/T1-1)*100, TJO=(tot[9]/tot[0]-1)*100;
-  h+='<tr style="font-weight:700;border-top:2px solid #e2e8f0"><td>Total '+B.rot+'</td><td class="num">'+nf(TJ)+'</td><td class="num">100,0%</td>'+
-     '<td class="num">'+nf(Math.round(T1))+'</td><td class="num">'+nf(Math.round(T2))+'</td>'+
-     '<td class="num" style="color:'+(TV>=0?'var(--green)':'#dc2626')+'">'+_prdPct(TV)+'</td>'+
-     '<td class="num" style="color:'+(TJO>=0?'var(--green)':'#dc2626')+'">'+_prdPct(TJO)+'</td>'+
-     '<td class="num" style="color:var(--muted)">'+nf(TN)+'</td></tr>';
-  document.querySelector('#tbl_prd tbody').innerHTML=h;
-
-  // leitura
-  var iI=B.v['Individual'], iP=B.v['PIM'];
-  var razao=iP[9]/iI[9]*100, raz1=_prdSum(iP.slice(0,6))/_prdSum(iI.slice(0,6))*100;
-  var mI1=_prdSum(iI.slice(0,6))/6, mI2=_prdSum(iI.slice(6))/4;
-  var txt='<b>'+B.rot+'</b> ('+B.nota+'). O PIM era <b>'+raz1.toFixed(0)+'%</b> do Individual no 1º semestre e '+
-    'em outubro é <b>'+razao.toFixed(0)+'%</b> — '+nf(iP[9])+' contra '+nf(iI[9])+'. '+
-    'O Individual foi de '+nf(Math.round(mI1))+' para '+nf(Math.round(mI2))+' vidas/mês entre as metades do ano ('+
-    _prdPct((mI2/mI1-1)*100)+'), e o conjunto dos quatro, '+_prdPct(TV)+'.';
-  txt += (razao>=100)
-    ? ' <b>O PIM já passou o Individual aqui.</b> Não foi perda de volume, foi troca de produto.'
-    : ' <b>Aqui o PIM ainda não passou o Individual</b> — na companhia ele já está em 168%. O canal digital segue mais concentrado em Individual que o resto da empresa.';
-  txt += ' <b>No ticket</b> (sempre Venda Digital), todo produto subiu entre as metades — Individual +4,0%, PIM +2,3%, '+
-    'Administradora +3,6% — e mesmo assim o ticket da divisão ficou em +0,3%: o preço somou +R$ 8,06 e o mix tirou −R$ 6,67.';
-  document.getElementById('n_prd').innerHTML=txt;
-}
 
 // ---------- Análise de Quartil (tab-quartil) ----------
 // Exporta o "Resumo por Vendedor" (auditoria) em CSV, a partir da populacao ja calculada em
