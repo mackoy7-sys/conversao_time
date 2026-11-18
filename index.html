@@ -156,6 +156,7 @@ td.rank.top1{color:#b45309}td.rank.top2{color:#475569}td.rank.top3{color:#a16207
 <button class="tab-btn" onclick="switchTab('origem',this)">Análise dos Leads</button>
 <button class="tab-btn" onclick="switchTab('geo',this)">Análise por Estado</button>
 <button class="tab-btn" onclick="switchTab('quartil',this)">Análise de Quartil</button>
+<button class="tab-btn" onclick="switchTab('produtos',this)">Produtos 2026</button>
 <div class="tab-more" id="tabMore">
 <button class="tab-btn" id="tabMoreBtn" onclick="toggleMore(event)">Outros ▾</button>
 <div class="tab-more-menu" id="tabMoreMenu">
@@ -384,6 +385,37 @@ Divide-se em quartis: <b>Q1 — Elite</b> (25% melhores), <b>Q2 — Bom</b>, <b>
 <tr><th rowspan="2">Faixa</th><th colspan="3" style="text-align:center;border-left:1px solid #e2e8f0">Time Próprio</th><th colspan="3" style="text-align:center;border-left:1px solid #e2e8f0">Time Terceiros</th></tr>
 <tr><th class="num" style="border-left:1px solid #e2e8f0">Agentes</th><th class="num">Vidas</th><th class="num">Conv.</th><th class="num" style="border-left:1px solid #e2e8f0">Agentes</th><th class="num">Vidas</th><th class="num">Conv.</th></tr>
 </thead><tbody></tbody></table></div>
+</div>
+
+<div id="tab-produtos" class="tab-panel">
+<div class="note">Dados estáticos: planilha de produtos de 18/11/2026 (companhia) e BASE_DIGITAL_FULL corte 10/11/2026 (ticket).
+Esta aba <b>não</b> acompanha a carga diária — quando chegar planilha nova, os números aqui precisam ser trocados à mão.
+Novembro está fora das médias: a extração pegou o mês pela metade.
+<a href="https://claude.ai/artifact/HouGcvGoCvDf9c6tCTrj53" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Abrir a análise completa &rarr;</a></div>
+
+<div class="card"><h3>Vidas por mês — os quatro produtos (companhia, jan–out/26)</h3>
+<canvas id="ch_prd_lin"></canvas></div>
+
+<div class="card"><h3>Participação de cada produto no mês</h3>
+<canvas id="ch_prd_emp"></canvas></div>
+
+<div class="tablecard"><table id="tbl_prd"><thead><tr>
+<th>Produto</th><th class="num">Jan–out</th><th class="num">% do total</th><th class="num">Média jan–jun</th>
+<th class="num">Média jul–out</th><th class="num">Variação</th><th class="num">Jan &rarr; out</th><th class="num">Nov (parcial)</th>
+</tr></thead><tbody></tbody></table></div>
+
+<div class="card"><h3>Ticket médio por mês, em R$ — só Venda Digital</h3>
+<p style="font-size:12px;color:var(--muted);margin:-8px 0 12px">A planilha da companhia traz só quantidade, sem mensalidade.
+Este gráfico é a Venda Digital, 19,4% do Individual da companhia. Eixo ampliado, não começa em zero.</p>
+<canvas id="ch_prd_tk"></canvas></div>
+
+<div class="note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
+<b>O PIM passou o Individual em julho.</b> Era 87% do Individual no 1º semestre; em outubro é 168% — 38.790 contra 23.119.
+Somados os quatro produtos a companhia <b>subiu 7,4%</b> entre as metades do ano, mesmo com o Individual caindo 20,2%:
+não foi perda de volume, foi troca de produto.
+<b>No ticket</b>, todo produto subiu (Individual +4,0%, PIM +2,3%, Administradora +3,6%) e mesmo assim o ticket da Venda Digital
+ficou em +0,3%: o preço somou +R$ 8,06 e o mix tirou −R$ 6,67, porque o Individual caiu de 55,8% para 46,6% das vidas.
+</div>
 </div>
 
 <div id="tab-tempo" class="tab-panel">
@@ -1101,6 +1133,7 @@ function render(){
   if(at==='geral')renderGeralMes(rows);              // grafico "Apurado geral por mes" so na Visao Geral
   else if(at==='org'){renderOrg(rows);renderOrgTempo(rows);}
   else if(at==='tempo')renderTempo(rows);
+  else if(at==='produtos')renderProdutos();
   else if(at==='extrato')renderExtrato();
   else if(at==='quartil')renderQuartilV();
   else if(at==='geo')renderGeo();                    // aba "Análise por Estado" (cubo geo_praca, lazy)
@@ -3286,6 +3319,71 @@ function qBadge(q){
 function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');var menu=document.getElementById('tabMoreMenu'),mbtn=document.getElementById('tabMoreBtn'),mw=document.getElementById('tabMore');if(menu&&mbtn&&menu.contains(btn))mbtn.classList.add('active');if(mw)mw.classList.remove('open');render();}   // render() agora despacha so' a aba ativa
 function toggleMore(ev){ev.stopPropagation();var w=document.getElementById('tabMore');if(w)w.classList.toggle('open');}
 document.addEventListener('click',function(e){var w=document.getElementById('tabMore');if(w&&!w.contains(e.target))w.classList.remove('open');});
+
+// ---------- Produtos 2026 (tab-produtos) ----------
+// Numeros estaticos: planilha de produtos da companhia (18/11/2026) e BASE_DIGITAL_FULL (10/11/2026).
+// Nao vem dos cubos diarios, entao nao reage aos filtros do topo nem a carga do dia.
+var PRD_M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'];
+var PRD_ROX='#7c3aed';
+var PRD=[
+ {n:'PIM',           c:AMB,     v:[19439,20414,29140,26043,28478,27710,24897,32446,34228,38790], nov:18123},
+ {n:'Individual',    c:ACC,     v:[24913,23505,33335,30350,32672,31872,23541,23132,24202,23119], nov:10823},
+ {n:'Administradora',c:GRN,     v:[5403,5547,8321,6475,10546,17823,14173,10804,16588,7086],      nov:5630},
+ {n:'Middle I',      c:PRD_ROX, v:[2494,2201,2451,1893,3419,2781,3135,2184,3360,2793],           nov:1307}];
+var PRD_TK=[
+ {n:'Individual',    c:ACC,     t:[372.49,371.20,390.23,387.91,373.59,347.04,369.37,363.94,405.35,394.41]},
+ {n:'Administradora',c:GRN,     t:[303.34,341.93,349.83,365.10,320.81,305.33,307.43,309.95,383.45,341.86]},
+ {n:'PIM',           c:AMB,     t:[258.63,260.10,251.20,258.59,261.26,270.01,256.31,263.33,270.61,261.95]},
+ {n:'Venda Digital', c:'#94a3b8',t:[326.67,324.46,330.68,339.86,331.60,316.61,320.28,315.84,351.08,333.03],tracejada:true}];
+function _prdTot(i){var s=0;PRD.forEach(function(p){s+=p.v[i];});return s;}
+function _prdPct(x){return (x>=0?'+':'−')+Math.abs(x).toFixed(1).replace('.',',')+'%';}
+
+function renderProdutos(){
+  // linhas: vidas por mes
+  mkChart('ch_prd_lin',{type:'line',data:{labels:PRD_M,datasets:PRD.map(function(p){
+    return {label:p.n,data:p.v,borderColor:p.c,backgroundColor:p.c,tension:.25,borderWidth:2.5,pointRadius:3};})},
+    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{afterBody:function(it){
+      var i=it[0].dataIndex;return 'Total do mês: '+nf(_prdTot(i));}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v>=1000?(v/1000)+'k':v;}}}}}});
+  // empilhado 100%
+  mkChart('ch_prd_emp',{type:'bar',data:{labels:PRD_M,datasets:PRD.map(function(p){
+    return {label:p.n,data:p.v.map(function(v,i){return +(v/_prdTot(i)*100).toFixed(1);}),backgroundColor:p.c};})},
+    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
+      var p=PRD[c.datasetIndex];return p.n+': '+c.parsed.y.toFixed(1).replace('.',',')+'% ('+nf(p.v[c.dataIndex])+')';}}}},
+      scales:{x:{stacked:true},y:{stacked:true,max:100,ticks:{callback:function(v){return v+'%';}}}}}});
+  // ticket
+  mkChart('ch_prd_tk',{type:'line',data:{labels:PRD_M,datasets:PRD_TK.map(function(p){
+    return {label:p.n,data:p.t,borderColor:p.c,backgroundColor:p.c,tension:.25,
+            borderWidth:p.tracejada?2:2.5,borderDash:p.tracejada?[6,4]:[],pointRadius:p.tracejada?0:3};})},
+    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(c){
+      return c.dataset.label+': R$ '+c.parsed.y.toFixed(2).replace('.',',');}}}},
+      scales:{y:{min:230,ticks:{callback:function(v){return 'R$ '+v;}}}}}});
+  // tabela
+  var TJ=0;PRD.forEach(function(p){p.v.forEach(function(v){TJ+=v;});});
+  var tb=document.querySelector('#tbl_prd tbody'),h='';
+  PRD.forEach(function(p){
+    var tot=p.v.reduce(function(a,b){return a+b;},0);
+    var m1=0,m2=0;p.v.forEach(function(v,i){if(i<6)m1+=v;else m2+=v;});m1/=6;m2/=4;
+    var vr=(m2/m1-1)*100, jo=(p.v[9]/p.v[0]-1)*100;
+    h+='<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;background:'+p.c+'"></span>'+p.n+'</td>'+
+       '<td class="num">'+nf(tot)+'</td><td class="num">'+(tot/TJ*100).toFixed(1).replace('.',',')+'%</td>'+
+       '<td class="num">'+nf(Math.round(m1))+'</td><td class="num">'+nf(Math.round(m2))+'</td>'+
+       '<td class="num" style="color:'+(vr>=0?'var(--green)':'#dc2626')+'">'+_prdPct(vr)+'</td>'+
+       '<td class="num" style="color:'+(jo>=0?'var(--green)':'#dc2626')+'">'+_prdPct(jo)+'</td>'+
+       '<td class="num" style="color:var(--muted)">'+nf(p.nov)+'</td></tr>';
+  });
+  var T1=0,T2=0,TN=0;
+  for(var i=0;i<10;i++){if(i<6)T1+=_prdTot(i);else T2+=_prdTot(i);}
+  PRD.forEach(function(p){TN+=p.nov;});
+  T1/=6;T2/=4;
+  var TV=(T2/T1-1)*100, TJO=(_prdTot(9)/_prdTot(0)-1)*100;
+  h+='<tr style="font-weight:700;border-top:2px solid #e2e8f0"><td>Total</td><td class="num">'+nf(TJ)+'</td><td class="num">100,0%</td>'+
+     '<td class="num">'+nf(Math.round(T1))+'</td><td class="num">'+nf(Math.round(T2))+'</td>'+
+     '<td class="num" style="color:var(--green)">'+_prdPct(TV)+'</td>'+
+     '<td class="num" style="color:var(--green)">'+_prdPct(TJO)+'</td>'+
+     '<td class="num" style="color:var(--muted)">'+nf(TN)+'</td></tr>';
+  tb.innerHTML=h;
+}
 
 // ---------- Análise de Quartil (tab-quartil) ----------
 // Exporta o "Resumo por Vendedor" (auditoria) em CSV, a partir da populacao ja calculada em
